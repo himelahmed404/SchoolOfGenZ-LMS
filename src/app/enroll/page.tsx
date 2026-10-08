@@ -12,32 +12,32 @@ export default function EnrollPage() {
 
   return (
     <Shell role="student" title="Enroll" back="/">
-      <div className="ph" style={{ height: 'var(--cover-h)', borderRadius: 4, marginBottom: 20 }}>course cover</div>
-      <div className="kicker">{newCourse.kicker}</div>
-      <h1 className="h1" style={{ margin: '2px 0 10px' }}>{newCourse.title}</h1>
-      <div className="t13 ink2" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: 28 }}>
+      <div className="mono tile" style={{ height: 'var(--cover-h)', background: 'var(--surface-sunk)', border: '1px solid var(--line)', borderRadius: 20, fontSize: 11, color: 'var(--ink-2)', marginBottom: 20 }}>course cover</div>
+      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{newCourse.kicker}</div>
+      <h1 className="d1" style={{ margin: '2px 0 10px' }}>{newCourse.title}</h1>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13, color: 'var(--ink-2)', marginBottom: 28 }}>
         <span>{newCourse.instructor}</span>
-        <span className="ink3">·</span>
+        <span style={{ color: 'var(--ink-3)' }}>·</span>
         <span>{newCourse.meta}</span>
       </div>
-      <div className="card card-pad" style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+      <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <div>
-          <div className="t13 ink3">Course Fee</div>
-          <div className="h2" style={{ lineHeight: 1.35 }}>{taka(newCourse.price, numerals)}</div>
-          <div className="t13 ink3">একবারই · Lifetime Access</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>Course Fee</div>
+          <div style={{ fontSize: 'var(--d2)', fontWeight: 600, lineHeight: 1.35 }}>{taka(newCourse.price, numerals)}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>একবারই · Lifetime Access</div>
         </div>
-        <Link href={submitted ? '/enroll/pending' : '/enroll/pay'} className="btn btn-primary ml-auto" style={{ padding: '0 24px' }}>
+        <Link href={submitted ? '/enroll/pending' : '/enroll/pay'} className="btn btn-primary" style={{ marginLeft: 'auto', padding: '0 24px', fontWeight: 500 }}>
           {submitted ? 'Status' : 'Enroll'}
         </Link>
       </div>
       <div className="fine" style={{ marginTop: 14, maxWidth: '52ch' }}>bKash বা Nagad-এ টাকা পাঠিয়ে TrxID জমা দিলেই হবে। অনুমোদন হলে SMS পাবে — সাধারণত ২-৪ ঘণ্টা লাগে।</div>
 
-      <div className="section-label">কোর্স শেষে তুমি পারবে</div>
-      <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <h2 className="sec-h" style={{ margin: '36px 0 12px' }}>কোর্স শেষে তুমি পারবে</h2>
+      <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {newCourseOutcomes.map((o) => (
           <div key={o} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <span className="ink3" style={{ width: 16, flexShrink: 0, textAlign: 'center', fontSize: 14, lineHeight: 1.7 }}>–</span>
-            <span className="grow t15" style={{ lineHeight: 1.7 }}>{o}</span>
+            <span style={{ width: 16, flexShrink: 0, textAlign: 'center', fontSize: 14, lineHeight: 1.7, color: 'var(--ink-3)' }}>–</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: 1.7 }}>{o}</span>
           </div>
         ))}
       </div>

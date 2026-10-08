@@ -3,11 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Shell } from '@/components/Shell';
+import { Icon } from '@/components/ui';
 import { submitPayment, trxTaken } from '@/lib/actions';
 import { merchants, newCourse } from '@/lib/data';
 import { taka } from '@/lib/format';
 import { useStore } from '@/lib/store';
 import type { PayMethod } from '@/lib/types';
+
+const METHOD_TILE: Record<PayMethod, [string, string]> = { bKash: ['#E2136E', 'b'], Nagad: ['#F26522', 'N'] };
 
 export default function PayPage() {
   const { s, set, n, numerals } = useStore();
@@ -35,20 +38,27 @@ export default function PayPage() {
     router.push('/enroll/pending');
   };
 
+  const label: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 10 };
+  const input: React.CSSProperties = { width: '100%', height: 52, padding: '0 14px', border: '1px solid var(--line-strong)', borderRadius: 14, background: 'var(--paper)', color: 'var(--ink)', fontSize: 15 };
+
   return (
     <Shell role="student" title="Payment" back="/enroll">
-      <div className="t13 w500 ink2">{newCourse.title}</div>
-      <h1 className="h1" style={{ margin: '2px 0 6px' }}>{price} পাঠাও</h1>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>{newCourse.title}</div>
+      <h1 className="d1" style={{ margin: '2px 0 6px' }}>{price} পাঠাও</h1>
       <div className="muted-p" style={{ maxWidth: '52ch', marginBottom: 24 }}>কোনটা দিয়ে পাঠাবে বেছে নাও। টাকা পাঠানোর পর TrxID-টা নিচে লিখে জমা দাও।</div>
 
-      <div className="grid-2" role="radiogroup" aria-label="পেমেন্ট মাধ্যম" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12, marginBottom: 28 }}>
+      <div role="radiogroup" aria-label="পেমেন্ট মাধ্যম" style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 12, marginBottom: 28 }}>
         {(['bKash', 'Nagad'] as PayMethod[]).map((m) => {
           const on = p.method === m;
           return (
             <button key={m} role="radio" aria-checked={on} onClick={() => setPay({ method: m })}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: 16, minHeight: 'var(--btn-h)', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 2, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink)', textAlign: 'left' }}>
-              <span style={{ fontSize: 17, fontWeight: on ? 600 : 500 }}>{m}</span>
-              <span className="mono t13 ink3">{merchants[m]}</span>
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: '2px solid ' + (on ? 'var(--brand)' : 'var(--line)'), borderRadius: 18, background: on ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left' }}>
+              <span className="tile disp" style={{ width: 44, height: 44, borderRadius: 12, background: METHOD_TILE[m][0], color: '#FFFFFF', fontSize: 20, fontWeight: 800 }}>{METHOD_TILE[m][1]}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>{m}</span>
+                <span className="mono" style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{merchants[m]}</span>
+              </span>
+              <Icon name={on ? 'check_circle' : 'radio_button_unchecked'} size={24} fill={on} style={{ color: on ? 'var(--brand)' : 'var(--line-strong)' }} />
             </button>
           );
         })}
@@ -56,29 +66,29 @@ export default function PayPage() {
 
       {p.method ? (
         <div>
-          <div className="t13 w500 ink2" style={{ marginBottom: 10 }}>কীভাবে পাঠাবে</div>
-          <ol className="card card-pad" style={{ margin: '0 0 28px', listStyle: 'none' }}>
+          <div style={label}>কীভাবে পাঠাবে</div>
+          <ol className="card" style={{ margin: '0 0 28px', padding: 'var(--card-pad)', listStyle: 'none' }}>
             {steps.map((t, i) => (
               <li key={i} style={{ display: 'flex', gap: 12, padding: '6px 0' }}>
-                <span className="mono t13 ink3" style={{ width: 20, flexShrink: 0 }}>{n(i + 1)}</span>
-                <span className="t15" style={{ lineHeight: 1.8 }}>{t}</span>
+                <span className="tile" style={{ width: 28, height: 28, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 14, fontWeight: 700 }}>{n(i + 1)}</span>
+                <span style={{ fontSize: 15, lineHeight: 1.8 }}>{t}</span>
               </li>
             ))}
           </ol>
 
-          <div className="t13 w500 ink2" style={{ marginBottom: 10 }}>যা পাঠিয়েছ তার তথ্য</div>
-          <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={label}>যা পাঠিয়েছ তার তথ্য</div>
+          <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <label style={{ display: 'block' }}>
-              <span className="t13 ink2" style={{ display: 'block', marginBottom: 6 }}>TrxID</span>
-              <input className="field mono" value={p.trxId} autoComplete="off" spellCheck={false}
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>TrxID</span>
+              <input className="mono" style={input} value={p.trxId} autoComplete="off" spellCheck={false}
                 onChange={(e) => { setError(''); setPay({ trxId: e.target.value.toUpperCase() }); }} placeholder="BKX7M2QP41" />
             </label>
             <label style={{ display: 'block' }}>
-              <span className="t13 ink2" style={{ display: 'block', marginBottom: 6 }}>যে নম্বর থেকে পাঠিয়েছ</span>
-              <input className="field mono" inputMode="tel" value={p.sender} onChange={(e) => setPay({ sender: e.target.value })} placeholder="01712 445589" />
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>যে নম্বর থেকে পাঠিয়েছ</span>
+              <input className="mono" style={input} inputMode="tel" value={p.sender} onChange={(e) => setPay({ sender: e.target.value })} placeholder="01712 445589" />
             </label>
             {error ? <div className="alert" role="alert">{error}</div> : null}
-            <button className="btn btn-primary btn-lg" disabled={!canSubmit} onClick={submit}>Submit</button>
+            <button className="btn btn-primary" style={{ height: 48, fontWeight: 500 }} disabled={!canSubmit} onClick={submit}>Submit</button>
             <div className="fine">ভুল TrxID দিলে অনুমোদন হবে না। SMS-এ যেটা এসেছে হুবহু সেটাই লেখো।</div>
           </div>
         </div>
