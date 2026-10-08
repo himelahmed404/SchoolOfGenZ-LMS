@@ -5,10 +5,10 @@ import { courses } from '@/lib/data';
 import { counts } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
-/** Placeholder until the penguin mascot artwork exists. */
+/** Placeholder until the penguin mascot artwork exists: a tilted, striped disc. */
 export function Penguin({ size, label = 'penguin' }: { size: number; label?: string }) {
   return (
-    <div className="ph avatar" style={{ width: size, height: size, fontSize: size >= 96 ? 10 : size >= 72 ? 9 : 8 }} aria-hidden>
+    <div className="peng" style={{ width: size, height: size, fontSize: size >= 140 ? 11 : size >= 76 ? 10 : size >= 50 ? 9 : 8 }} aria-hidden>
       {label}
     </div>
   );
