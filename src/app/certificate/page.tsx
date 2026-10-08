@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Icon } from '@/components/ui';
 import { courses, defaultStudent } from '@/lib/data';
 import { studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -15,29 +16,29 @@ export default function CertificatePage() {
   };
 
   return (
-    <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--test-pad)', background: 'var(--paper)' }}>
-      <div className="card" style={{ width: '100%', maxWidth: 680, padding: 'var(--cert-pad)', textAlign: 'center' }}>
-        <div className="row" style={{ justifyContent: 'center', gap: 8, marginBottom: 40 }}>
-          <div className="logo" style={{ width: 22, height: 22 }} />
-          <span className="t15 w600">School of GenZ</span>
+    <div data-print="sheet" style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--col-pad)', background: 'var(--paper)' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', width: '100%', maxWidth: 720, padding: 'var(--cert-pad)', border: '1px solid var(--line)', borderRadius: 28, background: 'repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px), var(--surface)', boxShadow: 'var(--overlay)', textAlign: 'center' }}>
+        <div aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: 'var(--cert-margin)', width: 2, background: 'var(--margin)', opacity: 0.4 }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 36 }}>
+          <div className="tile disp" style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 18, fontWeight: 800 }}>G</div>
+          <span className="disp" style={{ fontSize: 18, fontWeight: 700 }}>School of GenZ</span>
         </div>
-        <div className="t13 ink2">এই সার্টিফিকেট দেওয়া হলো</div>
-        <div className="h1" style={{ margin: '8px 0 20px' }}>{studentName(s)}</div>
-        <div className="t13 ink2">সফলভাবে শেষ করার জন্য</div>
-        <div className="h3" style={{ margin: '6px 0 32px' }}>{courses.cst.title}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px 40px', paddingTop: 24, borderTop: '1px solid var(--line)' }}>
+        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>এই সার্টিফিকেট দেওয়া হলো</div>
+        <div className="disp" style={{ fontSize: 'var(--cert-name)', lineHeight: 1.25, fontWeight: 800, margin: '10px 0 22px' }}><span className="hl">{studentName(s)}</span></div>
+        <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>সফলভাবে শেষ করার জন্য</div>
+        <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700, margin: '6px 0 32px' }}>{courses.cst.title}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
           <Meta k="Issued" v="23 Aug 2026" />
           <Meta k="Certificate ID" v="SGZ-2026-04812" />
           <Meta k="Batch" v={defaultStudent.batch} />
         </div>
-        <div className="row t13 ink2" style={{ justifyContent: 'center', gap: 8, marginTop: 28 }}>
-          <span style={{ color: 'var(--brand)' }}>✓</span>
-          <span>School of GenZ-এ যাচাই করা হয়েছে</span>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 28, padding: '6px 14px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)', fontSize: 13, fontWeight: 700 }}>
+          <Icon name="verified" size={18} fill />School of GenZ-এ যাচাই করা হয়েছে
         </div>
       </div>
-      <div data-print="hide" className="row" style={{ marginTop: 20 }}>
-        <button className="btn" onClick={share}>Share on Facebook</button>
-        <Link href="/" className="btn btn-link">Back to Home</Link>
+      <div data-print="hide" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 20 }}>
+        <button className="btn" style={{ padding: '0 20px' }} onClick={share}><Icon name="share" size={20} />Share on Facebook</button>
+        <Link href="/" className="btn btn-primary" style={{ padding: '0 20px' }}>Back to Home</Link>
       </div>
     </div>
   );
@@ -45,9 +46,9 @@ export default function CertificatePage() {
 
 function Meta({ k, v }: { k: string; v: string }) {
   return (
-    <div>
-      <div className="t12 ink3">{k}</div>
-      <div className="mono t13 w500">{v}</div>
+    <div style={{ padding: '10px 16px', borderRadius: 14, background: 'var(--surface-sunk)' }}>
+      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{k}</div>
+      <div className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{v}</div>
     </div>
   );
 }
