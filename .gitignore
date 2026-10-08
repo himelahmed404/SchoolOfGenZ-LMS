@@ -24,3 +24,7 @@ Thumbs.db
 .idea/
 *.tsbuildinfo
 next-env.d.ts
+.vercel
+
+# Design references (claude.ai/design exports, read-only)
+design/
