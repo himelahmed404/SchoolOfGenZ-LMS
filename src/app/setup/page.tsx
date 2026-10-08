@@ -7,8 +7,10 @@ import { examISO } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
 
+const LABEL: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', margin: '28px 0 8px' };
+
 export default function SetupPage() {
-  const { s, set, n, numerals, ready, theme } = useStore();
+  const { s, set, n, numerals, ready } = useStore();
   const router = useRouter();
   if (!ready) return null;
 
@@ -20,18 +22,19 @@ export default function SetupPage() {
 
   return (
     <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', background: 'var(--paper)' }}>
-      <div style={{ maxWidth: 540, margin: '0 auto', padding: 'var(--test-pad) var(--test-pad) 56px' }}>
-        <div className="row" style={{ gap: 10, marginBottom: 28 }}>
-          <div className="logo" />
-          <div className="t15 w600">School of GenZ</div>
+      <div style={{ maxWidth: 540, margin: '0 auto', padding: 'var(--col-pad)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <div style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 12, background: 'var(--brand)' }} />
+          <div style={{ fontSize: 15, fontWeight: 600 }}>School of GenZ</div>
         </div>
-        <h1 className="h1" style={{ marginBottom: 8 }}>শুরুর আগে চারটা কথা</h1>
+        <h1 className="d1" style={{ marginBottom: 8 }}>শুরুর আগে চারটা কথা</h1>
         <div className="muted-p" style={{ marginBottom: 36 }}>একবারই জিজ্ঞেস করবো। পরে সেটিংসে বদলাতে পারবে।</div>
 
-        <label htmlFor="name" className="t13 w500 ink2" style={{ display: 'block', marginBottom: 6 }}>তোমার নাম</label>
-        <input id="name" className="field field-sunk" value={p.name} onChange={(e) => setPrefs({ name: e.target.value })} placeholder="সার্টিফিকেটে এই নামটাই ছাপা হবে" style={{ padding: '0 14px' }} />
+        <label htmlFor="name" style={{ ...LABEL, display: 'block', margin: '0 0 6px' }}>তোমার নাম</label>
+        <input id="name" value={p.name} onChange={(e) => setPrefs({ name: e.target.value })} placeholder="সার্টিফিকেটে এই নামটাই ছাপা হবে"
+          style={{ width: '100%', height: 48, padding: '0 14px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 16 }} />
 
-        <div className="t13 w500 ink2" style={{ margin: '28px 0 8px' }}>কোন সেমিস্টার</div>
+        <div style={LABEL}>কোন সেমিস্টার</div>
         <div role="radiogroup" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {semNames.map((label, i) => (
             <button key={label} role="radio" aria-checked={p.sem === i + 1} aria-pressed={p.sem === i + 1} className="pick"
@@ -40,41 +43,40 @@ export default function SetupPage() {
           ))}
         </div>
 
-        <div className="t13 w500 ink2" style={{ margin: '28px 0 8px' }}>পরীক্ষা কবে</div>
+        <div style={LABEL}>পরীক্ষা কবে</div>
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span className="t17 w600">{dateLabel(iso, numerals)}</span>
-            <span className="t13 ink3 ml-auto nowrap">{days > 0 ? n(days) + ' দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
+            <span style={{ fontSize: 17, fontWeight: 600 }}>{dateLabel(iso, numerals)}</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{days > 0 ? n(days) + ' দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
           </div>
           <div className="fine" style={{ marginTop: 4 }}>{p.examDate ? 'তুমি নিজে দিয়েছ' : 'বোর্ড ক্যালেন্ডার অনুযায়ী — ' + semNames[p.sem - 1] + ' সেমিস্টার'}</div>
-          <div className="row wrap" style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
-            <label htmlFor="exam" className="t13 ink2">তারিখ ঠিক না?</label>
-            <input id="exam" type="date" value={iso} onChange={(e) => { if (e.target.value) setPrefs({ examDate: e.target.value }); }}
-              className="mono" style={{ height: 44, padding: '0 12px', border: '1px solid var(--line)', borderRadius: 2, background: 'var(--surface-sunk)', fontSize: 14 }} />
-            {p.examDate ? <button className="btn btn-link t13" style={{ height: 44 }} onClick={() => setPrefs({ examDate: null })}>ক্যালেন্ডারে ফেরাও</button> : null}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+            <label htmlFor="exam" style={{ fontSize: 13, color: 'var(--ink-2)' }}>তারিখ ঠিক না?</label>
+            <input id="exam" type="date" value={iso} onChange={(e) => { if (e.target.value) setPrefs({ examDate: e.target.value }); }} className="mono"
+              style={{ height: 44, padding: '0 12px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 14 }} />
+            {p.examDate ? (
+              <button onClick={() => setPrefs({ examDate: null })}
+                style={{ height: 44, padding: '0 12px', border: 'none', background: 'none', color: 'var(--brand)', fontSize: 13, fontWeight: 500 }}>ক্যালেন্ডারে ফেরাও</button>
+            ) : null}
           </div>
         </div>
 
-        <div className="t13 w500 ink2" style={{ margin: '28px 0 8px' }}>সংখ্যা কোন লেখায় দেখতে চাও</div>
+        <div style={LABEL}>সংখ্যা কোন লেখায় দেখতে চাও</div>
         <div role="radiogroup" style={{ display: 'flex', gap: 8 }}>
           {([['bn', '১২:৩০', 'বাংলা সংখ্যা'], ['latin', '12:30', 'ইংরেজি সংখ্যা']] as const).map(([id, sample, label]) => {
             const on = numerals === id;
             return (
               <button key={id} role="radio" aria-checked={on} onClick={() => setPrefs({ numerals: id })}
-                style={{ flex: 1, minHeight: 56, padding: '8px 16px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 2, background: on ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left' }}>
+                style={{ flex: 1, minHeight: 56, padding: '8px 16px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 999, background: on ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left' }}>
                 <span className="mono" style={{ display: 'block', fontSize: 17, fontWeight: 500, color: on ? 'var(--brand)' : 'var(--ink)' }}>{sample}</span>
-                <span className="t13 ink3" style={{ display: 'block' }}>{label}</span>
+                <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{label}</span>
               </button>
             );
           })}
         </div>
 
-        <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 36 }} onClick={finish}>Start</button>
-        <button className="btn btn-quiet btn-block t13 ink3" style={{ height: 44, marginTop: 8, fontWeight: 400 }} onClick={finish}>পরে দিই</button>
-        {p.setupDone ? (
-          <button className="btn btn-quiet btn-block t13 ink3" style={{ height: 44, fontWeight: 400 }}
-            onClick={() => setPrefs({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? 'লাইট মোডে যাও' : 'ডার্ক মোডে যাও'}</button>
-        ) : null}
+        <button className="btn btn-primary" style={{ width: '100%', height: 48, marginTop: 36, fontWeight: 500 }} onClick={finish}>Start</button>
+        <button style={{ width: '100%', height: 44, marginTop: 8, border: 'none', background: 'none', color: 'var(--ink-3)', fontSize: 13 }} onClick={finish}>পরে দিই</button>
       </div>
     </div>
   );
