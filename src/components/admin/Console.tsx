@@ -12,7 +12,8 @@ const sectionOf = (path: string): Section => { const seg = path.split('/')[2] ||
 const DATA_KEYS: (keyof AdminData)[] = ['roles', 'staff', 'courses', 'batches', 'teachers', 'students', 'coupons', 'refunds', 'certs', 'ann', 'activity', 'settings', 'viewAs', 'navMini'];
 
 const Ctx = createContext<{ vals: ConsoleVals; logic: AdminConsole; setState: SetState; st: ConsoleState } | null>(null);
-const useConsole = () => { const v = useContext(Ctx); if (!v) throw new Error('inside AdminShell only'); return v; };
+/** Console state and logic for anything rendered inside AdminShell (sections, queues). */
+export const useConsole = () => { const v = useContext(Ctx); if (!v) throw new Error('inside AdminShell only'); return v; };
 
 /** Stroke icon from the console's path set. */
 export function Svg({ d, size = 16, w = 1.9 }: { d: string; size?: number; w?: number }) {
