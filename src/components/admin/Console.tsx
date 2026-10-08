@@ -27,9 +27,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [st, setSt] = useState<ConsoleState | null>(null);
   const srRef = useRef<HTMLInputElement>(null);
+  const sec = sectionOf(path);
+  const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
 
   // Console data lives in the store (persisted); view state stays here.
-  useEffect(() => { if (ready && !st) setSt({ ...(s.admin || adminSeed()), ...initialUi }); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready && !st) setSt({ ...(s.admin || adminSeed()), ...initialUi, filter: defaultFilter(sec) }); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Section changes from outside the console (URL, dev bar, back button) start with fresh view state;
+  // console navigation (go) has already set its own selection/filter.
+  const consoleNav = useRef(false);
+  const lastSec = useRef<Section | null>(null);
+  useEffect(() => {
+    if (!st) return;
+    if (lastSec.current && lastSec.current !== sec && !consoleNav.current)
+      setSt((c) => (c ? { ...c, sel: null, filter: defaultFilter(sec), q: '', form: null, draft: null, viewOpen: false, rtab: 'roles' } : c));
+    consoleNav.current = false;
+    lastSec.current = sec;
+  }, [sec, !!st]); // eslint-disable-line react-hooks/exhaustive-deps
   const dataDeps = DATA_KEYS.map((k) => st?.[k]);
   useEffect(() => {
     if (!st) return;
@@ -66,10 +80,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
   if (!ready || !st) return <div className="adm-root" />;
 
   const env = {
-    sec: sectionOf(path), numerals, theme, today: new Date(),
+    sec, numerals, theme, today: new Date(),
     payCount: allQueue(s).filter((r) => r.status === 'pending').length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
-    navigate: (k: Section) => router.push(k === 'overview' ? '/admin' : '/admin/' + k),
+    navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
     toggleTheme: () => set((x) => ({ ...x, prefs: { ...x.prefs, theme: theme === 'dark' ? 'light' : 'dark' } })),
   };
   const logic = new AdminConsole(st, setState, env);
