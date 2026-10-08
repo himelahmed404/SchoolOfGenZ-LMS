@@ -12,7 +12,7 @@ import { useStore } from '@/lib/store';
 const BOX: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 24px 32px', borderRadius: 20, background: 'var(--surface)', textAlign: 'center' };
 
 export default function PendingPage() {
-  const { s, set, numerals } = useStore();
+  const { s, set } = useStore();
   const router = useRouter();
   const p = s.payment;
 
@@ -57,9 +57,9 @@ export default function PendingPage() {
       <h2 className="sec-h" style={{ margin: '36px 0 12px' }}>যা জমা দিয়েছ</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 20, overflow: 'hidden' }}>
         <Row k="Course" v={newCourse.title} />
-        <Row k="Method" v={(p.method || '') + ' · ' + taka(newCourse.price, numerals)} />
+        <Row k="Method" v={(p.method || '') + ' · ' + taka(newCourse.price)} />
         <Row k="TrxID" v={p.trxId || '—'} mono />
-        <Row k="নম্বর" v={p.sender || defaultStudent.phone} mono />
+        <Row k="Sent from" v={p.sender || defaultStudent.phone} mono />
       </div>
     </Shell>
   );

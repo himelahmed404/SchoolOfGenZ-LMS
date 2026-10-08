@@ -3,28 +3,29 @@
 import Link from 'next/link';
 import { Shell } from '@/components/Shell';
 import { newCourse, newCourseOutcomes } from '@/lib/data';
-import { taka } from '@/lib/format';
+import { plural, taka } from '@/lib/format';
+import { batchLabel } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function EnrollPage() {
-  const { s, numerals } = useStore();
+  const { s } = useStore();
   const submitted = s.payment.status !== 'none';
 
   return (
     <Shell role="student" title="Enroll" back="/">
       <div className="mono tile" style={{ height: 'var(--cover-h)', background: 'var(--surface-sunk)', border: '1px solid var(--line)', borderRadius: 20, fontSize: 11, color: 'var(--ink-2)', marginBottom: 20 }}>course cover</div>
-      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{newCourse.kicker}</div>
+      <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Skill course · {batchLabel(newCourse.batchNo)}</div>
       <h1 className="d1" style={{ margin: '2px 0 10px' }}>{newCourse.title}</h1>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13, color: 'var(--ink-2)', marginBottom: 28 }}>
         <span>{newCourse.instructor}</span>
         <span style={{ color: 'var(--ink-3)' }}>·</span>
-        <span>{newCourse.meta}</span>
+        <span>{plural(newCourse.lessons, 'lesson')} · {plural(newCourse.weeks, 'week')} · {newCourse.livePerWeek} live {newCourse.livePerWeek === 1 ? 'class' : 'classes'} a week</span>
       </div>
       <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>Course Fee</div>
-          <div style={{ fontSize: 'var(--d2)', fontWeight: 600, lineHeight: 1.35 }}>{taka(newCourse.price, numerals)}</div>
-          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>একবারই · Lifetime Access</div>
+          <div style={{ fontSize: 'var(--d2)', fontWeight: 600, lineHeight: 1.35 }}>{taka(newCourse.price)}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>One-time · Lifetime access</div>
         </div>
         <Link href={submitted ? '/enroll/pending' : '/enroll/pay'} className="btn btn-primary" style={{ marginLeft: 'auto', padding: '0 24px', fontWeight: 500 }}>
           {submitted ? 'Status' : 'Enroll'}

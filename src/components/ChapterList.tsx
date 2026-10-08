@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { courses } from '@/lib/data';
-import { secs } from '@/lib/format';
+import { pad2, secs } from '@/lib/format';
 import { isDone, isLocked } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function ChapterList({ courseId, open, onToggle, current, variant, onOpenLesson }: Props) {
-  const { s, n } = useStore();
+  const { s } = useStore();
   const router = useRouter();
   const course = courses[courseId];
   const big = variant === 'course';
@@ -56,7 +56,7 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
                   style={{ ['--row-bg' as string]: cur ? 'var(--brand-soft)' : 'transparent', minHeight: big || variant === 'sheet' ? (big ? 48 : 44) : 40 }}>
                   <Icon name={icon} fill={done || cur} style={{ color: iconColor }} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: variant === 'spine' ? 13 : 15, lineHeight: 1.45, color: lock ? 'var(--ink-3)' : 'var(--ink)', fontWeight: cur ? 600 : 400 }}>{l.t}</span>
-                  <span style={{ flexShrink: 0, fontSize: 12, color: 'var(--ink-3)' }}>{n(l.d)}</span>
+                  <span style={{ flexShrink: 0, fontSize: 12, color: 'var(--ink-3)' }}>{l.d}</span>
                 </button>
               );
             })}
@@ -68,14 +68,14 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
             <div key={ci} className="card" style={{ borderColor: isOpen ? 'var(--line-strong)' : 'var(--line)', overflow: 'hidden' }}>
               <button onClick={() => onToggle(ci)} aria-expanded={isOpen}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', border: 'none', background: 'transparent', textAlign: 'left', whiteSpace: 'normal' }}>
-                <span className="tile disp" style={{ width: 44, height: 44, borderRadius: 14, background: badgeBg, color: badgeFg, fontSize: 17, fontWeight: 800 }}>{ch.n}</span>
+                <span className="tile disp" style={{ width: 44, height: 44, borderRadius: 14, background: badgeBg, color: badgeFg, fontSize: 17, fontWeight: 800 }}>{pad2(ci + 1)}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{ch.name}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
                     <span style={{ flex: 1, maxWidth: 140, height: 6, borderRadius: 999, background: 'var(--surface-sunk)' }}>
                       <span style={{ display: 'block', height: 6, borderRadius: 999, width: Math.round((doneN / total) * 100) + '%', background: full ? 'var(--ok)' : 'var(--brand)' }} />
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{n(doneN)}/{n(total)} লেসন · {n(mins)} মিনিট</span>
+                    <span style={{ fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{doneN}/{total} lessons · {mins} min</span>
                   </span>
                 </span>
                 <Icon name={isOpen ? 'expand_less' : 'expand_more'} size={24} style={{ color: 'var(--ink-3)' }} />
@@ -88,7 +88,7 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
         return (
           <div key={ci} style={{ marginBottom: 2 }}>
             <button className="ch-head" onClick={() => onToggle(ci)} aria-expanded={isOpen}>
-              <span className="tile disp" style={{ width: 30, height: 30, borderRadius: 10, background: badgeBg, color: badgeFg, fontSize: 13, fontWeight: 800 }}>{ch.n}</span>
+              <span className="tile disp" style={{ width: 30, height: 30, borderRadius: 10, background: badgeBg, color: badgeFg, fontSize: 13, fontWeight: 800 }}>{pad2(ci + 1)}</span>
               <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: 1.4, fontWeight: 600, color: full || part ? 'var(--ink)' : 'var(--ink-2)' }}>{ch.name}</span>
               <Icon name={isOpen ? 'expand_less' : 'expand_more'} size={20} style={{ color: 'var(--ink-3)' }} />
             </button>

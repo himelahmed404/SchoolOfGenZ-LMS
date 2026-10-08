@@ -10,8 +10,8 @@ import { Sheet, Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
 import { askDoubt, completeLesson, savePosition, setMyNote, toggleBookmark } from '@/lib/actions';
 import { confusions, courses, defaultStudent } from '@/lib/data';
-import { mmss, pad2, secs } from '@/lib/format';
-import { doubtsFor, isLocked, lessonKey, step, studentLesson, watermarkOn } from '@/lib/selectors';
+import { ago, mmss, pad2, plural, secs } from '@/lib/format';
+import { doubtsFor, isLocked, lessonKey, lessonRef, step, studentLesson, watermarkOn } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -47,7 +47,7 @@ export default function LessonPage() {
 function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   const query = useSearchParams();
   const router = useRouter();
-  const { s, set, n, showToast } = useStore();
+  const { s, set, showToast } = useStore();
 
   const course = courses[cid];
   const lessonMeta = course.chapters[ci].lessons[li];
@@ -168,14 +168,14 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
               <div style={{ position: 'absolute', top: '50%', left: pct + '%', width: 16, height: 16, margin: '-8px 0 0 -8px', borderRadius: 999, background: 'var(--surface)', border: '3px solid var(--brand)' }} />
             </div>
           </div>
-          <span className="mono" style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--ink-2)' }}>{n(mmss(t))} / {n(mmss(dur))}</span>
+          <span className="mono" style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--ink-2)' }}>{mmss(t)} / {mmss(dur)}</span>
           <button className="ctl mono" style={{ fontSize: 12 }} onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed}x</button>
           <button className="ctl mono" style={{ fontSize: 12 }} onClick={() => setQuality(QUALITIES[(QUALITIES.indexOf(quality) + 1) % QUALITIES.length])}>{quality}</button>
           <button className="ctl" style={{ width: 32, padding: 0 }} aria-label="Fullscreen"><Icon name="fullscreen" size={20} /></button>
         </div>
       </div>
 
-      <div style={{ marginTop: 22, fontSize: 13, fontWeight: 700, color: 'var(--brand)' }}>অধ্যায় {course.chapters[ci].n} · লেসন {lessonMeta.n}</div>
+      <div style={{ marginTop: 22, fontSize: 13, fontWeight: 700, color: 'var(--brand)' }}>{lessonRef(ci, li)}</div>
       <h1 className="disp" style={{ margin: '2px 0 18px', fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 800 }}>{content.title}</h1>
 
       <div data-print="hide" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -200,7 +200,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="lock" size={16} />শুধু তুমি দেখতে পাবে · অটো-সেভ হয়</div>
           <textarea className="ruled" value={note} onChange={(e) => set((x) => setMyNote(x, lk, e.target.value))} placeholder="এই লেসনে যা মনে রাখতে চাও লিখে রাখো…" aria-label="আমার নোট" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{words ? n(words) + ' শব্দ · সেভ হয়েছে' : 'এখনো কিছু লেখোনি'}</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{words ? plural(words, 'word') + ' · saved' : 'এখনো কিছু লেখোনি'}</span>
             <Link href="/profile" className="btn btn-sm" style={{ marginLeft: 'auto' }}><Icon name="bookmarks" size={18} />সব নোট দেখো</Link>
           </div>
         </div>
@@ -243,7 +243,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
         content.quiz.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-2)' }}>অনুশীলন · {n(Object.keys(answers).length)}/{n(content.quiz.length)} উত্তর দেওয়া</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-2)' }}>Practice · {Object.keys(answers).length}/{content.quiz.length} answered</div>
               <button className="btn btn-sm" style={{ marginLeft: 'auto', height: 34 }} onClick={() => set((x) => ({ ...x, practiceAns: { ...x.practiceAns, [lk]: {} } }))}>
                 <Icon name="restart_alt" size={18} />আবার
               </button>
@@ -254,7 +254,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
               return (
                 <div key={qi} className="card" style={{ padding: 'var(--card-pad)' }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
-                    <span className="tile" style={{ minWidth: 34, height: 28, padding: '0 8px', borderRadius: 999, background: 'var(--surface-sunk)', color: 'var(--ink-2)', fontSize: 13, fontWeight: 700 }}>{n(pad2(qi + 1))}</span>
+                    <span className="tile" style={{ minWidth: 34, height: 28, padding: '0 8px', borderRadius: 999, background: 'var(--surface-sunk)', color: 'var(--ink-2)', fontSize: 13, fontWeight: 700 }}>{pad2(qi + 1)}</span>
                     <span style={{ fontSize: 16, lineHeight: 1.7, fontWeight: 600 }}>{q.stem}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -299,12 +299,12 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span className="tile" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--accent-2-soft)', color: 'var(--accent-2)', fontSize: 13, fontWeight: 700 }}>{initial(d.mine ? 'তুমি' : d.who)}</span>
                   <span style={{ fontSize: 14, fontWeight: 600 }}>{who}</span>
-                  <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{n(d.ago)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ago(d.agoMin)}</span>
                 </div>
                 <div style={{ fontSize: 15, lineHeight: 1.7 }}>{d.q}</div>
                 {d.reply ? (
                   <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 14, background: 'var(--brand-soft)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 13, fontWeight: 700, color: 'var(--brand)' }}><Icon name="verified" size={18} fill />{d.by} · ইন্সট্রাক্টর</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 13, fontWeight: 700, color: 'var(--brand)' }}><Icon name="verified" size={18} fill />{d.by} · Instructor</div>
                     <div style={{ fontSize: 15, lineHeight: 1.7 }}>{d.reply}</div>
                   </div>
                 ) : d.mine ? (

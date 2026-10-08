@@ -17,7 +17,7 @@ export function Penguin({ size, label = 'penguin', style }: { size: number; labe
 
 /** Lesson-complete toast (2s, +10 points) and the full-screen course-complete penguin. */
 export function Celebrations() {
-  const { s, n, toast, showToast } = useStore();
+  const { s, toast, showToast } = useStore();
   if (toast === 'small') {
     return (
       <div data-print="hide" role="status"
@@ -25,7 +25,7 @@ export function Celebrations() {
         <Penguin size={40} label="png" style={{ borderColor: '#131A33', fontSize: 8 }} />
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
           <span style={{ fontSize: 15, fontWeight: 700 }}>Lesson Complete</span>
-          <span style={{ fontSize: 12, color: '#FFE45C', fontWeight: 600 }}>+{n(10)} পয়েন্ট</span>
+          <span style={{ fontSize: 12, color: '#FFE45C', fontWeight: 600 }}>+10 points</span>
         </div>
       </div>
     );
@@ -37,7 +37,7 @@ export function Celebrations() {
         style={{ zIndex: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, background: 'repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px), var(--paper)', animation: 'pgn 260ms var(--ease)' }}>
         <Penguin size={148} />
         <div className="disp" style={{ fontSize: 34, lineHeight: 1.2, fontWeight: 800, textAlign: 'center' }}><span className="hl">Course Complete!</span></div>
-        <div style={{ fontSize: 15, color: 'var(--ink-2)', textAlign: 'center' }}>{courses.cst.title} · {n(c.total)}টি লেসনই সম্পন্ন</div>
+        <div style={{ fontSize: 15, color: 'var(--ink-2)', textAlign: 'center' }}>{courses.cst.title} · all {c.total} lessons done</div>
         <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
           <Link href="/certificate" className="btn btn-primary" style={{ height: 48 }} onClick={() => showToast(null)}><Icon name="workspace_premium" size={20} />View Certificate</Link>
           <button className="btn" style={{ height: 48, fontSize: 15 }} onClick={() => showToast(null)}>পরে</button>

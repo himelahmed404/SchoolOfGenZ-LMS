@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
 import { teacher, teacherStats as T } from '@/lib/data';
-import { taka } from '@/lib/format';
+import { plural, taka } from '@/lib/format';
 import { useStore } from '@/lib/store';
 
 export default function TeacherProfilePage() {
-  const { s, n, numerals } = useStore();
+  const { s } = useStore();
   const p = s.tProfile;
 
   return (
@@ -32,18 +32,18 @@ export default function TeacherProfilePage() {
             <h2 className="sec-h" style={{ fontSize: 18 }}>Rating</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span className="disp" style={{ fontSize: 52, lineHeight: 1, fontWeight: 800 }}>{n(T.rating)}</span>
+                <span className="disp" style={{ fontSize: 52, lineHeight: 1, fontWeight: 800 }}>{T.rating}</span>
                 <span style={{ display: 'flex', color: '#E0A100' }} aria-label={T.rating + ' / 5'}>
                   {['star', 'star', 'star', 'star', 'star_half'].map((st, i) => <Icon key={i} name={st} size={18} fill />)}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{n(T.reviews)} reviews</span>
+                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{T.reviews} reviews</span>
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {T.stars.map(([star, pct]) => (
                   <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--ink-2)' }}>
-                    <span style={{ width: 12 }}>{n(star)}</span>
+                    <span style={{ width: 12 }}>{star}</span>
                     <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'var(--surface-sunk)' }}><div style={{ height: 8, borderRadius: 999, width: pct + '%', background: 'var(--sun)' }} /></div>
-                    <span style={{ width: 28, textAlign: 'right' }}>{n(pct)}%</span>
+                    <span style={{ width: 28, textAlign: 'right' }}>{pct}%</span>
                   </div>
                 ))}
               </div>
@@ -58,13 +58,13 @@ export default function TeacherProfilePage() {
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>এই মাসের আয়</span>
-              <span className="disp" style={{ fontSize: 34, lineHeight: 1.1, fontWeight: 800 }}>{taka(T.earned, numerals)}</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Earned this month</span>
+              <span className="disp" style={{ fontSize: 34, lineHeight: 1.1, fontWeight: 800 }}>{taka(T.earned)}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ padding: 12, borderRadius: 14, background: 'var(--warn-soft)', color: 'var(--warn)' }}>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Pending</div>
-                <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{taka(T.pending, numerals)}</div>
+                <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{taka(T.pending)}</div>
               </div>
               <div style={{ padding: 12, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--brand)' }}>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Next payout</div>
@@ -82,9 +82,9 @@ export default function TeacherProfilePage() {
                 <span className="tile disp" style={{ width: 48, height: 48, borderRadius: 14, background: c.bg, color: '#FFFFFF', fontSize: 15, fontWeight: 800 }}>{c.code}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{c.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{c.batch} · {n(c.students)} শিক্ষার্থী</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{c.batch} · {plural(c.students, 'student')}</div>
                 </div>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700 }}><Icon name="star" size={16} fill style={{ color: '#E0A100' }} />{n(c.rating)}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700 }}><Icon name="star" size={16} fill style={{ color: '#E0A100' }} />{c.rating}</span>
               </div>
             ))}
           </div>
@@ -100,7 +100,7 @@ export default function TeacherProfilePage() {
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{month}</div>
                   <div className="mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>{trx}</div>
                 </div>
-                <span className="disp" style={{ fontSize: 17, fontWeight: 800 }}>{taka(amount, numerals)}</span>
+                <span className="disp" style={{ fontSize: 17, fontWeight: 800 }}>{taka(amount)}</span>
                 <span style={{ padding: '2px 10px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)', fontSize: 12, fontWeight: 700 }}>Paid</span>
               </div>
             ))}

@@ -5,20 +5,23 @@ import { useState } from 'react';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { courses, teacher } from '@/lib/data';
+import { ago } from '@/lib/format';
 import { doubtsFor, editorHref } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function DoubtsPage() {
-  const { s, set, n } = useStore();
+  const { s, set } = useStore();
   const router = useRouter();
   const [tab, setTab] = useState<'open' | 'done'>('open');
   const [openId, setOpenId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const doubts = doubtsFor(s, teacher.batch);
-  const openL = doubts.filter((d) => !d.reply).sort((a, b) => b.h - a.h);
-  const doneL = doubts.filter((d) => !!d.reply).sort((a, b) => a.h - b.h);
-  const lateN = openL.filter((d) => d.h >= 24).length;
+  // Open questions: longest-waiting first. A question is late after 24 hours.
+  const isLate = (min: number) => min >= 24 * 60;
+  const openL = doubts.filter((d) => !d.reply).sort((a, b) => b.agoMin - a.agoMin);
+  const doneL = doubts.filter((d) => !!d.reply).sort((a, b) => a.agoMin - b.agoMin);
+  const lateN = openL.filter((d) => isLate(d.agoMin)).length;
   const list = tab === 'open' ? openL : doneL;
 
   const send = (id: string) => {
@@ -34,23 +37,23 @@ export default function DoubtsPage() {
       <div className="strip">
         <span className="mono t13 ink2">{teacher.batch}</span>
         <span className="t13 ink3">·</span>
-        <span className="t13 ink3">উত্তর দেওয়ার সময় ২৪ ঘণ্টা</span>
+        <span className="t13 ink3">Reply within 24 h</span>
         <span className="ml-auto t13 w500 nowrap" style={{ color: lateN ? 'var(--margin)' : 'var(--ink-2)' }}>
-          {lateN ? n(lateN) + 'টি ' + n(24) + ' ঘণ্টা পেরিয়েছে' : openL.length ? 'সব সময়ের মধ্যে' : 'কোনো প্রশ্ন বাকি নেই'}
+          {lateN ? lateN + ' past 24 h' : openL.length ? 'All on time' : 'Nothing waiting'}
         </span>
       </div>
       <h1 className="d1" style={{ marginBottom: 16 }}>Student Doubts</h1>
       <div className="seg" role="tablist" style={{ display: 'inline-flex', marginBottom: 20 }}>
-        {([['উত্তর বাকি', 'open', openL.length], ['উত্তর দেওয়া', 'done', doneL.length]] as const).map(([label, id, count]) => (
+        {([['Open', 'open', openL.length], ['Answered', 'done', doneL.length]] as const).map(([label, id, count]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setOpenId(null); }}
-            style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {n(count)}</button>
+            style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {count}</button>
         ))}
       </div>
 
       {list.length ? (
         <div className="stack">
           {list.map((d) => {
-            const late = !d.reply && d.h >= 24, open = openId === d.id, draft = drafts[d.id] || '';
+            const late = !d.reply && isLate(d.agoMin), open = openId === d.id, draft = drafts[d.id] || '';
             const where = courses[d.course].chapters[d.ch].lessons[d.li].t;
             return (
               <div key={d.id}>
@@ -61,13 +64,13 @@ export default function DoubtsPage() {
                     <span className="t12 ink3" style={{ display: 'block' }}>{d.who} · {where}</span>
                     <span className="t15 w500" style={{ display: 'block', lineHeight: 1.7 }}>{d.q}</span>
                   </span>
-                  <span className="t12 nowrap" style={{ flexShrink: 0, lineHeight: 1.7, color: late ? 'var(--margin)' : 'var(--ink-3)' }}>{n(d.ago)}</span>
+                  <span className="t12 nowrap" style={{ flexShrink: 0, lineHeight: 1.7, color: late ? 'var(--margin)' : 'var(--ink-3)' }}>{ago(d.agoMin)}</span>
                 </button>
                 {open ? (
                   <div style={{ padding: '0 16px 16px 31px' }}>
                     {d.reply ? (
                       <div style={{ paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-                        <div className="t13 ink3" style={{ marginBottom: 4 }}>{d.by} · {n(d.replyAgo || '')}</div>
+                        <div className="t13 ink3" style={{ marginBottom: 4 }}>{d.by} · {ago(d.replyAgoMin ?? 0)}</div>
                         <div className="t15" style={{ lineHeight: 1.8 }}>{d.reply}</div>
                       </div>
                     ) : (

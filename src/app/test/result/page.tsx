@@ -10,7 +10,7 @@ import { mmss, pad2 } from '@/lib/format';
 import { useStore } from '@/lib/store';
 
 export default function ResultPage() {
-  const { s, n } = useStore();
+  const { s } = useStore();
   const [wrongOnly, setWrongOnly] = useState(false);
 
   if (s.test.score === null) {
@@ -37,10 +37,10 @@ export default function ResultPage() {
           <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{testMeta.name} · Result</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{n(s.test.score)}</span>
-              <span className="disp" style={{ fontSize: 28, fontWeight: 700, opacity: 0.85 }}>/ {n(testQs.length)}</span>
+              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{s.test.score}</span>
+              <span className="disp" style={{ fontSize: 28, fontWeight: 700, opacity: 0.85 }}>/ {testQs.length}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><Icon name="timer" size={18} />সময় নিয়েছ {n(mmss(s.test.elapsed))}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><Icon name="timer" size={18} />Time taken {mmss(s.test.elapsed)}</div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn" aria-pressed={wrongOnly} onClick={() => setWrongOnly(!wrongOnly)}
@@ -61,7 +61,7 @@ export default function ResultPage() {
                 <span className="tile" style={{ width: 36, height: 36, borderRadius: 999, background: soft, color: accent }}><Icon name={r.ok ? 'check' : 'close'} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, fontSize: 12, fontWeight: 700 }}>
-                    <span style={{ color: 'var(--ink-3)' }}>প্রশ্ন {n(pad2(r.i + 1))}</span>
+                    <span style={{ color: 'var(--ink-3)' }}>Question {pad2(r.i + 1)}</span>
                     <span style={{ color: accent }}>{r.ok ? 'ঠিক' : 'ভুল'}</span>
                   </div>
                   <div style={{ fontSize: 15, lineHeight: 1.6, fontWeight: 600, marginBottom: 10 }}>{r.stem}</div>

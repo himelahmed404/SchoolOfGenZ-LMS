@@ -71,7 +71,7 @@ export const initialState: AppState = {
   notifs: { read: { s4: true, s5: true, t3: true }, gone: {} },
   bookmarks: { 'cst:2:4': true, 'cst:1:1': true },
   myNotes: { 'cst:2:4': 'push আর pop দুটোই O(1) — পরীক্ষায় প্রায়ই আসে!' },
-  profile: { email: 'mahmud.cst@gmail.com', inst: 'ঢাকা পলিটেকনিক ইনস্টিটিউট' },
+  profile: { email: 'mahmud.cst@gmail.com', inst: 'Dhaka Polytechnic Institute' },
   tProfile: {
     email: 'shahriar@schoolofgenz.com',
     bio: '১০ বছর ধরে ডিপ্লোমা শিক্ষার্থীদের প্রোগ্রামিং পড়াচ্ছি। কঠিন জিনিস সহজ উদাহরণে বোঝাতে ভালোবাসি।',

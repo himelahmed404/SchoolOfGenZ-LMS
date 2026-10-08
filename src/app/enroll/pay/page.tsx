@@ -14,12 +14,12 @@ import type { PayMethod } from '@/lib/types';
 const METHOD_TILE: Record<PayMethod, [string, string]> = { bKash: ['#E2136E', 'b'], Nagad: ['#F26522', 'N'] };
 
 export default function PayPage() {
-  const { s, set, n, numerals } = useStore();
+  const { s, set, n } = useStore();
   const router = useRouter();
   const [error, setError] = useState('');
   const p = s.payment;
   const merchants = merchantNumbers(s);
-  const price = taka(newCourse.price, numerals);
+  const price = taka(newCourse.price);
   const canSubmit = !!p.method && p.trxId.trim().length >= 6;
   const setPay = (patch: Partial<typeof p>) => set((x) => ({ ...x, payment: { ...x.payment, ...patch } }));
 

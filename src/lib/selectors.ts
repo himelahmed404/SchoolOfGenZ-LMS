@@ -2,13 +2,39 @@ import {
   batches, boardExam, courses, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
   merchants, newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
-import { digits, pad2, taka, type Numerals } from './format';
+import { dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
 import type { AppState } from './state';
-import type { Block, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
+import type { Block, Course, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
 
 export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
 export const examISO = (s: AppState) => s.prefs.examDate || suggestedExam(s.prefs.sem);
+
+/* ---------- course facts (English) ---------- */
+
+export const lessonCount = (c: Course) => c.chapters.reduce((a, ch) => a + ch.lessons.length, 0);
+export const batchLabel = (n: number) => 'Batch ' + pad2(n);
+
+/** Line above a course title: "CST · 4th Semester", or "Skill course". */
+export const courseKicker = (c: Course) => (c.track === 'batch' && c.sem ? c.code + ' · ' + semLabel(c.sem) : 'Skill course');
+
+/** Details line: "4th Semester · Batch 01 · 1 Aug – 28 Dec 2026", or "18 lessons · 8 weeks · Lifetime access". */
+export function courseMeta(c: Course): string {
+  const parts: string[] = [];
+  if (c.track === 'batch') {
+    if (c.sem) parts.push(semLabel(c.sem));
+    if (c.batchNo) parts.push(batchLabel(c.batchNo));
+    if (c.start && c.end) parts.push(dateRangeEn(c.start, c.end));
+  } else {
+    parts.push(plural(lessonCount(c), 'lesson'));
+    if (c.weeks) parts.push(plural(c.weeks, 'week'));
+    if (c.access === 'lifetime') parts.push('Lifetime access');
+  }
+  return parts.join(' · ');
+}
+
+/** "Chapter 03 · Lesson 05" from zero-based positions. */
+export const lessonRef = (ci: number, li: number) => 'Chapter ' + pad2(ci + 1) + ' · Lesson ' + pad2(li + 1);
 
 /* ---------- progress ---------- */
 
@@ -104,7 +130,7 @@ export function boardRows(s: AppState, weekly: boolean): BoardRow[] {
     return { name: r.name, rank: 0, pts: weekly ? ((h >> 5) % 9) * 10 + ((h >> 2) % 6) * 5 : n * 10 + right * 5 };
   });
   rows.forEach((r) => { r.rank = 1 + rows.filter((x) => x.pts > r.pts).length; });
-  return rows.sort((a, b) => a.rank - b.rank || (a.live ? -1 : b.live ? 1 : a.name.localeCompare(b.name, 'bn')));
+  return rows.sort((a, b) => a.rank - b.rank || (a.live ? -1 : b.live ? 1 : a.name.localeCompare(b.name)));
 }
 
 /* ---------- doubts ---------- */
@@ -112,9 +138,9 @@ export function boardRows(s: AppState, weekly: boolean): BoardRow[] {
 export function doubtsFor(s: AppState, bid: string): Doubt[] {
   const withReply = (d: Doubt): Doubt => {
     const r = s.replies[d.id];
-    return r ? { ...d, reply: r.text, by: r.by, replyAgo: 'এইমাত্র' } : d;
+    return r ? { ...d, reply: r.text, by: r.by, replyAgoMin: 0 } : d;
   };
-  const mine = s.myDoubts.filter((d) => d.batch === bid).map((d) => withReply({ ...d, who: studentName(s), h: 0, ago: 'এইমাত্র', mine: true }));
+  const mine = s.myDoubts.filter((d) => d.batch === bid).map((d) => withReply({ ...d, who: studentName(s), agoMin: 0, mine: true }));
   return mine.concat(doubtSeed.filter((d) => d.batch === bid).map(withReply));
 }
 
@@ -205,7 +231,7 @@ export function liveRow(s: AppState): Payment {
     id: 'live', live: true, name: studentName(s), phone: defaultStudent.phone,
     course: newCourse.title, batch: newCourse.batch, method: p.method || 'bKash',
     amount: newCourse.price, due: newCourse.price, trx: p.trxId || '—',
-    sender: p.sender || defaultStudent.phone, at: 'এইমাত্র',
+    sender: p.sender || defaultStudent.phone, agoMin: 0,
     status: p.status === 'none' ? 'pending' : p.status, rejectReason: p.reason,
   };
 }
@@ -220,9 +246,9 @@ export function allQueue(s: AppState): Payment[] {
   return out;
 }
 
-export function rowFlags(r: Payment, numerals: Numerals): string[] {
+export function rowFlags(r: Payment): string[] {
   const f: string[] = [];
-  if (r.amount < r.due) f.push('টাকা কম — ' + taka(r.due - r.amount, numerals) + ' বাকি আছে');
+  if (r.amount < r.due) f.push('টাকা কম — ' + taka(r.due - r.amount) + ' বাকি আছে');
   if (r.dup) f.push('এই TrxID আগেও একবার জমা পড়েছে');
   if (r.sender !== r.phone) f.push('অন্য নম্বর থেকে পেমেন্ট এসেছে');
   return f;

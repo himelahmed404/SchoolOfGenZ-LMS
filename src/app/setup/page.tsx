@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { semNames } from '@/lib/data';
-import { dateLabel, daysTo } from '@/lib/format';
+import { SEMESTERS } from '@/lib/data';
+import { dateEn, daysTo, ordinalEn, plural, semLabel } from '@/lib/format';
 import { examISO } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 const LABEL: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', margin: '28px 0 8px' };
 
 export default function SetupPage() {
-  const { s, set, n, numerals, ready } = useStore();
+  const { s, set, numerals, ready } = useStore();
   const router = useRouter();
   if (!ready) return null;
 
@@ -38,20 +38,20 @@ export default function SetupPage() {
 
         <div style={LABEL}>কোন সেমিস্টার</div>
         <div role="radiogroup" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {semNames.map((label, i) => (
-            <button key={label} role="radio" aria-checked={p.sem === i + 1} className="pick"
+          {SEMESTERS.map((sem) => (
+            <button key={sem} role="radio" aria-checked={p.sem === sem} className="pick"
               style={{ minWidth: 56, height: 44, padding: '0 14px', fontSize: 15 }}
-              onClick={() => setPrefs({ sem: i + 1, examDate: null })}>{label}</button>
+              onClick={() => setPrefs({ sem, examDate: null })}>{ordinalEn(sem)}</button>
           ))}
         </div>
 
         <div style={LABEL}>পরীক্ষা কবে</div>
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 17, fontWeight: 600 }}>{dateLabel(iso, numerals)}</span>
-            <span style={{ fontSize: 13, color: 'var(--ink-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{days > 0 ? n(days) + ' দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
+            <span style={{ fontSize: 17, fontWeight: 600 }}>{dateEn(iso)}</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{days > 0 ? plural(days, 'day') + ' left' : days === 0 ? 'Exam today' : 'Exam over'}</span>
           </div>
-          <div className="fine" style={{ marginTop: 4 }}>{p.examDate ? 'তুমি নিজে দিয়েছ' : 'বোর্ড ক্যালেন্ডার অনুযায়ী — ' + semNames[p.sem - 1] + ' সেমিস্টার'}</div>
+          <div className="fine" style={{ marginTop: 4 }}>{p.examDate ? 'তুমি নিজে দিয়েছ' : 'বোর্ড ক্যালেন্ডার অনুযায়ী — ' + semLabel(p.sem)}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
             <label htmlFor="exam" style={{ fontSize: 13, color: 'var(--ink-2)' }}>তারিখ ঠিক না?</label>
             <input id="exam" type="date" value={iso} onChange={(e) => { if (e.target.value) setPrefs({ examDate: e.target.value }); }} className="mono"
@@ -63,14 +63,14 @@ export default function SetupPage() {
           </div>
         </div>
 
-        <div style={LABEL}>সংখ্যা কোন লেখায় দেখতে চাও</div>
+        <div style={LABEL}>বাংলা লেখার ভেতরে সংখ্যা কেমন দেখতে চাও</div>
         <div role="radiogroup" style={{ display: 'flex', gap: 8 }}>
-          {([['bn', '১২:৩০', 'বাংলা সংখ্যা'], ['latin', '12:30', 'ইংরেজি সংখ্যা']] as const).map(([id, sample, label]) => {
+          {([['bn', '৩টা লেসন বাকি', 'বাংলা সংখ্যা'], ['latin', '3টা লেসন বাকি', 'ইংরেজি সংখ্যা']] as const).map(([id, sample, label]) => {
             const on = numerals === id;
             return (
               <button key={id} role="radio" aria-checked={on} onClick={() => setPrefs({ numerals: id })}
                 style={{ flex: 1, minHeight: 56, padding: '8px 16px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 999, background: on ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left' }}>
-                <span className="mono" style={{ display: 'block', fontSize: 17, fontWeight: 500, color: on ? 'var(--brand)' : 'var(--ink)' }}>{sample}</span>
+                <span style={{ display: 'block', fontSize: 17, fontWeight: 500, color: on ? 'var(--brand)' : 'var(--ink)' }}>{sample}</span>
                 <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{label}</span>
               </button>
             );

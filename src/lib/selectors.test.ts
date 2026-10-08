@@ -1,13 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { defaultStudent, queueSeed } from './data';
+import { courses, defaultStudent, queueSeed } from './data';
 import {
-  allQueue, boardRows, counts, doneChapters, doubtsFor, frontier, isDone, isLocked, issues, item, itemKeys, monthCells,
-  roster, rowFlags, satIndex, statusOf, step, studentLesson, studentName, unreadCount, weekDots,
+  allQueue, batchLabel, boardRows, counts, courseKicker, courseMeta, doneChapters, doubtsFor, frontier, isDone, isLocked, issues, item,
+  itemKeys, lessonCount, lessonRef, monthCells, roster, rowFlags, satIndex, statusOf, step, studentLesson, studentName, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
 const s0 = initialState;
 const withState = (p: Partial<AppState>): AppState => ({ ...s0, ...p });
+
+describe('course facts', () => {
+  it('describes a batch course by semester, batch and dates', () => {
+    expect(courseKicker(courses.cst)).toBe('CST · 4th Semester');
+    expect(courseMeta(courses.cst)).toBe('4th Semester · Batch 01 · 1 Aug – 28 Dec 2026');
+  });
+
+  it('describes a skill course by size and access', () => {
+    expect(courseKicker(courses.eng)).toBe('Skill course');
+    expect(lessonCount(courses.eng)).toBe(18);
+    expect(courseMeta(courses.eng)).toBe('18 lessons · 8 weeks · Lifetime access');
+  });
+
+  it('numbers chapters and lessons from their position', () => {
+    expect(lessonRef(2, 4)).toBe('Chapter 03 · Lesson 05');
+    expect(batchLabel(3)).toBe('Batch 03');
+  });
+
+  it('keeps facts free of Bangla digits', () => {
+    const facts = [courseKicker(courses.cst), courseMeta(courses.cst), courseMeta(courses.eng), courses.cst.instructor, courses.eng.instructor];
+    facts.forEach((f) => expect(f).not.toMatch(/[\u0980-\u09FF]/));
+  });
+});
 
 describe('progress', () => {
   it('counts seeded lessons as done', () => {
@@ -79,7 +102,7 @@ describe('roster and leaderboard', () => {
 describe('doubts', () => {
   it('lists the batch seed doubts and puts the student\'s own first', () => {
     expect(doubtsFor(s0, 'CST-04-B01')).toHaveLength(6);
-    const s = withState({ myDoubts: [{ id: 'm1', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, q: 'কেন?', who: '', h: 0, ago: '' }] });
+    const s = withState({ myDoubts: [{ id: 'm1', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, q: 'কেন?', who: '', agoMin: 0 }] });
     const list = doubtsFor(s, 'CST-04-B01');
     expect(list).toHaveLength(7);
     expect(list[0]).toMatchObject({ id: 'm1', mine: true, who: defaultStudent.name });
@@ -147,7 +170,7 @@ describe('payment queue', () => {
   });
 
   it('flags short payments, reused TrxIDs and a different sender', () => {
-    const by = (id: string) => rowFlags(queueSeed.find((r) => r.id === id)!, 'latin');
+    const by = (id: string) => rowFlags(queueSeed.find((r) => r.id === id)!);
     expect(by('q1')).toEqual([]);
     expect(by('q2')).toHaveLength(1);
     expect(by('q3')).toHaveLength(1);

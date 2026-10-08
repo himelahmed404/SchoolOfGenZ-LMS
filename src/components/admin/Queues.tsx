@@ -7,7 +7,7 @@ import { Penguin } from '@/components/Penguin';
 import { useConsole } from './Console';
 import { decideContent, decidePayments } from '@/lib/actions';
 import { contentReasons, courses, rejectReasons, teacher } from '@/lib/data';
-import { pad2, taka } from '@/lib/format';
+import { ago, pad2, taka } from '@/lib/format';
 import { allQueue, blockHasContent, item, itemKeys, keyCourse, rowFlags } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
@@ -19,13 +19,13 @@ type CFilter = 'review' | 'published' | 'returned';
 
 /** Course and position of a lesson revision, for list rows and the preview. */
 function where(k: string, x: LessonRevision) {
-  const c = courses[keyCourse(k)], chap = c.chapters[x.ch];
-  return { course: c.title, tag: c.id === 'cst' ? 'CST' : 'ইংলিশ', loc: 'অধ্যায় ' + chap.n + ' · ' + (x.isNew ? 'নতুন লেসন' : 'লেসন ' + chap.lessons[x.li as number].n) };
+  const c = courses[keyCourse(k)];
+  return { course: c.titleEn, tag: c.code, loc: 'Chapter ' + pad2(x.ch + 1) + ' · ' + (x.isNew ? 'New lesson' : 'Lesson ' + pad2((x.li as number) + 1)) };
 }
 
 /** Payment approvals and content review, shown beside the console sidebar. */
 export function AdminQueues({ mode }: { mode: Mode }) {
-  const { s, set, n, numerals, ready } = useStore();
+  const { s, set, n, ready } = useStore();
   const { logic, vals } = useConsole();
   const router = useRouter();
   // Mirrors the role's permission for the UI; the server must enforce it.
@@ -182,7 +182,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 <span /><span>Student</span><span>Course</span><span>Method</span><span>TrxID</span><span>Submitted</span>
               </div>
               {rows.map((r, i) => {
-                const here = i === selIdx, flagged = rowFlags(r, numerals).length > 0, on = !!checked[r.id];
+                const here = i === selIdx, flagged = rowFlags(r).length > 0, on = !!checked[r.id];
                 return (
                   <div key={r.id} role="row" aria-selected={here} onClick={() => { setSel(i); setRejectFor(null); }} className="pay-grid"
                     style={{ width: '100%', height: 44, padding: '0 16px', borderLeft: '2px solid ' + (here ? 'var(--brand)' : flagged ? 'var(--margin)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', cursor: 'pointer' }}>
@@ -195,10 +195,10 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                     <span className="t13 ink2 ellipsis">{r.course}</span>
                     <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.4 }}>
                       <span className="t13 ink2">{r.method}</span>
-                      <span className="mono" style={{ fontSize: 11, color: r.amount < r.due ? 'var(--margin)' : 'var(--ink-2)' }}>{taka(r.amount, numerals)}</span>
+                      <span className="mono" style={{ fontSize: 11, color: r.amount < r.due ? 'var(--margin)' : 'var(--ink-2)' }}>{taka(r.amount)}</span>
                     </span>
                     <span className="mono t12 ink2 ellipsis">{r.trx}</span>
-                    <span className="t12 ink3 nowrap">{r.at}</span>
+                    <span className="t12 ink3 nowrap">{ago(r.agoMin)}</span>
                   </div>
                 );
               })}
@@ -219,9 +219,9 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 <div style={{ fontSize: 20, lineHeight: 1.45, fontWeight: 600 }}>{selRow.name}</div>
                 <div className="mono t13 ink3" style={{ marginBottom: 24 }}>{selRow.phone}</div>
 
-                {rowFlags(selRow, numerals).length ? (
+                {rowFlags(selRow).length ? (
                   <div className="alert" style={{ marginBottom: 24, borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.7 }}>
-                    {rowFlags(selRow, numerals).map((f) => <div key={f}>{f}</div>)}
+                    {rowFlags(selRow).map((f) => <div key={f}>{f}</div>)}
                   </div>
                 ) : null}
 
@@ -233,11 +233,11 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 <div className="t12 w500 ink3" style={{ marginBottom: 8 }}>Payment</div>
                 <dl className="kv">
                   <KV k="Method" v={selRow.method} />
-                  <KV k="এসেছে" v={taka(selRow.amount, numerals)} mono strong color={selRow.amount < selRow.due ? 'var(--margin)' : undefined} />
-                  <KV k="আসার কথা" v={taka(selRow.due, numerals)} mono color="var(--ink-2)" />
+                  <KV k="এসেছে" v={taka(selRow.amount)} mono strong color={selRow.amount < selRow.due ? 'var(--margin)' : undefined} />
+                  <KV k="আসার কথা" v={taka(selRow.due)} mono color="var(--ink-2)" />
                   <KV k="TrxID" v={selRow.trx} mono strong />
                   <KV k="পাঠিয়েছে" v={selRow.sender} mono color={selRow.sender !== selRow.phone ? 'var(--margin)' : undefined} />
-                  <KV k="Submitted" v={selRow.at} color="var(--ink-2)" />
+                  <KV k="Submitted" v={ago(selRow.agoMin)} color="var(--ink-2)" />
                 </dl>
 
                 {selRow.status === 'pending' && !canPay ? <div className="t12 ink3">এই অংশে তোমার শুধু দেখার অনুমতি আছে — অনুমোদন দিতে পারবে না।</div> : null}
@@ -280,7 +280,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 return (
                   <button key={k} onClick={() => { setCSel(i); setCRetFor(null); }} aria-current={here ? 'true' : undefined}
                     style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '12px 16px 12px 14px', border: 'none', borderLeft: '2px solid ' + (here ? 'var(--brand)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left', whiteSpace: 'normal' }}>
-                    <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{x.subAt || 'এইমাত্র'}</span></span>
+                    <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
                     <span className="t15" style={{ lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'নাম দেওয়া হয়নি'}</span>
                     <span className="row t12 ink2" style={{ gap: 8 }}><span>{x.by || teacher.name}</span><span className="tag" style={{ color: kindColor }}>{x.isNew ? 'New Lesson' : 'Update'}</span></span>
                   </button>
@@ -368,7 +368,7 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
           <div className="t12 w500" style={{ color: status[1], marginBottom: 8 }}>{status[0]}</div>
           <div className="t12 ink3">{loc.course} · {loc.loc}</div>
           <h1 style={{ margin: '2px 0 4px', fontSize: 24, lineHeight: 1.4, fontWeight: 600 }}>{it.title || 'নাম দেওয়া হয়নি'}</h1>
-          <div className="t13 ink2" style={{ marginBottom: 20 }}>{(it.by || teacher.name) + ' · ' + (it.subAt || 'এইমাত্র') + ' জমা'}</div>
+          <div className="t13 ink2" style={{ marginBottom: 20 }}>{(it.by || teacher.name) + ' · submitted ' + ago(it.subAgoMin ?? 0)}</div>
           {!it.isNew && it.status === 'review' ? (
             <div className="note-dashed t13 ink2" style={{ marginBottom: 20, fontSize: 13, borderRadius: 10 }}>আগে প্রকাশিত লেসনের আপডেট। প্রকাশ করলে পুরোনোটা বদলে যাবে — শিক্ষার্থীদের অগ্রগতি আর কুইজের ফল থেকে যাবে।</div>
           ) : null}

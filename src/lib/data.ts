@@ -1,9 +1,10 @@
 // Seed data ported from the v6 design prototype. Replace with API data once a server exists.
+// Facts (names, batches, dates, times, counts, prices) are English; titles and lesson content are Bangla.
 import type { Block, BlockType, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, QuizQ, Tone } from './types';
 
 export const boardExam = { name: 'পর্ব সমাপনী পরীক্ষা', even: '2026-12-14', odd: '2027-04-18' };
-export const bnMonths = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-export const semNames = ['১ম', '২য়', '৩য়', '৪র্থ', '৫ম', '৬ষ্ঠ', '৭ম', '৮ম'];
+/** Diploma semesters a student can pick. */
+export const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export const confusions: Record<string, Confusion[]> = {
   'cst:0:2': [
@@ -44,26 +45,25 @@ export const newCourseOutcomes = [
   'নিজের তিনটা প্রজেক্ট লাইভ লিংকসহ দেখাতে পারবে'
 ];
 
-export const newCourse = { title: 'ওয়েব ডেভেলপমেন্ট বেসিক', kicker: 'স্কিল কোর্স · ব্যাচ ০৩',
-  instructor: 'তানভীর আহমেদ', price: 2500, batch: 'WEB-01-B03',
-  meta: '২৪ লেসন · ১০ সপ্তাহ · সপ্তাহে ২টি লাইভ ক্লাস' };
+export const newCourse = { code: 'WEB', title: 'ওয়েব ডেভেলপমেন্ট বেসিক', titleEn: 'Web Development Basics',
+  instructor: 'Tanvir Ahmed', price: 2500, batch: 'WEB-01-B03', batchNo: 3, lessons: 24, weeks: 10, livePerWeek: 2 };
 
 export const merchants: Record<PayMethod, string> = { bKash: '01777 090909', Nagad: '01888 070707' };
 
 export const queueSeed: Payment[] = [
-  { id: 'q1', name: 'সাদিয়া আফরিন', phone: '01812 337742', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01812 337742', at: '১২ মিনিট আগে', status: 'pending' },
-  { id: 'q2', name: 'রাকিবুল ইসলাম', phone: '01911 208864', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 1500, due: 2000, trx: 'NGD5K1RW83', sender: '01911 208864', at: '২৬ মিনিট আগে', status: 'pending' },
-  { id: 'q3', name: 'নুসরাত জাহান মীম', phone: '01741 665503', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX2P8VC57', sender: '01918 442210', at: '৪১ মিনিট আগে', status: 'pending' },
-  { id: 'q4', name: 'তানভীর হোসেন', phone: '01684 991127', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 2500, due: 2500, trx: 'BKX6Q3ZN14', sender: '01684 991127', at: '১ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q5', name: 'ফারহানা আক্তার', phone: '01521 774096', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 2000, due: 2000, trx: 'NGD8W2YT65', sender: '01521 774096', at: '১ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q6', name: 'আরিফুল ইসলাম', phone: '01733 550218', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01733 550218', at: '২ ঘণ্টা আগে', status: 'pending', dup: true },
-  { id: 'q7', name: 'সুমাইয়া বিনতে করিম', phone: '01876 331409', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 2500, due: 2500, trx: 'NGD3M7QX92', sender: '01876 331409', at: '২ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q8', name: 'ইমরান কবির', phone: '01958 002264', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX1L5HD38', sender: '01958 002264', at: '৩ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q9', name: 'জান্নাতুল ফেরদৌস', phone: '01627 883351', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX4C9JR76', sender: '01627 883351', at: '৩ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q10', name: 'মেহেদী হাসান', phone: '01799 116740', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 1000, due: 2500, trx: 'NGD7B4KF29', sender: '01799 116740', at: '৪ ঘণ্টা আগে', status: 'pending' },
-  { id: 'q11', name: 'শারমিন সুলতানা', phone: '01555 448802', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX8N2WS45', sender: '01555 448802', at: 'গতকাল', status: 'approved' },
-  { id: 'q12', name: 'নাফিস ইকবাল', phone: '01844 907715', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'Nagad', amount: 3000, due: 3000, trx: 'NGD6V1PA83', sender: '01844 907715', at: 'গতকাল', status: 'approved' },
-  { id: 'q13', name: 'রুবাইয়া হক', phone: '01712 664438', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 500, due: 2500, trx: 'BKX0F3TM61', sender: '01712 664438', at: 'গতকাল', status: 'rejected' }
+  { id: 'q1', name: 'Sadia Afrin', phone: '01812 337742', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01812 337742', agoMin: 12, status: 'pending' },
+  { id: 'q2', name: 'Rakibul Islam', phone: '01911 208864', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 1500, due: 2000, trx: 'NGD5K1RW83', sender: '01911 208864', agoMin: 26, status: 'pending' },
+  { id: 'q3', name: 'Nusrat Jahan Mim', phone: '01741 665503', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX2P8VC57', sender: '01918 442210', agoMin: 41, status: 'pending' },
+  { id: 'q4', name: 'Tanvir Hossain', phone: '01684 991127', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 2500, due: 2500, trx: 'BKX6Q3ZN14', sender: '01684 991127', agoMin: 60, status: 'pending' },
+  { id: 'q5', name: 'Farhana Akter', phone: '01521 774096', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 2000, due: 2000, trx: 'NGD8W2YT65', sender: '01521 774096', agoMin: 75, status: 'pending' },
+  { id: 'q6', name: 'Ariful Islam', phone: '01733 550218', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01733 550218', agoMin: 120, status: 'pending', dup: true },
+  { id: 'q7', name: 'Sumaiya Binte Karim', phone: '01876 331409', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 2500, due: 2500, trx: 'NGD3M7QX92', sender: '01876 331409', agoMin: 140, status: 'pending' },
+  { id: 'q8', name: 'Imran Kabir', phone: '01958 002264', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX1L5HD38', sender: '01958 002264', agoMin: 180, status: 'pending' },
+  { id: 'q9', name: 'Jannatul Ferdous', phone: '01627 883351', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX4C9JR76', sender: '01627 883351', agoMin: 200, status: 'pending' },
+  { id: 'q10', name: 'Mehedi Hasan', phone: '01799 116740', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 1000, due: 2500, trx: 'NGD7B4KF29', sender: '01799 116740', agoMin: 240, status: 'pending' },
+  { id: 'q11', name: 'Sharmin Sultana', phone: '01555 448802', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX8N2WS45', sender: '01555 448802', agoMin: 1500, status: 'approved' },
+  { id: 'q12', name: 'Nafis Iqbal', phone: '01844 907715', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'Nagad', amount: 3000, due: 3000, trx: 'NGD6V1PA83', sender: '01844 907715', agoMin: 1560, status: 'approved' },
+  { id: 'q13', name: 'Rubaiya Haque', phone: '01712 664438', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 500, due: 2500, trx: 'BKX0F3TM61', sender: '01712 664438', agoMin: 1620, status: 'rejected' }
 ];
 
 export const rejectReasons = ['ভুল TrxID', 'টাকা কম', 'ডুপ্লিকেট', 'অন্য নম্বর'];
@@ -73,15 +73,15 @@ export const batches: Record<string, { course: CourseId; seed: number; size: num
   'CST-04-B02': { course: 'cst', seed: 23, size: 24 },
   'ENG-02-B07': { course: 'eng', seed: 37, size: 18 }
 };
-export const firstNames = ['সাকিব', 'তাসনিম', 'রিফাত', 'মাহিয়া', 'নাঈম', 'ফারিহা', 'তানভীর', 'সুমাইয়া', 'আরিফ', 'নুসরাত', 'জুবায়ের', 'লামিয়া', 'রাকিব', 'তানজিলা', 'ইমন', 'সাদিয়া', 'ফাহিম', 'মারিয়া', 'শুভ', 'আফসানা', 'রাহাত', 'জান্নাত', 'সজীব', 'নাদিয়া', 'হৃদয়', 'মৌমিতা', 'তারেক', 'সানজিদা'];
-export const lastNames = ['ইসলাম', 'হোসেন', 'আহমেদ', 'রহমান', 'খান', 'চৌধুরী', 'সরকার', 'হক', 'বিশ্বাস', 'তালুকদার', 'মজুমদার', 'শেখ'];
+export const firstNames = ['Sakib', 'Tasnim', 'Rifat', 'Mahia', 'Naim', 'Fariha', 'Tanvir', 'Sumaiya', 'Arif', 'Nusrat', 'Jubayer', 'Lamia', 'Rakib', 'Tanzila', 'Emon', 'Sadia', 'Fahim', 'Maria', 'Shuvo', 'Afsana', 'Rahat', 'Jannat', 'Sajib', 'Nadia', 'Hridoy', 'Moumita', 'Tarek', 'Sanjida'];
+export const lastNames = ['Islam', 'Hossain', 'Ahmed', 'Rahman', 'Khan', 'Chowdhury', 'Sarkar', 'Haque', 'Biswas', 'Talukdar', 'Majumdar', 'Sheikh'];
 export const doubtSeed: Doubt[] = [
-  { id: 'd1', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: 'রাকিব হাসান', q: 'স্ট্যাক আর কিউ একসাথে ব্যবহার করা যায়? বইয়ে একটা উদাহরণ আছে বুঝিনি।', h: 52, ago: '2 দিন আগে', reply: 'যায়। দুইটা স্ট্যাক দিয়ে কিউ বানানো একটা ক্লাসিক প্রশ্ন — অধ্যায় ০৩-এর শেষ লেসনে দেখাবো।', by: 'শাহরিয়ার হোসেন', replyAgo: '2 দিন আগে' },
-  { id: 'd2', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: 'সুমাইয়া আক্তার', q: 'underflow আর overflow-এর পার্থক্যটা আরেকবার বলবেন?', h: 27, ago: 'গতকাল' },
-  { id: 'd3', batch: 'CST-04-B01', course: 'cst', ch: 0, li: 3, who: 'ফাহিম মুনতাসির', q: 'O(1) আর O(n)-এর পার্থক্য পরীক্ষার খাতায় কীভাবে লিখলে পুরো নম্বর পাবো?', h: 31, ago: 'গতকাল' },
-  { id: 'd4', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 2, who: 'তানজিলা রহমান', q: 'top = −1 দিয়ে শুরু করি কেন? 0 দিয়ে শুরু করলে কী সমস্যা?', h: 5, ago: '5 ঘণ্টা আগে' },
-  { id: 'd5', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 3, who: 'জুবায়ের আলম', q: 'enqueue করার সময় আগে rear বাড়াবো, নাকি আগে মান বসাবো?', h: 1, ago: '40 মিনিট আগে' },
-  { id: 'd6', batch: 'CST-04-B01', course: 'cst', ch: 1, li: 2, who: 'নাদিয়া ইসলাম', q: 'ডাবলি লিংকড লিস্টে prev পয়েন্টার না রাখলে ঠিক কোন কাজটা কঠিন হয়?', h: 70, ago: '3 দিন আগে', reply: 'পেছন দিকে যাওয়া, আর মাঝখান থেকে কোনো নোড মুছে ফেলা। prev না থাকলে আগের নোডটা খুঁজতে আবার শুরু থেকে হাঁটতে হয় — O(n)।', by: 'শাহরিয়ার হোসেন', replyAgo: '3 দিন আগে' }
+  { id: 'd1', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: 'Rakib Hasan', q: 'স্ট্যাক আর কিউ একসাথে ব্যবহার করা যায়? বইয়ে একটা উদাহরণ আছে বুঝিনি।', agoMin: 3120, reply: 'যায়। দুইটা স্ট্যাক দিয়ে কিউ বানানো একটা ক্লাসিক প্রশ্ন — অধ্যায় ০৩-এর শেষ লেসনে দেখাবো।', by: 'Shahriar Hossain', replyAgoMin: 2880 },
+  { id: 'd2', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: 'Sumaiya Akter', q: 'underflow আর overflow-এর পার্থক্যটা আরেকবার বলবেন?', agoMin: 1620 },
+  { id: 'd3', batch: 'CST-04-B01', course: 'cst', ch: 0, li: 3, who: 'Fahim Muntasir', q: 'O(1) আর O(n)-এর পার্থক্য পরীক্ষার খাতায় কীভাবে লিখলে পুরো নম্বর পাবো?', agoMin: 1860 },
+  { id: 'd4', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 2, who: 'Tanzila Rahman', q: 'top = −1 দিয়ে শুরু করি কেন? 0 দিয়ে শুরু করলে কী সমস্যা?', agoMin: 300 },
+  { id: 'd5', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 3, who: 'Jubayer Alam', q: 'enqueue করার সময় আগে rear বাড়াবো, নাকি আগে মান বসাবো?', agoMin: 40 },
+  { id: 'd6', batch: 'CST-04-B01', course: 'cst', ch: 1, li: 2, who: 'Nadia Islam', q: 'ডাবলি লিংকড লিস্টে prev পয়েন্টার না রাখলে ঠিক কোন কাজটা কঠিন হয়?', agoMin: 4200, reply: 'পেছন দিকে যাওয়া, আর মাঝখান থেকে কোনো নোড মুছে ফেলা। prev না থাকলে আগের নোডটা খুঁজতে আবার শুরু থেকে হাঁটতে হয় — O(n)।', by: 'Shahriar Hossain', replyAgoMin: 4320 }
 ];
 export const stackBlocks: Block[] = [
   { t: 'h', x: 'স্ট্যাক (Stack) কী?' },
@@ -94,7 +94,7 @@ export const stackBlocks: Block[] = [
   { t: 'p', x: 'পরীক্ষায় প্রায় প্রতিবার আসে: স্ট্যাক LIFO, কিউ FIFO। আর ইনফিক্স থেকে পোস্টফিক্স রূপান্তর, ফাংশন কল ট্র্যাকিং, ব্রাউজারের ব্যাক বাটন — এই তিনটাই স্ট্যাকের প্রয়োগ।' }
 ];
 export const itemSeeds: Record<string, Partial<LessonRevision>> = {
-  'cst|lesson:5:4': { status: 'review', update: true, by: 'শাহরিয়ার হোসেন', subAt: '৩৫ মিনিট আগে',
+  'cst|lesson:5:4': { status: 'review', update: true, by: 'Shahriar Hossain', subAgoMin: 35,
     quiz: [
       { stem: 'Dijkstra কখন ভুল উত্তর দিতে পারে?', o: ['কোনো এজের ওজন ঋণাত্মক হলে', 'গ্রাফ ডিরেক্টেড হলে', 'নোড ১০০-র বেশি হলে', 'গ্রাফে সাইকেল থাকলে'], a: 0, why: 'ঋণাত্মক ওজনে আগে চূড়ান্ত ধরা দূরত্ব পরে কমে যেতে পারে — Dijkstra সেটা আর ফিরে দেখে না।' },
       { stem: 'প্রতি ধাপে কোন নোড বেছে নেওয়া হয়?', o: ['সবচেয়ে কাছের অদেখা নোড', 'সবচেয়ে বেশি প্রতিবেশী যার', 'বর্ণানুক্রমে পরের নোড', 'যেকোনো একটা নোড'], a: 0, why: '' }
@@ -105,8 +105,8 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
     { t: 'p', x: 'প্রতি ধাপে সবচেয়ে কাছের অদেখা নোড u বেছে নিয়ে তার প্রতিবেশী v-এর দূরত্ব হালনাগাদ করো:' },
     { t: 'fx', x: 'd[v] = \\min\\big(d[v],\\; d[u] + w(u, v)\\big)' }
   ] },
-  'cst|lesson:4:3': { status: 'returned', update: true, reason: 'ভিডিওর শব্দ অস্পষ্ট, ৪:১০ থেকে ৬:০০', by: 'শাহরিয়ার হোসেন', subAt: 'গতকাল' },
-  'cst|new:3:0': { kind: 'lesson', ch: 3, isNew: true, title: 'AVL ট্রি — রোটেশন দিয়ে ব্যালান্স', status: 'review', by: 'শাহরিয়ার হোসেন', subAt: '৫০ মিনিট আগে',
+  'cst|lesson:4:3': { status: 'returned', update: true, reason: 'ভিডিওর শব্দ অস্পষ্ট, ৪:১০ থেকে ৬:০০', by: 'Shahriar Hossain', subAgoMin: 1500 },
+  'cst|new:3:0': { kind: 'lesson', ch: 3, isNew: true, title: 'AVL ট্রি — রোটেশন দিয়ে ব্যালান্স', status: 'review', by: 'Shahriar Hossain', subAgoMin: 50,
     video: { state: 'done', name: 'VID_20260924_2215.mp4', dur: '16:45' },
     quiz: [{ stem: 'AVL ট্রিতে কোনো নোডের ব্যালান্স ফ্যাক্টর কত হলে রোটেশন লাগে?', o: ['২ বা −২', '১', '০', '−১'], a: 0, why: 'AVL-এ −১, ০ আর ১ চলে। এর বাইরে গেলেই রোটেশন।' }],
     blocks: [
@@ -116,7 +116,7 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
       { t: 'img', file: 'avl-ll-rotation.png', cap: 'LL কেস — ডান দিকে একবার রোটেশন' },
       { t: 'list', x: 'LL — ডানে একবার ঘোরাও\nRR — বাঁয়ে একবার ঘোরাও\nLR — আগে বাঁয়ে, তারপর ডানে\nRL — আগে ডানে, তারপর বাঁয়ে' }
     ] },
-  'eng|lesson:1:2': { status: 'review', update: true, by: 'নুসরাত জাহান', subAt: '২ ঘণ্টা আগে',
+  'eng|lesson:1:2': { status: 'review', update: true, by: 'Nusrat Jahan', subAgoMin: 120,
     quiz: [{ stem: 'ফোনে কাউকে চাইতে সবচেয়ে ভদ্র বাক্য কোনটা?', o: ['Could I speak to Rahim, please?', 'Give me Rahim.', 'Rahim there?', 'I want Rahim.'], a: 0, why: '' }],
     blocks: [
       { t: 'h', x: 'ফোন ধরার প্রথম তিন লাইন' },
@@ -142,75 +142,75 @@ export const contentReasons = ['ভিডিওর শব্দ বা ছবি
 
 export const courses: Record<CourseId, Course> = {
   cst: {
-    id: 'cst', track: 'batch', kicker: 'CST — ৪র্থ সেমিস্টার',
-    title: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', instructor: 'শাহরিয়ার হোসেন',
-    meta: '৪র্থ সেমিস্টার · ব্যাচ ০১ · শুরু ১ আগস্ট · শেষ ২৮ ডিসেম্বর',
+    id: 'cst', code: 'CST', track: 'batch',
+    title: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', titleEn: 'Data Structure & Algorithm', instructor: 'Shahriar Hossain',
+    sem: 4, batchNo: 1, start: '2026-08-01', end: '2026-12-28',
     chapters: [
-      { n: '০১', name: 'ভূমিকা ও অ্যারে (Array)', lessons: [
-        { n: '০১', t: 'কোর্স পরিচিতি', d: '08:20', done: true },
-        { n: '০২', t: 'ডেটা স্ট্রাকচার কেন দরকার', d: '11:05', done: true },
-        { n: '০৩', t: 'অ্যারে — মেমরি লেআউট', d: '14:30', done: true },
-        { n: '০৪', t: 'অ্যারে অপারেশন ও কমপ্লেক্সিটি', d: '12:15', done: true } ] },
-      { n: '০২', name: 'লিংকড লিস্ট (Linked List)', lessons: [
-        { n: '০১', t: 'সিঙ্গলি লিংকড লিস্ট', d: '15:40', done: true },
-        { n: '০২', t: 'ইনসার্ট ও ডিলিট', d: '13:20', done: true },
-        { n: '০৩', t: 'ডাবলি লিংকড লিস্ট', d: '12:50', done: true },
-        { n: '০৪', t: 'অ্যারে বনাম লিংকড লিস্ট', d: '09:35', done: true } ] },
-      { n: '০৩', name: 'স্ট্যাক ও কিউ (Stack & Queue)', lessons: [
-        { n: '০১', t: 'স্ট্যাক কী', d: '10:10', done: true },
-        { n: '০২', t: 'পুশ ও পপ', d: '11:45', done: true },
-        { n: '০৩', t: 'অ্যারে দিয়ে স্ট্যাক ইমপ্লিমেন্ট', d: '13:05', done: true },
-        { n: '০৪', t: 'কিউ কী', d: '09:50', done: true },
-        { n: '০৫', t: 'Stack ও Queue — বেসিক ধারণা', d: '12:30' },
-        { n: '০৬', t: 'সার্কুলার কিউ', d: '11:20' } ] },
-      { n: '০৪', name: 'ট্রি (Tree)', lessons: [
-        { n: '০১', t: 'বাইনারি ট্রি পরিচিতি', d: '13:10' },
-        { n: '০২', t: 'ট্রি ট্রাভার্সাল', d: '16:00' },
-        { n: '০৩', t: 'বাইনারি সার্চ ট্রি', d: '14:25' },
-        { n: '০৪', t: 'BST ইনসার্ট ও ডিলিট', d: '15:10' },
-        { n: '০৫', t: 'হিপ (Heap)', d: '12:40' } ] },
-      { n: '০৫', name: 'সর্টিং ও সার্চিং', lessons: [
-        { n: '০১', t: 'লিনিয়ার ও বাইনারি সার্চ', d: '12:00' },
-        { n: '০২', t: 'বাবল ও সিলেকশন সর্ট', d: '13:30' },
-        { n: '০৩', t: 'ইনসার্শন সর্ট', d: '10:45' },
-        { n: '০৪', t: 'মার্জ সর্ট', d: '15:20' },
-        { n: '০৫', t: 'কুইক সর্ট', d: '16:10' },
-        { n: '০৬', t: 'কমপ্লেক্সিটি তুলনা', d: '11:00' } ] },
-      { n: '০৬', name: 'গ্রাফ (Graph)', lessons: [
-        { n: '০১', t: 'গ্রাফ পরিচিতি', d: '12:20' },
-        { n: '০২', t: 'অ্যাডজেসেন্সি ম্যাট্রিক্স ও লিস্ট', d: '13:45' },
-        { n: '০৩', t: 'BFS', d: '14:00' },
-        { n: '০৪', t: 'DFS', d: '13:15' },
-        { n: '০৫', t: 'শর্টেস্ট পাথ — Dijkstra', d: '17:30' } ] }
+      { name: 'ভূমিকা ও অ্যারে (Array)', lessons: [
+        { t: 'কোর্স পরিচিতি', d: '08:20', done: true },
+        { t: 'ডেটা স্ট্রাকচার কেন দরকার', d: '11:05', done: true },
+        { t: 'অ্যারে — মেমরি লেআউট', d: '14:30', done: true },
+        { t: 'অ্যারে অপারেশন ও কমপ্লেক্সিটি', d: '12:15', done: true } ] },
+      { name: 'লিংকড লিস্ট (Linked List)', lessons: [
+        { t: 'সিঙ্গলি লিংকড লিস্ট', d: '15:40', done: true },
+        { t: 'ইনসার্ট ও ডিলিট', d: '13:20', done: true },
+        { t: 'ডাবলি লিংকড লিস্ট', d: '12:50', done: true },
+        { t: 'অ্যারে বনাম লিংকড লিস্ট', d: '09:35', done: true } ] },
+      { name: 'স্ট্যাক ও কিউ (Stack & Queue)', lessons: [
+        { t: 'স্ট্যাক কী', d: '10:10', done: true },
+        { t: 'পুশ ও পপ', d: '11:45', done: true },
+        { t: 'অ্যারে দিয়ে স্ট্যাক ইমপ্লিমেন্ট', d: '13:05', done: true },
+        { t: 'কিউ কী', d: '09:50', done: true },
+        { t: 'Stack ও Queue — বেসিক ধারণা', d: '12:30' },
+        { t: 'সার্কুলার কিউ', d: '11:20' } ] },
+      { name: 'ট্রি (Tree)', lessons: [
+        { t: 'বাইনারি ট্রি পরিচিতি', d: '13:10' },
+        { t: 'ট্রি ট্রাভার্সাল', d: '16:00' },
+        { t: 'বাইনারি সার্চ ট্রি', d: '14:25' },
+        { t: 'BST ইনসার্ট ও ডিলিট', d: '15:10' },
+        { t: 'হিপ (Heap)', d: '12:40' } ] },
+      { name: 'সর্টিং ও সার্চিং', lessons: [
+        { t: 'লিনিয়ার ও বাইনারি সার্চ', d: '12:00' },
+        { t: 'বাবল ও সিলেকশন সর্ট', d: '13:30' },
+        { t: 'ইনসার্শন সর্ট', d: '10:45' },
+        { t: 'মার্জ সর্ট', d: '15:20' },
+        { t: 'কুইক সর্ট', d: '16:10' },
+        { t: 'কমপ্লেক্সিটি তুলনা', d: '11:00' } ] },
+      { name: 'গ্রাফ (Graph)', lessons: [
+        { t: 'গ্রাফ পরিচিতি', d: '12:20' },
+        { t: 'অ্যাডজেসেন্সি ম্যাট্রিক্স ও লিস্ট', d: '13:45' },
+        { t: 'BFS', d: '14:00' },
+        { t: 'DFS', d: '13:15' },
+        { t: 'শর্টেস্ট পাথ — Dijkstra', d: '17:30' } ] }
     ]
   },
   eng: {
-    id: 'eng', track: 'skill', kicker: 'স্কিল কোর্স',
-    title: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', instructor: 'নুসরাত জাহান',
-    meta: '১৯ লেসন · ৮ সপ্তাহ · লাইফটাইম অ্যাক্সেস',
+    id: 'eng', code: 'ENG', track: 'skill',
+    title: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', titleEn: 'Spoken English — Foundation', instructor: 'Nusrat Jahan',
+    weeks: 8, access: 'lifetime',
     chapters: [
-      { n: '০১', name: 'উচ্চারণ ও শব্দ', lessons: [
-        { n: '০১', t: 'কোর্স কীভাবে করবে', d: '06:40', done: true },
-        { n: '০২', t: 'ভাওয়েল সাউন্ড', d: '12:10', done: true },
-        { n: '০৩', t: 'কনসোনেন্ট ক্লাস্টার', d: '11:30', done: true },
-        { n: '০৪', t: 'শব্দে জোর (Word stress)', d: '10:05', done: true } ] },
-      { n: '০২', name: 'দৈনন্দিন কথোপকথন', lessons: [
-        { n: '০১', t: 'পরিচয় দেওয়া', d: '09:20' },
-        { n: '০২', t: 'দিক ও ঠিকানা জিজ্ঞাসা', d: '10:40' },
-        { n: '০৩', t: 'ফোনে কথা বলা', d: '11:15' },
-        { n: '০৪', t: 'দোকানে দরদাম', d: '08:55' },
-        { n: '০৫', t: 'ছোট গল্প বলা', d: '12:25' } ] },
-      { n: '০৩', name: 'ইন্টারভিউ ইংলিশ', lessons: [
-        { n: '০১', t: 'নিজের পরিচয় — ৬০ সেকেন্ড', d: '10:30' },
-        { n: '০২', t: 'সাধারণ প্রশ্নের উত্তর', d: '13:00' },
-        { n: '০৩', t: 'দুর্বলতা নিয়ে প্রশ্ন', d: '09:45' },
-        { n: '০৪', t: 'প্রশ্ন করা শেখো', d: '08:30' },
-        { n: '০৫', t: 'মক ইন্টারভিউ', d: '18:20' } ] },
-      { n: '০৪', name: 'পাবলিক স্পিকিং বেসিক', lessons: [
-        { n: '০১', t: 'ভয় সামলানো', d: '11:10' },
-        { n: '০২', t: 'কথার গঠন', d: '12:35' },
-        { n: '০৩', t: 'শরীরী ভাষা', d: '10:20' },
-        { n: '০৪', t: 'শেষ উপস্থাপনা', d: '15:40' } ] }
+      { name: 'উচ্চারণ ও শব্দ', lessons: [
+        { t: 'কোর্স কীভাবে করবে', d: '06:40', done: true },
+        { t: 'ভাওয়েল সাউন্ড', d: '12:10', done: true },
+        { t: 'কনসোনেন্ট ক্লাস্টার', d: '11:30', done: true },
+        { t: 'শব্দে জোর (Word stress)', d: '10:05', done: true } ] },
+      { name: 'দৈনন্দিন কথোপকথন', lessons: [
+        { t: 'পরিচয় দেওয়া', d: '09:20' },
+        { t: 'দিক ও ঠিকানা জিজ্ঞাসা', d: '10:40' },
+        { t: 'ফোনে কথা বলা', d: '11:15' },
+        { t: 'দোকানে দরদাম', d: '08:55' },
+        { t: 'ছোট গল্প বলা', d: '12:25' } ] },
+      { name: 'ইন্টারভিউ ইংলিশ', lessons: [
+        { t: 'নিজের পরিচয় — ৬০ সেকেন্ড', d: '10:30' },
+        { t: 'সাধারণ প্রশ্নের উত্তর', d: '13:00' },
+        { t: 'দুর্বলতা নিয়ে প্রশ্ন', d: '09:45' },
+        { t: 'প্রশ্ন করা শেখো', d: '08:30' },
+        { t: 'মক ইন্টারভিউ', d: '18:20' } ] },
+      { name: 'পাবলিক স্পিকিং বেসিক', lessons: [
+        { t: 'ভয় সামলানো', d: '11:10' },
+        { t: 'কথার গঠন', d: '12:35' },
+        { t: 'শরীরী ভাষা', d: '10:20' },
+        { t: 'শেষ উপস্থাপনা', d: '15:40' } ] }
     ]
   }
 };
@@ -237,16 +237,16 @@ export const testQs: QuizQ[] = [
   { stem: 'মার্জ সর্টের গড় টাইম কমপ্লেক্সিটি কত?', o: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'], a: 1 },
   { stem: 'বাইনারি সার্চ ট্রি-তে সবচেয়ে ছোট মান কোথায় থাকে?', o: ['রুট নোডে', 'সবচেয়ে ডান দিকের নোডে', 'সবচেয়ে বাঁ দিকের নোডে', 'যেকোনো লিফে'], a: 2 }
 ];
-export const teacher = { name: 'শাহরিয়ার হোসেন', batch: 'CST-04-B01', phone: '01711-649032', title: 'সিনিয়র ইন্সট্রাক্টর · কম্পিউটার টেকনোলজি' };
-export const defaultStudent = { name: 'মাহমুদুল হাসান', phone: '01712 445589', masked: '01712-••••89', batch: 'CST-04-B01' };
+export const teacher = { name: 'Shahriar Hossain', batch: 'CST-04-B01', phone: '01711-649032', title: 'Senior Instructor · Computer Technology' };
+export const defaultStudent = { name: 'Mahmudul Hasan', phone: '01712 445589', masked: '01712-••••89', batch: 'CST-04-B01' };
 /** Subjects a teacher can list on their profile. */
 export const subjectOptions = ['Data Structure', 'C Programming', 'Algorithm', 'Database', 'Web Development', 'Networking'];
-export const supportPhone = '০১৭৭৭ ০৯০৯০৯';
+export const supportPhone = '01777 090909';
 export const testMeta = { name: 'Model Test 04', seconds: 1500 };
 /** Seeded until activity tracking exists: the current streak ends today. */
 export const streakSeed = { current: 12, best: 19 };
-export const weekDayShort = ['শ', 'র', 'সো', 'ম', 'বু', 'বৃ', 'শু'];
-export const weekDayHead = ['শনি', 'রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র'];
+export const weekDayShort = ['Sa', 'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr'];
+export const weekDayHead = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 /** Tile colours for a tone: [background, foreground]. */
 export const toneColors: Record<Tone, [string, string]> = {
@@ -259,45 +259,45 @@ export const toneColors: Record<Tone, [string, string]> = {
 
 export const notifSeed: Record<'student' | 'teacher', Notif[]> = {
   student: [
-    { id: 's1', icon: 'forum', tone: 'brand', title: 'তোমার প্রশ্নের উত্তর এসেছে', body: 'শাহরিয়ার স্যার: "খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।"', time: '১২ মিনিট আগে', href: '/learn/cst/2/4?tab=ask' },
-    { id: 's2', icon: 'check_circle', tone: 'ok', title: 'পেমেন্ট অ্যাপ্রুভ হয়েছে', body: 'Web Development কোর্সে তোমার ভর্তি নিশ্চিত।', time: '১ ঘণ্টা আগে', href: '/' },
-    { id: 's3', icon: 'timer', tone: 'warn', title: 'Model Test 04 — শুক্রবার', body: '১০ প্রশ্ন · ২৫ মিনিট। প্রস্তুতি নিতে Chapter 03 রিভিশন দাও।', time: 'আজ সকাল', href: '/' },
-    { id: 's4', icon: 'local_fire_department', tone: 'sun', title: 'নতুন ব্যাজ: ৭ দিনের স্ট্রিক', body: 'টানা ৭ দিন পড়েছ। এভাবেই চালিয়ে যাও!', time: 'গতকাল', href: '/profile' },
-    { id: 's5', icon: 'videocam', tone: 'pink', title: 'Live Class সোমবার সন্ধ্যা ৭টা', body: 'Queue ও Circular Queue — প্রশ্ন নিয়ে এসো।', time: '২ দিন আগে', href: '/' }
+    { id: 's1', icon: 'forum', tone: 'brand', title: 'তোমার প্রশ্নের উত্তর এসেছে', body: 'Shahriar Hossain: "খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।"', agoMin: 12, href: '/learn/cst/2/4?tab=ask' },
+    { id: 's2', icon: 'check_circle', tone: 'ok', title: 'পেমেন্ট অ্যাপ্রুভ হয়েছে', body: 'Web Development কোর্সে তোমার ভর্তি নিশ্চিত।', agoMin: 60, href: '/' },
+    { id: 's3', icon: 'timer', tone: 'warn', title: 'Model Test 04 — শুক্রবার', body: '১০ প্রশ্ন · ২৫ মিনিট। প্রস্তুতি নিতে Chapter 03 রিভিশন দাও।', agoMin: 300, href: '/' },
+    { id: 's4', icon: 'local_fire_department', tone: 'sun', title: 'নতুন ব্যাজ: ৭ দিনের স্ট্রিক', body: 'টানা ৭ দিন পড়েছ। এভাবেই চালিয়ে যাও!', agoMin: 1500, href: '/profile' },
+    { id: 's5', icon: 'videocam', tone: 'pink', title: 'Live Class সোমবার সন্ধ্যা ৭টা', body: 'Queue ও Circular Queue — প্রশ্ন নিয়ে এসো।', agoMin: 2880, href: '/' }
   ],
   teacher: [
-    { id: 't1', icon: 'forum', tone: 'brand', title: '৪টি নতুন প্রশ্ন', body: 'CST-04-B01 ব্যাচ থেকে — Stack ও Queue লেসনে।', time: '৮ মিনিট আগে', href: '/teacher/doubts' },
-    { id: 't2', icon: 'task_alt', tone: 'ok', title: 'কনটেন্ট অ্যাপ্রুভ হয়েছে', body: '"Linked List — ইনসার্শন" লেসন এখন লাইভ।', time: '৩ ঘণ্টা আগে', href: '/teacher/content' },
-    { id: 't3', icon: 'payments', tone: 'sun', title: 'সেপ্টেম্বরের পেআউট পাঠানো হয়েছে', body: '৳৩৮,৪০০ — bKash 01711-••••32', time: '৬ দিন আগে', href: '/teacher/profile' }
+    { id: 't1', icon: 'forum', tone: 'brand', title: '৪টি নতুন প্রশ্ন', body: 'CST-04-B01 ব্যাচ থেকে — Stack ও Queue লেসনে।', agoMin: 8, href: '/teacher/doubts' },
+    { id: 't2', icon: 'task_alt', tone: 'ok', title: 'কনটেন্ট অ্যাপ্রুভ হয়েছে', body: '"Linked List — ইনসার্শন" লেসন এখন লাইভ।', agoMin: 180, href: '/teacher/content' },
+    { id: 't3', icon: 'payments', tone: 'sun', title: 'সেপ্টেম্বরের পেআউট পাঠানো হয়েছে', body: '৳38,400 — bKash 01711-••••32', agoMin: 8640, href: '/teacher/profile' }
   ]
 };
 
 /** Student badges: [icon, label, sub (date earned or what's left), earned]. */
 export const badgeSeed: [string, string, string, boolean][] = [
-  ['local_fire_department', '৭ দিনের স্ট্রিক', '২ অক্টো', true],
-  ['bolt', '১০০ পয়েন্ট', '১৮ সেপ্টে', true],
-  ['target', 'নির্ভুল কুইজ', '২৫ সেপ্টে', true],
-  ['workspace_premium', 'প্রথম সার্টিফিকেট', '৩০ সেপ্টে', true],
-  ['emoji_events', 'টপ ১০', 'বাকি ৩ ধাপ', false],
-  ['forum', 'কৌতূহলী মন', '৩/৫ প্রশ্ন', false],
-  ['nights_stay', 'রাতজাগা পাখি', 'রাত ১০টার পর ৫ লেসন', false],
-  ['school', 'কোর্স শেষ', '৬২% হয়েছে', false],
+  ['local_fire_department', '৭ দিনের স্ট্রিক', '2 Oct', true],
+  ['bolt', '১০০ পয়েন্ট', '18 Sep', true],
+  ['target', 'নির্ভুল কুইজ', '25 Sep', true],
+  ['workspace_premium', 'প্রথম সার্টিফিকেট', '30 Sep', true],
+  ['emoji_events', 'টপ ১০', '3 ranks to go', false],
+  ['forum', 'কৌতূহলী মন', '3/5 questions', false],
+  ['nights_stay', 'রাতজাগা পাখি', '5 lessons after 10 PM', false],
+  ['school', 'কোর্স শেষ', '62% done', false],
 ];
 
 /** A certificate the student already holds (an earlier course). */
-export const pastCertificate = { title: 'Programming Fundamentals', meta: 'সম্পন্ন · ৩০ সেপ্টেম্বর ২০২৬' };
+export const pastCertificate = { title: 'Programming Fundamentals', meta: 'Completed · 30 Sep 2026' };
 
 /** Teacher profile stats (seeded until ratings and payouts come from the server). */
 export const teacherStats = {
   rating: '4.8', reviews: 312,
   /** [stars, % of reviews] */
   stars: [[5, 78], [4, 15], [3, 5], [2, 1], [1, 1]] as [number, number][],
-  earned: 42500, pending: 8200, nextPayout: '১০ অক্টোবর', payoutTo: 'bKash · 01711-••••32',
+  earned: 42500, pending: 8200, nextPayout: '10 Oct', payoutTo: 'bKash · 01711-••••32',
   // v6 used #0F7A55 for ALG, which is now the brand (DS) colour; the orange preset keeps the three tiles distinct.
   courses: [
     { code: 'DS', title: 'Data Structure — CST', batch: 'CST-04-B01', students: 86, rating: '4.9', bg: 'var(--hero)' },
     { code: 'C', title: 'C Programming', batch: 'CST-02-B03', students: 124, rating: '4.7', bg: '#C2357A' },
-    { code: 'ALG', title: 'Algorithm Basics', batch: 'রেকর্ডেড', students: 410, rating: '4.8', bg: '#D2561B' },
+    { code: 'ALG', title: 'Algorithm Basics', batch: 'Recorded', students: 410, rating: '4.8', bg: '#D2561B' },
   ],
-  payouts: [['সেপ্টেম্বর ২০২৬', 38400, 'TRX 9KD27HQ1PX'], ['আগস্ট ২০২৬', 35150, 'TRX 8JB11ZK0MA'], ['জুলাই ২০২৬', 31900, 'TRX 7HC94LR3QE']] as [string, number, string][],
+  payouts: [['Sep 2026', 38400, 'TRX 9KD27HQ1PX'], ['Aug 2026', 35150, 'TRX 8JB11ZK0MA'], ['Jul 2026', 31900, 'TRX 7HC94LR3QE']] as [string, number, string][],
 };

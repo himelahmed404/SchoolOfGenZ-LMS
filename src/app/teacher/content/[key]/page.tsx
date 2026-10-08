@@ -29,7 +29,7 @@ function safeItem(s: Parameters<typeof item>[0], k: string): LessonRevision | nu
 export default function EditorPage() {
   const { key } = useParams<{ key: string }>();
   const k = decodeURIComponent(key);
-  const { s, set, n, numerals } = useStore();
+  const { s, set, numerals } = useStore();
   const [tab, setTab] = useState<EdTab>('notes');
   const [active, setActive] = useState(0);
   const [errs, setErrs] = useState<string[]>([]);
@@ -37,8 +37,6 @@ export default function EditorPage() {
   const it = safeItem(s, k);
   if (!it) notFound();
 
-  const course = courses[keyCourse(k)];
-  const ch = course.chapters[it.ch];
   const locked = it.status === 'review';
   const [statusLabel, statusColor] = statusOf(it);
   const upPct = s.upload && s.upload.key === k ? s.upload.pct : 0;
@@ -58,15 +56,15 @@ export default function EditorPage() {
 
   const tabs: [string, EdTab, string][] = [
     ['Video', 'video', it.video.state === 'done' ? '✓' : ''],
-    ['Notes', 'notes', n(it.blocks.filter(blockHasContent).length)],
-    ['Quiz', 'quiz', n(it.quiz.length)],
+    ['Notes', 'notes', String(it.blocks.filter(blockHasContent).length)],
+    ['Quiz', 'quiz', String(it.quiz.length)],
   ];
 
   return (
     <Shell role="teacher" title="Lesson Editor" back="/teacher/content" noTabs>
       <div className="row wrap" style={{ marginBottom: 12 }}>
         <Link href="/teacher/content" className="t13 w500 only-desktop" style={{ height: 32, display: 'inline-flex', alignItems: 'center', color: 'var(--brand)' }}>← Content</Link>
-        <span className="kicker">অধ্যায় {ch.n} · {it.isNew ? 'নতুন লেসন' : 'লেসন ' + ch.lessons[it.li as number].n}</span>
+        <span className="kicker">Chapter {pad2(it.ch + 1)} · {it.isNew ? 'New lesson' : 'Lesson ' + pad2((it.li as number) + 1)}</span>
         <span className="ml-auto t13 w500" style={{ color: statusColor }}>{it.status === 'published' ? 'Published · বদলালে আবার Review লাগবে' : statusLabel}</span>
       </div>
       <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="লেসনের নাম"
@@ -97,13 +95,13 @@ export default function EditorPage() {
               <div role="progressbar" aria-valuenow={upPct} aria-valuemin={0} aria-valuemax={100} style={{ height: 3, background: 'var(--line)' }}>
                 <div style={{ height: 3, width: upPct + '%', background: 'var(--brand)', transition: 'width 400ms var(--ease)' }} />
               </div>
-              <div className="t13 ink3">আপলোড হচ্ছে · {n(upPct)}% · {n(84)} MB</div>
+              <div className="t13 ink3">Uploading · {upPct}% · 84 MB</div>
             </div>
           ) : (
             <div>
               <div className="ph" style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 20 }}>
                 <span style={{ width: 56, height: 56, borderRadius: 9999, border: '1px solid var(--line-strong)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontFamily: 'var(--font-ui)', color: 'var(--ink)' }}>▶</span>
-                <span className="mono ink2" style={{ position: 'absolute', bottom: 10, left: 12, fontSize: 11 }}>bunny.net stream · {n(it.video.dur || '')}</span>
+                <span className="mono ink2" style={{ position: 'absolute', bottom: 10, left: 12, fontSize: 11 }}>bunny.net stream · {it.video.dur || ''}</span>
               </div>
               <div className="row wrap" style={{ marginTop: 10 }}>
                 <span className="mono t13 ink2">{it.video.name}</span>
@@ -156,7 +154,7 @@ export default function EditorPage() {
             return (
               <div key={qi} className="card card-pad">
                 <div className="row" style={{ gap: 10, marginBottom: 10 }}>
-                  <span className="mono t13 ink3">{n(pad2(qi + 1))}</span>
+                  <span className="mono t13 ink3">{pad2(qi + 1)}</span>
                   <span className="t12 w500" style={{ color: 'var(--warn)' }}>{noA ? 'সঠিক উত্তর বাছা হয়নি' : ''}</span>
                   {!locked ? <button className="t13 ink3 ml-auto" style={{ height: 32, padding: '0 10px', border: 'none', background: 'none' }} onClick={() => patch({ quiz: it.quiz.filter((_, j) => j !== qi) })}>Delete</button> : null}
                 </div>

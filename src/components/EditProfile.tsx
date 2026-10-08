@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { saveStudentProfile, saveTeacherProfile, type StudentProfileDraft, type TeacherProfileDraft } from '@/lib/actions';
-import { defaultStudent, semNames, subjectOptions, teacher } from '@/lib/data';
+import { defaultStudent, SEMESTERS, subjectOptions, teacher } from '@/lib/data';
+import { ordinalEn } from '@/lib/format';
 import { studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { Shell } from './Shell';
@@ -81,11 +82,11 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
           {!isT ? (
             <div style={LABEL}>সেমিস্টার
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {semNames.map((label, i) => {
-                  const on = stu.sem === i + 1;
+                {SEMESTERS.map((sem) => {
+                  const on = stu.sem === sem;
                   return (
-                    <button key={label} aria-pressed={on} onClick={() => editS({ sem: i + 1 })}
-                      style={{ minWidth: 52, height: 40, padding: '0 12px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 12, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 14, fontWeight: on ? 600 : 400 }}>{label}</button>
+                    <button key={sem} aria-pressed={on} onClick={() => editS({ sem })}
+                      style={{ minWidth: 52, height: 40, padding: '0 12px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 12, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 14, fontWeight: on ? 600 : 400 }}>{ordinalEn(sem)}</button>
                   );
                 })}
               </div>

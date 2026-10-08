@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { createLesson, newLessonKey } from '@/lib/actions';
 import { batches, courses, teacher } from '@/lib/data';
-import { pad2 } from '@/lib/format';
+import { pad2, plural } from '@/lib/format';
 import { editorHref, item, itemKeys, statusOf } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function ContentPage() {
-  const { s, set, n } = useStore();
+  const { s, set } = useStore();
   const router = useRouter();
   const tCid = batches[teacher.batch].course;
   const tc = courses[tCid];
@@ -25,9 +25,9 @@ export default function ContentPage() {
     if (st === 'returned') retN++;
   });
   const parts: string[] = [];
-  if (retN) parts.push(n(retN) + 'টি ফেরত');
-  if (revN) parts.push(n(revN) + 'টি অপেক্ষায়');
-  if (draftN) parts.push(n(draftN) + 'টি খসড়া');
+  if (retN) parts.push(retN + ' returned');
+  if (revN) parts.push(revN + ' in review');
+  if (draftN) parts.push(plural(draftN, 'draft'));
 
   const newLesson = () => {
     const ci = openCh !== null && openCh < tc.chapters.length ? openCh : tc.chapters.length - 1;
@@ -40,7 +40,7 @@ export default function ContentPage() {
     <Shell role="teacher" title="Content">
       <div className="strip">
         <span className="t13 ink2">{tc.title}</span>
-        <span className="ml-auto t13 w500 nowrap" style={{ color: retN ? 'var(--margin)' : 'var(--ink-2)' }}>{parts.join(' · ') || 'সব প্রকাশিত'}</span>
+        <span className="ml-auto t13 w500 nowrap" style={{ color: retN ? 'var(--margin)' : 'var(--ink-2)' }}>{parts.join(' · ') || 'All published'}</span>
       </div>
       <h1 className="d1" style={{ marginBottom: 6 }}>Content</h1>
       <div className="muted-p" style={{ marginBottom: 28 }}>নতুন বা বদলানো লেসন অ্যাডমিন অনুমোদন করলে তবেই ছাত্ররা দেখবে।</div>
@@ -50,8 +50,8 @@ export default function ContentPage() {
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
         {tc.chapters.map((ch, ci) => {
-          const ks: [string, string][] = ch.lessons.map((l, li) => [tCid + '|lesson:' + ci + ':' + li, l.n] as [string, string])
-            .concat(keys.filter((k) => k.startsWith(tCid + '|new:' + ci + ':')).map((k, j) => [k, n(pad2(ch.lessons.length + j + 1))] as [string, string]));
+          const ks: [string, string][] = ch.lessons.map((l, li) => [tCid + '|lesson:' + ci + ':' + li, pad2(li + 1)] as [string, string])
+            .concat(keys.filter((k) => k.startsWith(tCid + '|new:' + ci + ':')).map((k, j) => [k, pad2(ch.lessons.length + j + 1)] as [string, string]));
           const rows = ks.map(([k, num]) => ({ k, num, it: item(s, k) }));
           const pend = rows.filter((r) => r.it.status !== 'published').length;
           const open = openCh === ci;
@@ -59,9 +59,9 @@ export default function ContentPage() {
             <div key={ci} style={{ borderBottom: ci === tc.chapters.length - 1 ? 'none' : '1px solid var(--line)' }}>
               <button onClick={() => setOpenCh(open ? null : ci)} aria-expanded={open}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', border: 'none', background: 'var(--surface)', color: 'var(--ink)', textAlign: 'left', whiteSpace: 'normal' }}>
-                <span className="mono t13 ink3" style={{ flexShrink: 0 }}>{ch.n}</span>
+                <span className="mono t13 ink3" style={{ flexShrink: 0 }}>{pad2(ci + 1)}</span>
                 <span className="grow t17 w600" style={{ lineHeight: 1.5 }}>{ch.name}</span>
-                <span className="t12 nowrap" style={{ color: pend ? 'var(--warn)' : 'var(--ink-3)' }}>{n(ks.length)} লেসন{pend ? ' · ' + n(pend) + 'টি অপ্রকাশিত' : ''}</span>
+                <span className="t12 nowrap" style={{ color: pend ? 'var(--warn)' : 'var(--ink-3)' }}>{plural(ks.length, 'lesson')}{pend ? ' · ' + pend + ' unpublished' : ''}</span>
               </button>
               {open ? (
                 <div style={{ padding: '0 16px 8px 48px', display: 'flex', flexDirection: 'column' }}>

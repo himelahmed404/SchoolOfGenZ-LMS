@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
 import { toggleBookmark } from '@/lib/actions';
-import { badgeSeed, bnMonths, courses, defaultStudent, pastCertificate, semNames, streakSeed, weekDayHead } from '@/lib/data';
-import { boardRows, counts, monthCells, studentName } from '@/lib/selectors';
+import { badgeSeed, courses, defaultStudent, pastCertificate, streakSeed, weekDayHead } from '@/lib/data';
+import { monthEn, plural, semLabel } from '@/lib/format';
+import { boardRows, counts, lessonRef, monthCells, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
 export default function ProfilePage() {
-  const { s, set, n, theme, toggleTheme, setNotifOpen } = useStore();
+  const { s, set, theme, toggleTheme, setNotifOpen } = useStore();
   const router = useRouter();
   const name = studentName(s);
   const cst = counts(s, 'cst');
@@ -21,9 +22,9 @@ export default function ProfilePage() {
   const earned = badgeSeed.filter((b) => b[3]).length;
 
   const stats: [string, string, string, string, string][] = [
-    ['local_fire_department', n(streakSeed.current), 'দিনের স্ট্রিক', 'var(--sun)', 'var(--on-sun)'],
-    ['task_alt', n(cst.done), 'লেসন শেষ', 'var(--ok-soft)', 'var(--ok)'],
-    ['leaderboard', n(me ? me.rank : 0), 'ব্যাচে র‍্যাংক', 'var(--brand-soft)', 'var(--brand)'],
+    ['local_fire_department', String(streakSeed.current), 'Day streak', 'var(--sun)', 'var(--on-sun)'],
+    ['task_alt', String(cst.done), 'Lessons done', 'var(--ok-soft)', 'var(--ok)'],
+    ['leaderboard', String(me ? me.rank : 0), 'Batch rank', 'var(--brand-soft)', 'var(--brand)'],
   ];
 
   const bookmarks = Object.keys(s.bookmarks).map((k) => {
@@ -31,7 +32,7 @@ export default function ProfilePage() {
     const c = courses[cid as CourseId], ch = c?.chapters[+ci], l = ch?.lessons[+li];
     if (!l) return null;
     const note = (s.myNotes[k] || '').trim();
-    return { k, href: `/learn/${cid}/${ci}/${li}` + (note ? '?tab=mine' : ''), kicker: cid.toUpperCase() + ' · অধ্যায় ' + ch.n + ' · লেসন ' + l.n, title: l.t, note };
+    return { k, href: `/learn/${cid}/${ci}/${li}` + (note ? '?tab=mine' : ''), kicker: c.code + ' · ' + lessonRef(+ci, +li), title: l.t, note };
   }).filter((b): b is NonNullable<typeof b> => !!b);
 
   return (
@@ -44,7 +45,7 @@ export default function ProfilePage() {
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.25, fontWeight: 800 }}>{name}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>CST · {semNames[s.prefs.sem - 1]} সেমিস্টার · {s.profile.inst}</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>CST · {semLabel(s.prefs.sem)} · {s.profile.inst}</div>
             <div className="mono" style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>{defaultStudent.masked} · {s.profile.email}</div>
           </div>
           <Link href="/profile/edit" className="btn btn-white" style={{ height: 42, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
@@ -64,28 +65,28 @@ export default function ProfilePage() {
           <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h2 className="sec-h" style={{ fontSize: 18 }}>স্ট্রিক ক্যালেন্ডার</h2>
-              <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{bnMonths[today.getMonth()]} {n(today.getFullYear())}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{monthEn(today)}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
               {weekDayHead.map((h) => <span key={h} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--ink-3)' }}>{h}</span>)}
               {cells.map((c, i) => (
                 <span key={i} title={c.studied ? 'পড়েছ' : undefined} className="tile"
                   style={{ aspectRatio: '1', borderRadius: 10, background: c.studied ? 'var(--hl)' : 'transparent', border: '2px solid ' + (c.today ? 'var(--brand)' : c.future ? 'var(--line)' : 'transparent'), color: c.future ? 'var(--ink-3)' : 'var(--ink)', opacity: c.other ? 0.45 : 1, fontSize: 13, fontWeight: c.today ? 800 : 600 }}>
-                  {n(c.n)}
+                  {c.n}
                 </span>
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--ink-3)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--hl)' }} />পড়েছ</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: '2px solid var(--brand)' }} />আজ</span>
-              <span style={{ marginLeft: 'auto' }}>সর্বোচ্চ স্ট্রিক: {n(streakSeed.best)} দিন</span>
+              <span style={{ marginLeft: 'auto' }}>Best streak: {plural(streakSeed.best, 'day')}</span>
             </div>
           </section>
 
           <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h2 className="sec-h" style={{ fontSize: 18 }}>ব্যাজ</h2>
-              <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{n(earned)}/{n(badgeSeed.length)}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{earned}/{badgeSeed.length}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '14px 8px' }}>
               {badgeSeed.map(([icon, label, sub, got], i) => (
@@ -104,7 +105,7 @@ export default function ProfilePage() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2 className="sec-h">বুকমার্ক ও নোট</h2>
-            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{n(bookmarks.length)}টি</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{bookmarks.length} saved</span>
           </div>
           {bookmarks.length ? (
             <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -140,10 +141,10 @@ export default function ProfilePage() {
             <CertRow icon="workspace_premium" tone={['var(--sun)', 'var(--on-sun)']} title={pastCertificate.title} meta={pastCertificate.meta}
               action={<Link href="/certificate" className="btn btn-sm">View</Link>} />
             {cst.done >= cst.total ? (
-              <CertRow icon="workspace_premium" tone={['var(--sun)', 'var(--on-sun)']} title="Data Structure — CST" meta="সম্পন্ন · এইমাত্র"
+              <CertRow icon="workspace_premium" tone={['var(--sun)', 'var(--on-sun)']} title="Data Structure — CST" meta="Completed · just now"
                 action={<Link href="/certificate" className="btn btn-sm">View</Link>} />
             ) : (
-              <CertRow icon="lock" tone={['var(--surface-sunk)', 'var(--ink-3)']} title="Data Structure — CST" meta={'কোর্স ' + n(cst.pct) + '% শেষ · শেষ হলে পাবে'}
+              <CertRow icon="lock" tone={['var(--surface-sunk)', 'var(--ink-3)']} title="Data Structure — CST" meta={cst.pct + '% complete · unlocks at 100%'}
                 action={<button className="btn btn-sm" disabled style={{ color: 'var(--ink-3)' }}>Locked</button>} />
             )}
           </div>

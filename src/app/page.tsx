@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { boardExam, courses, newCourse, streakSeed, testMeta } from '@/lib/data';
-import { daysTo, dateLabel, mmss, ordinal, pad2, secs, taka } from '@/lib/format';
-import { boardRows, counts, examISO, studentName, weekDots } from '@/lib/selectors';
+import { dateEn, daysTo, mmss, ordinalEn, plural, secs, taka } from '@/lib/format';
+import { batchLabel, boardRows, counts, courseKicker, courseMeta, examISO, lessonRef, studentName, weekDots } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -27,7 +27,7 @@ const COVER: Record<CourseId, { code: string; bg: string; bar: string }> = {
 };
 
 export default function Dashboard() {
-  const { s, ready, n, numerals } = useStore();
+  const { s, ready } = useStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -63,8 +63,8 @@ export default function Dashboard() {
             style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px 10px 10px', border: '1px solid var(--line)', borderRadius: 18, background: 'var(--surface)', boxShadow: 'var(--lift)' }}>
             <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--sun)', color: '#D23B45' }}><Icon name="local_fire_department" size={26} fill /></span>
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-              <span className="disp" style={{ fontSize: 19, fontWeight: 800 }}>{n(streakSeed.current)} দিন</span>
-              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>স্ট্রিক চলছে</span>
+              <span className="disp" style={{ fontSize: 19, fontWeight: 800 }}>{plural(streakSeed.current, 'day')}</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>current streak</span>
             </span>
             <span style={{ display: 'flex', gap: 5, paddingLeft: 12, borderLeft: '1px solid var(--line)' }}>
               {dots.map((w) => (
@@ -82,28 +82,28 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'var(--hero-cols)', gap: 16 }}>
           <div className="hero" style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
-              <Icon name="history" size={18} />আবার শুরু করো · Chapter {n(pad2(ch + 1))} · Lesson {n(pad2(li + 1))}
+              <Icon name="history" size={18} />আবার শুরু করো · {lessonRef(ch, li)}
             </div>
             <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
               <Link href={lessonHref} aria-label="চালিয়ে যাও" className="tile"
                 style={{ position: 'relative', width: 'var(--thumb-w)', aspectRatio: '16/10', borderRadius: 16, background: 'rgba(255,255,255,0.14)' }}>
                 <span className="tile" style={{ width: 44, height: 44, borderRadius: 999, background: '#FFFFFF', color: 'var(--hero)' }}><Icon name="play_arrow" size={28} fill /></span>
-                <span className="mono" style={{ position: 'absolute', left: 8, bottom: 8, padding: '1px 6px', borderRadius: 6, background: 'rgba(12,16,32,0.55)', color: '#FFFFFF', fontSize: 11, fontWeight: 600 }}>{n(mmss(t).replace(/^0/, ''))}</span>
+                <span className="mono" style={{ position: 'absolute', left: 8, bottom: 8, padding: '1px 6px', borderRadius: 6, background: 'rgba(12,16,32,0.55)', color: '#FFFFFF', fontSize: 11, fontWeight: 600 }}>{mmss(t).replace(/^0/, '')}</span>
               </Link>
               <div style={{ minWidth: 0 }}>
                 <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700 }}>{lesson.t}</div>
-                <div style={{ marginTop: 4, fontSize: 13, opacity: 0.85 }}>{course.kicker}</div>
+                <div style={{ marginTop: 4, fontSize: 13, opacity: 0.85 }}>{courseKicker(course)}</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.22)' }}>
                 <div style={{ height: 8, borderRadius: 999, width: coursePct + '%', background: 'var(--sun)' }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>কোর্সের {n(coursePct)}% শেষ</span>
+              <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{coursePct}% complete</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <Link href={lessonHref} className="btn btn-white" style={{ padding: '0 22px', gap: 8 }}>চালিয়ে যাও<Icon name="arrow_forward" size={20} /></Link>
-              <span style={{ marginLeft: 'auto', fontSize: 13, opacity: 0.85, whiteSpace: 'nowrap' }}>{n(minsLeft)} মিনিট বাকি</span>
+              <span style={{ marginLeft: 'auto', fontSize: 13, opacity: 0.85, whiteSpace: 'nowrap' }}>{minsLeft} min left</span>
             </div>
           </div>
 
@@ -112,11 +112,11 @@ export default function Dashboard() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>
                 <Icon name="event" size={18} /><span>{boardExam.name}</span>
               </div>
-              <div style={{ marginTop: 2, fontSize: 13 }}>{dateLabel(iso, numerals)}</div>
+              <div style={{ marginTop: 2, fontSize: 13 }}>{dateEn(iso)}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className="disp" style={{ fontSize: 'var(--exam-num)', lineHeight: 0.95, fontWeight: 800 }}>{n(Math.max(0, days))}</span>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>{days > 0 ? 'দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
+              <span className="disp" style={{ fontSize: 'var(--exam-num)', lineHeight: 0.95, fontWeight: 800 }}>{Math.max(0, days)}</span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{days > 1 ? 'days left' : days === 1 ? 'day left' : days === 0 ? 'Exam today' : 'Exam over'}</span>
             </div>
           </div>
         </div>
@@ -130,12 +130,12 @@ export default function Dashboard() {
                 <Link key={id} href={`/course/${id}`} className="card tap lift-hover" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ height: 96, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, padding: '12px 16px', background: `repeating-linear-gradient(180deg, transparent 0 31px, rgba(255,255,255,0.12) 31px 32px), ${cv.bg}`, color: '#FFFFFF' }}>
                     <span className="disp" style={{ fontSize: 44, lineHeight: 0.9, fontWeight: 800 }}>{cv.code}</span>
-                    <span style={{ padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', fontSize: 12, fontWeight: 700 }}>{n(pct)}%</span>
+                    <span style={{ padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', fontSize: 12, fontWeight: 700 }}>{pct}%</span>
                   </div>
                   <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1, width: '100%' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{c.kicker}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{courseKicker(c)}</div>
                     <div className="disp" style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 700 }}>{c.title}</div>
-                    <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 12 }}>{c.meta}</div>
+                    <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 12 }}>{courseMeta(c)}</div>
                     <div style={{ marginTop: 'auto', height: 8, borderRadius: 999, background: 'var(--surface-sunk)' }}>
                       <div style={{ height: 8, borderRadius: 999, width: pct + '%', background: cv.bar }} />
                     </div>
@@ -152,7 +152,7 @@ export default function Dashboard() {
             <span className="tile disp" style={{ width: 60, height: 60, borderRadius: 16, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 18, fontWeight: 800 }}>WEB</span>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{newCourse.title}</span>
-              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{newCourse.kicker} · {taka(newCourse.price, numerals)}</span>
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>Skill course · {batchLabel(newCourse.batchNo)} · {taka(newCourse.price)}</span>
             </span>
             <span style={{ flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', gap: 4, padding: '0 14px', borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>
               Enroll<Icon name="arrow_forward" size={18} />
@@ -163,11 +163,11 @@ export default function Dashboard() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <h2 className="sec-h">This Week</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <WeekRow badge="শুক্র" tone={['var(--brand-soft)', 'var(--brand)']} title={testMeta.name} sub="১০ প্রশ্ন · ২৫ মিনিট"
+            <WeekRow badge="Fri" tone={['var(--brand-soft)', 'var(--brand)']} title={testMeta.name} sub="10 questions · 25 min"
               action={<Link href="/test" className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Start</Link>} />
-            <WeekRow badge="সোম" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="সন্ধ্যা ৭টা"
+            <WeekRow badge="Mon" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="7:00 PM"
               action={<button className="btn btn-sm" disabled title="লিংক ক্লাসের আগে আসবে">Link</button>} />
-            <WeekRow badge={n(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="ব্যাচে তোমার অবস্থান" sub={ordinal(me.rank, numerals) + ' · ' + n(all.length) + ' জনের মধ্যে'} last
+            <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="ব্যাচে তোমার অবস্থান" sub={ordinalEn(me.rank) + ' of ' + all.length} last
               action={<Link href="/leaderboard" className="btn btn-sm">View</Link>} />
           </div>
         </section>

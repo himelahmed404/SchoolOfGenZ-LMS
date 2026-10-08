@@ -4,13 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clearNotifs, markRead } from '@/lib/actions';
 import { toneColors } from '@/lib/data';
+import { ago } from '@/lib/format';
 import { notifsFor, type AppRole } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { Icon } from './ui';
 
 /** Right-hand drawer (full width on mobile). Opened from the sidebar, the topbar bell or Profile → settings. */
 export function Notifications({ role }: { role: AppRole }) {
-  const { s, set, n, notifOpen, setNotifOpen } = useStore();
+  const { s, set, notifOpen, setNotifOpen } = useStore();
   const router = useRouter();
   const [tab, setTab] = useState<'all' | 'unread'>('all');
 
@@ -35,7 +36,7 @@ export function Notifications({ role }: { role: AppRole }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 12px 12px 20px', borderBottom: '1px solid var(--line)' }}>
           <div className="disp" style={{ fontSize: 20, fontWeight: 800 }}>নোটিফিকেশন</div>
           {unread.length ? (
-            <span style={{ padding: '0 8px', borderRadius: 999, background: 'var(--margin)', color: '#FFFFFF', fontSize: 12, fontWeight: 700 }}>{n(unread.length)} নতুন</span>
+            <span style={{ padding: '0 8px', borderRadius: 999, background: 'var(--margin)', color: '#FFFFFF', fontSize: 12, fontWeight: 700 }}>{unread.length} new</span>
           ) : null}
           <button className="icon-btn" onClick={close} aria-label="Close" style={{ marginLeft: 'auto', width: 40, height: 40, color: 'var(--ink-2)' }}>
             <Icon name="close" />
@@ -68,7 +69,7 @@ export function Notifications({ role }: { role: AppRole }) {
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 14, lineHeight: 1.4, fontWeight: read ? 500 : 700 }}>{x.title}</span>
                   <span style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)' }}>{x.body}</span>
-                  <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{x.time}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ago(x.agoMin)}</span>
                 </span>
                 <span style={{ width: 10, height: 10, marginTop: 6, flexShrink: 0, borderRadius: 999, background: read ? 'transparent' : 'var(--margin)' }} />
               </button>

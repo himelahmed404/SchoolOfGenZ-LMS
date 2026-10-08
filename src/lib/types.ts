@@ -1,25 +1,35 @@
 export type CourseId = 'cst' | 'eng';
 
+/** Lesson and chapter numbers come from their position in the list. */
 export interface Lesson {
-  n: string;
   t: string;
   d: string;
   done?: boolean;
 }
 
 export interface Chapter {
-  n: string;
   name: string;
   lessons: Lesson[];
 }
 
 export interface Course {
   id: CourseId;
+  /** Short code shown on covers and in details lines: CST, ENG. */
+  code: string;
   track: 'batch' | 'skill';
-  kicker: string;
+  /** Bangla title, shown to students. */
   title: string;
+  /** English title, for the admin console. */
+  titleEn: string;
   instructor: string;
-  meta: string;
+  /** Batch courses follow a diploma semester and run between two dates. */
+  sem?: number;
+  batchNo?: number;
+  start?: string;
+  end?: string;
+  /** Skill courses are self-paced. */
+  weeks?: number;
+  access?: 'lifetime';
   chapters: Chapter[];
 }
 
@@ -60,7 +70,8 @@ export interface LessonRevision {
   blocks: Block[];
   quiz: QuizQ[];
   by?: string;
-  subAt?: string;
+  /** Minutes since it was submitted for review. */
+  subAgoMin?: number;
   reason?: string;
   live?: boolean;
 }
@@ -87,7 +98,8 @@ export interface Payment {
   due: number;
   trx: string;
   sender: string;
-  at: string;
+  /** Minutes since it was submitted. */
+  agoMin: number;
   status: PayStatus;
   dup?: boolean;
   live?: boolean;
@@ -102,11 +114,11 @@ export interface Doubt {
   li: number;
   who: string;
   q: string;
-  h: number;
-  ago: string;
+  /** Minutes since it was asked. */
+  agoMin: number;
   reply?: string;
   by?: string;
-  replyAgo?: string;
+  replyAgoMin?: number;
   mine?: boolean;
 }
 
@@ -124,7 +136,7 @@ export interface Notif {
   tone: Tone;
   title: string;
   body: string;
-  time: string;
+  agoMin: number;
   /** Route the notification opens. */
   href: string;
 }

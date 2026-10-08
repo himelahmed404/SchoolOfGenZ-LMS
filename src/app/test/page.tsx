@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 const LETTERS = 'কখগঘ';
 
 export default function TestPage() {
-  const { s, set, n, ready } = useStore();
+  const { s, set, ready } = useStore();
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [exitAsk, setExitAsk] = useState(false);
@@ -54,11 +54,11 @@ export default function TestPage() {
           <button className="btn btn-round" style={{ width: 40, height: 40 }} onClick={() => setExitAsk(true)} aria-label="Exit"><Icon name="close" /></button>
           <div style={{ minWidth: 0 }}>
             <div className="disp" style={{ fontSize: 17, lineHeight: 1.2, fontWeight: 700 }}>{testMeta.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>প্রশ্ন {n(qi + 1)}/{n(testQs.length)}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Question {qi + 1}/{testQs.length}</div>
           </div>
           <div className="mono" role="timer" aria-live="off"
             style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 14px', borderRadius: 999, background: low ? 'var(--margin-soft)' : 'var(--surface-sunk)', color: low ? 'var(--margin)' : 'var(--ink)', fontSize: 17, fontWeight: 600, whiteSpace: 'nowrap' }}>
-            <Icon name="timer" size={20} />{n(mmss(left))}
+            <Icon name="timer" size={20} />{mmss(left)}
           </div>
         </div>
         <div style={{ height: 4, background: 'var(--surface-sunk)' }}>
@@ -68,7 +68,7 @@ export default function TestPage() {
 
       <div style={{ flex: 1, maxWidth: 760, width: '100%', margin: '0 auto', padding: 'var(--test-pad)', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="card" style={{ borderRadius: 24, padding: 'var(--card-pad)' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px', marginBottom: 12, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>প্রশ্ন {n(pad2(qi + 1))}</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px', marginBottom: 12, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>Question {pad2(qi + 1)}</div>
           <div style={{ fontSize: 18, lineHeight: 1.6, fontWeight: 600, marginBottom: 18 }}>{q.stem}</div>
           <div role="radiogroup" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {q.o.map((label, oi) => {
@@ -94,8 +94,8 @@ export default function TestPage() {
             {testQs.map((_, i) => {
               const has = s.test.ans[i] !== undefined, here = i === qi;
               return (
-                <button key={i} onClick={() => setQ(i)} aria-current={here ? 'step' : undefined} aria-label={'প্রশ্ন ' + n(i + 1) + (has ? ' — উত্তর দেওয়া' : '')}
-                  style={{ width: 44, height: 44, border: '2px solid ' + (here ? (has ? 'var(--ink)' : 'var(--brand)') : has ? 'var(--brand)' : 'var(--line)'), borderRadius: 999, background: has ? 'var(--brand)' : 'var(--surface)', color: has ? 'var(--on-brand)' : 'var(--ink-2)', fontSize: 15, fontWeight: 700 }}>{n(i + 1)}</button>
+                <button key={i} onClick={() => setQ(i)} aria-current={here ? 'step' : undefined} aria-label={'Question ' + (i + 1) + (has ? ', answered' : '')}
+                  style={{ width: 44, height: 44, border: '2px solid ' + (here ? (has ? 'var(--ink)' : 'var(--brand)') : has ? 'var(--brand)' : 'var(--line)'), borderRadius: 999, background: has ? 'var(--brand)' : 'var(--surface)', color: has ? 'var(--on-brand)' : 'var(--ink-2)', fontSize: 15, fontWeight: 700 }}>{i + 1}</button>
               );
             })}
           </div>

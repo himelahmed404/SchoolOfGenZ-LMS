@@ -66,7 +66,7 @@ export function resetPayment(s: AppState): AppState {
 
 export function askDoubt(s: AppState, cid: CourseId, ch: number, li: number, text: string): AppState {
   const batch = cid === 'cst' ? defaultStudent.batch : 'ENG-02-B07';
-  return { ...s, myDoubts: [{ id: 'm' + Date.now(), batch, course: cid, ch, li, q: text, who: '', h: 0, ago: '' }, ...s.myDoubts] };
+  return { ...s, myDoubts: [{ id: 'm' + Date.now(), batch, course: cid, ch, li, q: text, who: '', agoMin: 0 }, ...s.myDoubts] };
 }
 
 /* ---------- admin: payments ---------- */
@@ -102,7 +102,7 @@ export function createLesson(s: AppState, k: string): AppState {
 
 export function submitForReview(s: AppState, k: string, by: string): AppState {
   const cur = item(s, k);
-  return { ...s, tItems: { ...s.tItems, [k]: { ...cur, status: 'review', reason: '', live: true, subAt: 'এইমাত্র', by } } };
+  return { ...s, tItems: { ...s.tItems, [k]: { ...cur, status: 'review', reason: '', live: true, subAgoMin: 0, by } } };
 }
 
 export function withdraw(s: AppState, k: string): AppState {

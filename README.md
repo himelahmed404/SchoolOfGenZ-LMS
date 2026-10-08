@@ -29,6 +29,17 @@ The app is light on every device, whatever the system setting. The sun/moon butt
 top bar, setup screen, admin console) switches to dark, and the choice is saved on that device.
 `src/lib/theme.ts` holds the rule and the script that applies it before first paint.
 
+## Language
+
+Two kinds of text, so no line mixes scripts:
+
+- **Facts are English with 123 digits:** names of instructors and staff, course code, semester, batch,
+  dates and times, durations, counts, percentages, prices and ranks. They come from the formatters
+  in the first half of `src/lib/format.ts` and the course-fact selectors in `src/lib/selectors.ts`.
+- **Titles and sentences are Bangla:** course, chapter and lesson titles, lesson content, greetings,
+  guidance, empty states and dialogs. Digits inside a Bangla sentence follow the student's numeral
+  setting (`digits`, `ordinal`).
+
 ## Routes
 
 | Role | Path | Screen |
@@ -53,7 +64,7 @@ Notifications are a drawer in the student/teacher shell, not a route.
 
 ## Layout of the code
 
-- `src/lib/data.ts`: seed data ported from the prototype.
+- `src/lib/data.ts`: seed data ported from the prototype. Course details are fields (`sem`, `batchNo`, `start`…), and times are minutes ago.
 - `src/lib/state.ts`: the persisted app state shape (`version` bumps reset old saved state).
 - `src/lib/selectors.ts`: pure reads (progress, roster, leaderboard, queue flags, revisions).
 - `src/lib/actions.ts`: pure mutations, each the seam for a future API call.

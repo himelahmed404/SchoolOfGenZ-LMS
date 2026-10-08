@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
 import { defaultStudent } from '@/lib/data';
-import { ordinal } from '@/lib/format';
+import { ordinal, ordinalEn, plural } from '@/lib/format';
 import { boardRows } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
             <h1 className="d1 only-desktop" style={{ margin: '0 0 6px' }}>Leaderboard</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-3)' }}>
               <span className="mono" style={{ padding: '2px 8px', borderRadius: 8, background: 'var(--surface-sunk)', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{defaultStudent.batch}</span>
-              <span>{n(rows.length)} জন</span>
+              <span>{plural(rows.length, 'student')}</span>
             </div>
           </div>
           <div className="seg" role="group" aria-label="সময়কাল" style={{ marginLeft: 'auto' }}>
@@ -52,11 +52,11 @@ export default function LeaderboardPage() {
           <div className="hero" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>Your Rank</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{ordinal(me.rank, numerals)}</span>
-              <span style={{ fontSize: 15 }}>{n(rows.length)} জনের মধ্যে</span>
+              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{ordinalEn(me.rank)}</span>
+              <span style={{ fontSize: 15 }}>of {rows.length}</span>
             </div>
             <span style={{ alignSelf: 'flex-start', marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', borderRadius: 999, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
-              <Icon name="bolt" size={18} fill />{n(me.pts)} পয়েন্ট
+              <Icon name="bolt" size={18} fill />{plural(me.pts, 'point')}
             </span>
           </div>
           <div className="card" style={{ borderRadius: 24, padding: 'var(--hero-pad)', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -73,23 +73,23 @@ export default function LeaderboardPage() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 className="sec-h">Around You</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {from > 0 ? morePill('↑ আরও ' + n(from) + ' জন') : null}
+            {from > 0 ? morePill('↑ ' + from + ' more') : null}
             {rows.slice(from, to).map((r, i) => {
               const av = AVATAR[r.name.length % 4];
               return (
                 <div key={r.name + i} aria-current={r.live ? 'true' : undefined}
                   style={{ display: 'grid', gridTemplateColumns: '36px 36px minmax(0,1fr) auto', gap: 12, alignItems: 'center', minHeight: 56, padding: '8px 16px 8px 10px', borderRadius: 16, border: '1px solid ' + (r.live ? 'var(--brand)' : 'var(--line)'), background: r.live ? 'var(--brand-soft)' : 'var(--surface)' }}>
-                  <span className="disp" style={{ textAlign: 'center', fontSize: 17, fontWeight: 700, color: r.rank <= 3 ? 'var(--warn)' : 'var(--ink-3)' }}>{n(r.rank)}</span>
+                  <span className="disp" style={{ textAlign: 'center', fontSize: 17, fontWeight: 700, color: r.rank <= 3 ? 'var(--warn)' : 'var(--ink-3)' }}>{r.rank}</span>
                   <span className="tile" style={{ width: 36, height: 36, borderRadius: 999, background: av[0], color: av[1], fontSize: 15, fontWeight: 700 }}>{initial(r.name)}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <span className="ellipsis" style={{ fontSize: 15, fontWeight: r.live ? 700 : 500 }}>{r.name}</span>
                     {r.live ? <span style={{ flexShrink: 0, padding: '0 8px', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 12, fontWeight: 700, lineHeight: '20px' }}>তুমি</span> : null}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: r.live ? 700 : 500, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{n(r.pts)}</span>
+                  <span style={{ fontSize: 14, fontWeight: r.live ? 700 : 500, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{r.pts}</span>
                 </div>
               );
             })}
-            {to < rows.length ? morePill('↓ আরও ' + n(rows.length - to) + ' জন') : null}
+            {to < rows.length ? morePill('↓ ' + (rows.length - to) + ' more') : null}
           </div>
         </section>
 

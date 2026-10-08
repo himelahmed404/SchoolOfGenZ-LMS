@@ -7,7 +7,8 @@ import { ChapterList } from '@/components/ChapterList';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { courses, outcomeSets, testMeta, testQs } from '@/lib/data';
-import { counts, frontier, isDone } from '@/lib/selectors';
+import { pad2, plural } from '@/lib/format';
+import { counts, courseKicker, courseMeta, frontier, isDone } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -15,7 +16,7 @@ const HERO_BG: Record<CourseId, string> = { cst: 'var(--hero)', eng: '#C2357A' }
 
 export default function CoursePage() {
   const { courseId } = useParams<{ courseId: string }>();
-  const { s, n } = useStore();
+  const { s } = useStore();
   const valid = courseId in courses;
   const cid = (valid ? courseId : 'cst') as CourseId;
   // The resume lesson's chapter opens first; for other courses, the first unfinished chapter.
@@ -31,18 +32,18 @@ export default function CoursePage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div className="hero" style={{ ['--hero-bg' as string]: HERO_BG[cid], color: '#FFFFFF', display: 'grid', gridTemplateColumns: 'var(--course-hero-cols)', gap: 20, alignItems: 'center' }}>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{course.kicker}</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{courseKicker(course)}</div>
             <h1 className="d1">{course.title}</h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 13, opacity: 0.9 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="person" size={18} />{course.instructor}</span>
-              <span>{course.meta}</span>
+              <span>{courseMeta(course)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
               <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.22)' }}>
                 <div style={{ height: 8, borderRadius: 999, width: cnt.pct + '%', background: 'var(--sun)', transition: 'width 400ms var(--ease)' }} />
               </div>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>{n(cnt.pct)}% সম্পন্ন · {n(cnt.total)}টির মধ্যে {n(cnt.done)}টি লেসন</div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{cnt.pct}% complete · {cnt.done} of {plural(cnt.total, 'lesson')}</div>
           </div>
           <div className="only-desktop mono tile" style={{ aspectRatio: '4/3', borderRadius: 18, border: '1px dashed rgba(255,255,255,0.45)', background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.10) 0 8px, rgba(255,255,255,0.03) 8px 16px)', fontSize: 11 }}>course cover</div>
         </div>
@@ -57,7 +58,7 @@ export default function CoursePage() {
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 10 }}>
                   <Icon name={done ? 'check_circle' : 'radio_button_unchecked'} fill={done} style={{ color: done ? 'var(--ok)' : 'var(--ink-3)', marginTop: 2 }} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: 1.6, color: done ? 'var(--ink)' : 'var(--ink-2)' }}>{o.t}</span>
-                  {chap ? <span style={{ flexShrink: 0, padding: '1px 9px', borderRadius: 999, background: 'var(--surface-sunk)', color: 'var(--ink-3)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>অধ্যায় {chap.n}</span> : null}
+                  {chap ? <span style={{ flexShrink: 0, padding: '1px 9px', borderRadius: 999, background: 'var(--surface-sunk)', color: 'var(--ink-3)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>Chapter {pad2(o.ch + 1)}</span> : null}
                 </div>
               );
             })}
@@ -74,7 +75,7 @@ export default function CoursePage() {
             <span className="tile" style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(19,26,51,0.08)' }}><Icon name="timer" size={26} /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="disp" style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 700 }}>{testMeta.name}</div>
-              <div style={{ fontSize: 13 }}>{n(testQs.length)} প্রশ্ন · {n(testMeta.seconds / 60)} মিনিট · অধ্যায় ০১–০৬</div>
+              <div style={{ fontSize: 13 }}>{plural(testQs.length, 'question')} · {testMeta.seconds / 60} min · Chapters 01–06</div>
             </div>
             <Link href="/test" className="btn" style={{ border: 'none', padding: '0 24px', background: '#131A33', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>Start</Link>
           </div>
