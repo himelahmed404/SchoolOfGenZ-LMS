@@ -40,6 +40,7 @@
   --cover-h: 200px; --cert-pad: 56px 48px; --test-pad: 24px; --col-pad: 36px 40px 64px;
   --thumb-w: 152px; --exam-num: 76px; --video-r: 20px; --cert-name: 44px; --cert-margin: 40px; --toast-bottom: 24px;
   --hero-cols: minmax(0, 2fr) minmax(0, 1fr); --card-cols: repeat(2, minmax(0, 1fr)); --course-hero-cols: minmax(0, 1fr) 220px;
+  --edit-h: 20px;
 }
 .has-devbar { --devbar-h: 48px; }
 @media (max-width: 1179px) {
@@ -50,7 +51,7 @@
     --d1: 26px; --d2: 20px; --h1: 19px; --btn-h: 48px; --card-pad: 16px; --hero-pad: 20px;
     --cover-h: 140px; --cert-pad: 28px 20px; --test-pad: 16px; --col-pad: 18px 16px 28px;
     --thumb-w: 108px; --exam-num: 52px; --video-r: 16px; --cert-name: 30px; --cert-margin: 14px; --toast-bottom: 88px;
-    --hero-cols: 1fr; --card-cols: 1fr; --course-hero-cols: 1fr;
+    --hero-cols: 1fr; --card-cols: 1fr; --course-hero-cols: 1fr; --edit-h: 17px;
   }
 }
 
