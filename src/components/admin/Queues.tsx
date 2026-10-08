@@ -6,9 +6,9 @@ import { NoteBlocks } from '@/components/NoteBlocks';
 import { Penguin } from '@/components/Penguin';
 import { useConsole } from './Console';
 import { decideContent, decidePayments } from '@/lib/actions';
-import { contentReasons, courses, rejectReasons, teacher } from '@/lib/data';
+import { contentReasons, courses, MIN_TEST_QUESTIONS, rejectReasons, teacher } from '@/lib/data';
 import { ago, pad2, taka } from '@/lib/format';
-import { allQueue, blockHasContent, item, itemKeys, keyCourse, rowFlags } from '@/lib/selectors';
+import { allQueue, blockHasContent, item, itemKeys, keyCourse, revisionRef, rowFlags } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
 import type { LessonRevision, PayStatus, Payment } from '@/lib/types';
@@ -20,7 +20,7 @@ type CFilter = 'review' | 'published' | 'returned';
 /** Course and position of a lesson revision, for list rows and the preview. */
 function where(k: string, x: LessonRevision) {
   const c = courses[keyCourse(k)];
-  return { course: c.titleEn, tag: c.code, loc: 'Chapter ' + pad2(x.ch + 1) + ' · ' + (x.isNew ? 'New lesson' : 'Lesson ' + pad2((x.li as number) + 1)) };
+  return { course: c.titleEn, tag: c.code, loc: revisionRef(x) };
 }
 
 /** Payment approvals and content review, shown beside the console sidebar. */
@@ -90,7 +90,8 @@ export function AdminQueues({ mode }: { mode: Mode }) {
     if (!k || !canContent) return;
     set((x: AppState) => decideContent(x, k, status, reason));
     const x = item(s, k), w = where(k, x);
-    logic.log('content', status === 'published' ? 'Published lesson' : 'Returned lesson', w.tag + ' · ' + w.loc + ' · ' + (x.title || ''), reason);
+    const what = x.kind === 'test' ? 'test' : 'lesson';
+    logic.log('content', (status === 'published' ? 'Published ' : 'Returned ') + what, w.tag + ' · ' + w.loc + (x.kind === 'test' ? '' : ' · ' + (x.title || '')), reason);
     setCRetFor(null); setCReason(null); setCNote(''); setCSel(0);
   };
   const doReturn = () => { if (canRet) cDecide(ck, 'returned', [cReason, cNote.trim()].filter(Boolean).join(' — ')); };
@@ -282,7 +283,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                     style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '12px 16px 12px 14px', border: 'none', borderLeft: '2px solid ' + (here ? 'var(--brand)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left', whiteSpace: 'normal' }}>
                     <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
                     <span className="t15" style={{ lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'নাম দেওয়া হয়নি'}</span>
-                    <span className="row t12 ink2" style={{ gap: 8 }}><span>{x.by || teacher.name}</span><span className="tag" style={{ color: kindColor }}>{x.isNew ? 'New Lesson' : 'Update'}</span></span>
+                    <span className="row t12 ink2" style={{ gap: 8 }}><span>{x.by || teacher.name}</span><span className="tag" style={{ color: kindColor }}>{x.kind === 'test' ? (x.isNew ? 'New Test' : 'Test Update') : x.isNew ? 'New Lesson' : 'Update'}</span></span>
                   </button>
                 );
               })}
@@ -355,7 +356,11 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
   const { n } = useStore();
   const nb = it.blocks.filter(blockHasContent).length, vq = it.quiz.length, vOk = it.video.state === 'done';
   const status = it.status === 'published' ? ['✓ Published', 'var(--brand)'] : it.status === 'returned' ? ['✗ Returned', 'var(--margin)'] : ['● Pending review', 'var(--warn)'];
-  const checks: [string, boolean][] = [
+  const isTest = it.kind === 'test';
+  const checks: [string, boolean][] = isTest ? [
+    ['Questions · ' + vq, vq >= MIN_TEST_QUESTIONS],
+    ['Time limit · ' + Math.round((it.seconds || 0) / 60) + ' min', !!it.seconds],
+  ] : [
     ['Video · ' + (vOk ? n(it.video.dur || '') : 'নেই'), vOk],
     ['Notes · ' + n(nb) + ' blocks', nb > 0],
     ['Quiz · ' + (vq ? n(vq) + ' প্রশ্ন' : 'নেই'), vq > 0],
@@ -384,15 +389,17 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
               <span key={label} className="t13 ink2" style={{ display: 'flex', gap: 6 }}><span style={{ color: ok ? 'var(--brand)' : 'var(--ink-3)' }}>{ok ? '✓' : '–'}</span><span>{label}</span></span>
             ))}
           </div>
+          {isTest ? null : (<>
           <div style={{ height: 240, marginBottom: 32, padding: 12, background: 'var(--surface-sunk)', border: '1px solid var(--line)', borderRadius: 16, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
             <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>{vOk ? it.video.name : 'ভিডিও নেই'}</span>
             {vOk ? <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>▶ {n(it.video.dur || '')}</span> : null}
           </div>
           <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>Notes — শিক্ষার্থী যেভাবে দেখবে</div>
           <div style={{ marginBottom: 32, padding: '24px 28px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}><NoteBlocks blocks={it.blocks} /></div>
+          </>)}
           {it.quiz.length ? (
             <div>
-              <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>Quiz — সঠিক উত্তর চিহ্ন দেওয়া</div>
+              <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>{isTest ? 'Questions' : 'Quiz'} — সঠিক উত্তর চিহ্ন দেওয়া</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {it.quiz.map((q, qi) => (
                   <div key={qi} style={{ padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}>

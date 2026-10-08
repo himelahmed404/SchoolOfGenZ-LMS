@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Tex } from '@/components/Tex';
 import { patchItem, startUpload, submitForReview, withdraw } from '@/lib/actions';
-import { blockTypes, courses, fxKeys, teacher } from '@/lib/data';
+import { blockTypes, courses, fxKeys, MIN_TEST_QUESTIONS, teacher } from '@/lib/data';
 import { pad2 } from '@/lib/format';
-import { blockHasContent, issues, item, keyCourse, statusOf } from '@/lib/selectors';
+import { blockHasContent, issues, item, keyCourse, revisionRef, statusOf } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { Block, BlockType, LessonRevision, QuizQ } from '@/lib/types';
 
@@ -38,6 +38,9 @@ export default function EditorPage() {
   if (!it) notFound();
 
   const locked = it.status === 'review';
+  // A chapter test has questions and a time limit only: no video, notes or title of its own.
+  const isTest = it.kind === 'test';
+  const view: EdTab = isTest ? 'quiz' : tab;
   const [statusLabel, statusColor] = statusOf(it);
   const upPct = s.upload && s.upload.key === k ? s.upload.pct : 0;
 
@@ -61,27 +64,48 @@ export default function EditorPage() {
   ];
 
   return (
-    <Shell role="teacher" title="Lesson Editor" back="/teacher/content" noTabs>
+    <Shell role="teacher" title={isTest ? 'Chapter Test' : 'Lesson Editor'} back="/teacher/content" noTabs>
       <div className="row wrap" style={{ marginBottom: 12 }}>
         <Link href="/teacher/content" className="t13 w500 only-desktop" style={{ height: 32, display: 'inline-flex', alignItems: 'center', color: 'var(--brand)' }}>← Content</Link>
-        <span className="kicker">Chapter {pad2(it.ch + 1)} · {it.isNew ? 'New lesson' : 'Lesson ' + pad2((it.li as number) + 1)}</span>
+        <span className="kicker">{revisionRef(it)}</span>
         <span className="ml-auto t13 w500" style={{ color: statusColor }}>{it.status === 'published' ? 'Published · বদলালে আবার Review লাগবে' : statusLabel}</span>
       </div>
-      <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="লেসনের নাম"
-        className="title-input" />
+      {isTest ? (
+        <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
+          <h1 className="d1" style={{ fontWeight: 600 }}>Chapter test</h1>
+          <div className="t15 ink2">{courses[keyCourse(k)].chapters[it.ch].name}</div>
+        </div>
+      ) : (
+        <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="লেসনের নাম"
+          className="title-input" />
+      )}
 
       {it.status === 'returned' ? <div className="alert" style={{ marginTop: 16 }}>ফেরত এসেছে — {it.reason || 'কারণ লেখা নেই'}। ঠিক করে আবার জমা দাও।</div> : null}
       {locked ? <div className="alert alert-warn" style={{ marginTop: 16 }}>অ্যাডমিন দেখছেন। অনুমোদন হলে ছাত্ররা দেখতে পাবে — ততক্ষণ বদলানো যাবে না।</div> : null}
       {it.status === 'draft' && it.update ? <div className="fine" style={{ marginTop: 16 }}>ছাত্ররা এখনো আগের সংস্করণ দেখছে। জমা দিয়ে অনুমোদন হলে নতুনটা যাবে।</div> : null}
 
-      <div className="seg" role="tablist" style={{ display: 'inline-flex', margin: '20px 0 24px' }}>
-        {tabs.map(([label, id, badge]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label}{badge ? ' · ' + badge : ''}</button>
-        ))}
-      </div>
+      {isTest ? (
+        <div className="card card-pad" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '20px 0 16px' }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="t15 w600">Time limit</div>
+            <div className="t13 ink3">সময় শেষ হলে টেস্ট নিজে থেকেই জমা হয়ে যায়।</div>
+          </div>
+          <div className="seg" role="group" aria-label="Time limit" style={{ marginLeft: 'auto' }}>
+            {[5, 8, 10, 15, 20].map((m) => (
+              <button key={m} aria-pressed={it.seconds === m * 60} disabled={locked} onClick={() => patch({ seconds: m * 60 })}>{m} min</button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="seg" role="tablist" style={{ display: 'inline-flex', margin: '20px 0 24px' }}>
+          {tabs.map(([label, id, badge]) => (
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+              style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label}{badge ? ' · ' + badge : ''}</button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'video' ? (
+      {view === 'video' ? (
         <div>
           {it.video.state === 'none' ? (
             <button onClick={() => set((x) => startUpload(x, k))} disabled={locked || !!s.upload}
@@ -113,7 +137,7 @@ export default function EditorPage() {
         </div>
       ) : null}
 
-      {tab === 'notes' ? (
+      {view === 'notes' ? (
         <div>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0' }}>
             {it.blocks.map((b, i) => (
@@ -146,9 +170,16 @@ export default function EditorPage() {
         </div>
       ) : null}
 
-      {tab === 'quiz' ? (
+      {view === 'quiz' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {it.quiz.length === 0 ? <div className="muted-p">এই লেসনে এখনো কুইজ নেই। লেসন শেষে ছাত্ররা এগুলো অনুশীলন করবে — ভুল করলে তোমার ব্যাখ্যা দেখবে।</div> : null}
+          {isTest ? (
+            <div className="t13 w500 ink2">Questions · {it.quiz.length}{it.quiz.length < MIN_TEST_QUESTIONS ? ' · at least ' + MIN_TEST_QUESTIONS + ' needed' : ''}</div>
+          ) : null}
+          {it.quiz.length === 0 ? (
+            <div className="muted-p">{isTest
+              ? 'এই অধ্যায়ের টেস্টে এখনো প্রশ্ন নেই। অধ্যায়ের সব লেসন শেষ করলে ছাত্ররা চাইলে টেস্টটা দিতে পারবে — দেওয়া বাধ্যতামূলক না।'
+              : 'এই লেসনে এখনো কুইজ নেই। লেসন শেষে ছাত্ররা এগুলো অনুশীলন করবে — ভুল করলে তোমার ব্যাখ্যা দেখবে।'}</div>
+          ) : null}
           {it.quiz.map((q, qi) => {
             const noA = q.a === null || q.a === undefined;
             return (
@@ -175,7 +206,7 @@ export default function EditorPage() {
                     );
                   })}
                 </div>
-                <input value={q.why || ''} readOnly={locked} placeholder="ব্যাখ্যা — উত্তর দেওয়ার পর ছাত্ররা দেখবে" aria-label="ব্যাখ্যা"
+                <input value={q.why || ''} readOnly={locked} placeholder={isTest ? 'ব্যাখ্যা — ভুল করলে ফলাফলের পাতায় ছাত্ররা দেখবে' : 'ব্যাখ্যা — উত্তর দেওয়ার পর ছাত্ররা দেখবে'} aria-label="ব্যাখ্যা"
                   onChange={(e) => { const v = e.target.value; setQ(qi, () => ({ why: v })); }}
                   style={{ width: '100%', height: 44, marginTop: 10, padding: '0 12px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 14 }} />
               </div>

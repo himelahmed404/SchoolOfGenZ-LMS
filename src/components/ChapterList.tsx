@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { courses } from '@/lib/data';
 import { pad2, secs } from '@/lib/format';
-import { isDone, isLocked } from '@/lib/selectors';
+import { chapterTest, isDone, isLocked, testFacts, testKey, testStatus } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 import { Icon } from './ui';
@@ -24,6 +24,8 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
   const router = useRouter();
   const course = courses[courseId];
   const big = variant === 'course';
+  const rowH = big ? 48 : variant === 'sheet' ? 44 : 40;
+  const rowText = variant === 'spine' ? 13 : 15;
 
   const go = (ci: number, li: number) => {
     if (isLocked(s, courseId, ci, li)) return;
@@ -42,6 +44,16 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
         const badgeBg = full ? 'var(--ok-soft)' : part ? 'var(--brand)' : 'var(--surface-sunk)';
         const badgeFg = full ? 'var(--ok)' : part ? 'var(--on-brand)' : 'var(--ink-3)';
 
+        // The optional chapter test sits under the last lesson, and only when the chapter has one.
+        const test = chapterTest(s, courseId, ci);
+        const tSt = testStatus(s, courseId, ci);
+        const res = s.testResults[testKey(courseId, ci)];
+        const openTest = () => {
+          onOpenLesson?.();
+          router.push(`/test/${courseId}/${ci}` + (tSt === 'done' ? '/result' : ''));
+        };
+        const testNote = tSt === 'done' && res ? 'Test ' + res.best + '/' + res.total : tSt === 'ready' ? 'Test ready' : tSt === 'running' ? 'Test in progress' : '';
+
         const lessons = isOpen ? (
           <div style={big ? { padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 2 } : { padding: '2px 0 8px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {ch.lessons.map((l, li) => {
@@ -53,13 +65,30 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
               return (
                 <button key={li} className="ch-row" onClick={() => go(ci, li)} disabled={lock} aria-label={lock ? l.t + ' — লক' : l.t}
                   aria-current={cur ? 'true' : undefined}
-                  style={{ ['--row-bg' as string]: cur ? 'var(--brand-soft)' : 'transparent', minHeight: big || variant === 'sheet' ? (big ? 48 : 44) : 40 }}>
+                  style={{ ['--row-bg' as string]: cur ? 'var(--brand-soft)' : 'transparent', minHeight: rowH }}>
                   <Icon name={icon} fill={done || cur} style={{ color: iconColor }} />
-                  <span style={{ flex: 1, minWidth: 0, fontSize: variant === 'spine' ? 13 : 15, lineHeight: 1.45, color: lock ? 'var(--ink-3)' : 'var(--ink)', fontWeight: cur ? 600 : 400 }}>{l.t}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: rowText, lineHeight: 1.45, color: lock ? 'var(--ink-3)' : 'var(--ink)', fontWeight: cur ? 600 : 400 }}>{l.t}</span>
                   <span style={{ flexShrink: 0, fontSize: 12, color: 'var(--ink-3)' }}>{l.d}</span>
                 </button>
               );
             })}
+            {test && tSt !== 'none' ? (
+              <button className="ch-row" onClick={openTest} disabled={tSt === 'locked'}
+                aria-label={'Chapter ' + pad2(ci + 1) + ' test' + (tSt === 'locked' ? ', locked until the lessons are done' : '')}
+                style={{ minHeight: rowH, marginTop: 4, borderTop: '1px dashed var(--line-strong)', borderRadius: '0 0 12px 12px' }}>
+                <Icon name={tSt === 'done' ? 'task_alt' : tSt === 'locked' ? 'lock' : 'quiz'} fill={tSt === 'done'}
+                  style={{ color: tSt === 'done' ? 'var(--ok)' : tSt === 'locked' ? 'var(--ink-3)' : 'var(--brand)' }} />
+                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
+                  <span style={{ fontSize: rowText, fontWeight: 600, color: tSt === 'locked' ? 'var(--ink-3)' : 'var(--ink)' }}>Chapter test</span>
+                  {variant !== 'spine' ? <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{testFacts(test)} · optional</span> : null}
+                </span>
+                {tSt === 'done' && res ? (
+                  <span style={{ flexShrink: 0, padding: '2px 10px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)', fontSize: 12, fontWeight: 700 }}>{res.best}/{res.total}</span>
+                ) : tSt === 'locked' ? null : (
+                  <span style={{ flexShrink: 0, padding: '2px 10px', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 12, fontWeight: 700 }}>{tSt === 'running' ? 'Resume' : 'Take test'}</span>
+                )}
+              </button>
+            ) : null}
           </div>
         ) : null;
 
@@ -76,6 +105,7 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
                       <span style={{ display: 'block', height: 6, borderRadius: 999, width: Math.round((doneN / total) * 100) + '%', background: full ? 'var(--ok)' : 'var(--brand)' }} />
                     </span>
                     <span style={{ fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{doneN}/{total} lessons · {mins} min</span>
+                    {testNote ? <span style={{ fontSize: 12, fontWeight: 600, color: tSt === 'done' ? 'var(--ok)' : 'var(--brand)', whiteSpace: 'nowrap' }}>{testNote}</span> : null}
                   </span>
                 </span>
                 <Icon name={isOpen ? 'expand_less' : 'expand_more'} size={24} style={{ color: 'var(--ink-3)' }} />

@@ -14,7 +14,7 @@ type Role = 'student' | 'teacher' | 'admin';
 
 const JUMPS: Record<Role, [string, string][]> = {
   student: [
-    ['dashboard', '/'], ['course', '/course/cst'], ['lesson', '/learn/cst/2/4'], ['test', '/test'], ['result', '/test/result'],
+    ['dashboard', '/'], ['course', '/course/cst'], ['lesson', '/learn/cst/2/4'], ['test', '/test/cst/1'], ['result', '/test/cst/0/result'],
     ['board', '/leaderboard'], ['cert', '/certificate'], ['enroll', '/enroll'], ['profile', '/profile'], ['setup', '/setup'],
   ],
   teacher: [
@@ -36,8 +36,7 @@ function screenOf(p: string): string {
   if (p === '/') return 'dashboard';
   if (p.startsWith('/course')) return 'course';
   if (p.startsWith('/learn')) return 'lesson';
-  if (p === '/test/result') return 'result';
-  if (p.startsWith('/test')) return 'test';
+  if (p.startsWith('/test')) return p.endsWith('/result') ? 'result' : 'test';
   if (p.startsWith('/leaderboard')) return 'board';
   if (p.startsWith('/certificate')) return 'cert';
   if (p.startsWith('/enroll')) return 'enroll';

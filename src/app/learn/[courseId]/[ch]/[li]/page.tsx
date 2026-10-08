@@ -11,7 +11,7 @@ import { Icon, initial } from '@/components/ui';
 import { askDoubt, completeLesson, savePosition, setMyNote, toggleBookmark } from '@/lib/actions';
 import { confusions, courses, defaultStudent } from '@/lib/data';
 import { ago, mmss, pad2, plural, secs } from '@/lib/format';
-import { doubtsFor, isLocked, lessonKey, lessonRef, step, studentLesson, watermarkOn } from '@/lib/selectors';
+import { chapterTest, doubtsFor, isLocked, lessonKey, lessonRef, step, studentLesson, testFacts, testStatus, watermarkOn } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -65,6 +65,8 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   const [openCh, setOpenCh] = useState<number | null>(ci);
   const [stuckOpen, setStuckOpen] = useState<Record<number, boolean>>({});
   const [askText, setAskText] = useState('');
+  /** Set when the last lesson of a chapter was just finished and its test has not been taken. */
+  const [chapterEnd, setChapterEnd] = useState<{ next: [number, number] | null; courseDone: boolean } | null>(null);
 
   useEffect(() => { tRef.current = t; }, [t]);
 
@@ -107,13 +109,20 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   const words = note.trim() ? note.trim().split(/\s+/).length : 0;
   const pct = dur ? Math.round((t / dur) * 100) : 0;
 
+  const moveOn = (nx: [number, number] | null, courseDone: boolean) => {
+    if (courseDone) { showToast('big'); return; }
+    showToast('small');
+    if (nx) router.push(`/learn/${cid}/${nx[0]}/${nx[1]}`);
+  };
   const next = () => {
     const r = completeLesson(s, cid, ci, li);
     set(() => r.s);
-    if (r.courseDone) { showToast('big'); return; }
-    showToast('small');
-    if (r.next) router.push(`/learn/${cid}/${r.next[0]}/${r.next[1]}`);
+    // Finishing a chapter offers its test first. The test is optional and never blocks the next chapter.
+    const endsChapter = !r.next || r.next[0] !== ci;
+    if (endsChapter && testStatus(r.s, cid, ci) === 'ready') { setChapterEnd({ next: r.next, courseDone: r.courseDone }); return; }
+    moveOn(r.next, r.courseDone);
   };
+  const test = chapterTest(s, cid, ci);
   const prev = () => {
     const pv = step(cid, ci, li, -1);
     if (pv) router.push(`/learn/${cid}/${pv[0]}/${pv[1]}`);
@@ -329,6 +338,23 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
       </div>
 
       {sheet ? <Sheet title="Chapters" onClose={() => setSheet(false)}><div style={{ padding: '0 12px' }}>{spine('sheet')}</div></Sheet> : null}
+
+      {chapterEnd && test ? (
+        <div className="ov dialog-scrim" data-print="hide">
+          <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="chapter-end">
+            <span className="tile" style={{ width: 48, height: 48, marginBottom: 14, borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)' }}><Icon name="task_alt" size={26} fill /></span>
+            <div id="chapter-end" className="disp" style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Chapter {pad2(ci + 1)} complete</div>
+            <div style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--ink-2)' }}>চ্যাপ্টার টেস্টটা দিয়ে দেখবে কতটা শিখেছ? এটা ঐচ্ছিক — না দিলেও পরের অধ্যায় খোলা থাকবে।</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '10px 0 22px', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)' }}><Icon name="quiz" size={18} />{testFacts(test)}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link href={`/test/${cid}/${ci}`} className="btn btn-primary" style={{ height: 48 }} autoFocus>Take the test</Link>
+              <button className="btn" style={{ height: 48, fontSize: 15 }} onClick={() => { const e = chapterEnd; setChapterEnd(null); moveOn(e.next, e.courseDone); }}>
+                {chapterEnd.next ? 'Continue to Chapter ' + pad2(chapterEnd.next[0] + 1) : 'Finish the course'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </Shell>
   );
 }

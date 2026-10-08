@@ -7,9 +7,17 @@ export interface Lesson {
   done?: boolean;
 }
 
+/** Optional test at the end of a chapter. A chapter without one shows no test option. */
+export interface ChapterTest {
+  /** Time limit. */
+  seconds: number;
+  qs: QuizQ[];
+}
+
 export interface Chapter {
   name: string;
   lessons: Lesson[];
+  test?: ChapterTest;
 }
 
 export interface Course {
@@ -57,9 +65,12 @@ export interface Video {
 
 export type RevisionStatus = 'draft' | 'review' | 'returned' | 'published';
 
-/** A lesson revision as the teacher edits it. Key format: `cid|lesson:ci:li` or `cid|new:ci:id`. */
+/**
+ * A revision as the teacher edits it, reviewed by an admin before students see it.
+ * Keys: a lesson is `cid|lesson:ci:li` (existing) or `cid|new:ci:id` (new); a chapter test is `cid|test:ci`.
+ */
 export interface LessonRevision {
-  kind: 'lesson';
+  kind: 'lesson' | 'test';
   ch: number;
   li?: number;
   isNew?: boolean;
@@ -68,7 +79,10 @@ export interface LessonRevision {
   update?: boolean;
   video: Video;
   blocks: Block[];
+  /** Lesson practice quiz, or the questions of a chapter test. */
   quiz: QuizQ[];
+  /** Chapter tests: time limit. */
+  seconds?: number;
   by?: string;
   /** Minutes since it was submitted for review. */
   subAgoMin?: number;
@@ -82,6 +96,7 @@ export interface PublishedLesson {
   video: Video;
   blocks: Block[];
   quiz: QuizQ[];
+  seconds?: number;
 }
 
 export type PayMethod = 'bKash' | 'Nagad';

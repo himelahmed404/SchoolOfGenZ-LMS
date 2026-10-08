@@ -1,14 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useState } from 'react';
 import { ChapterList } from '@/components/ChapterList';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { courses, outcomeSets, testMeta, testQs } from '@/lib/data';
+import { courses, outcomeSets } from '@/lib/data';
 import { pad2, plural } from '@/lib/format';
-import { counts, courseKicker, courseMeta, frontier, isDone } from '@/lib/selectors';
+import { chapterDone, counts, courseKicker, courseMeta, frontier } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -53,7 +52,7 @@ export default function CoursePage() {
           <div className="card" style={{ display: 'flex', flexDirection: 'column', padding: 8 }}>
             {outcomeSets[cid].map((o, i) => {
               const chap = course.chapters[o.ch];
-              const done = !!chap && chap.lessons.every((_, li) => isDone(s, cid, o.ch, li));
+              const done = !!chap && chapterDone(s, cid, o.ch);
               return (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 10 }}>
                   <Icon name={done ? 'check_circle' : 'radio_button_unchecked'} fill={done} style={{ color: done ? 'var(--ok)' : 'var(--ink-3)', marginTop: 2 }} />
@@ -69,17 +68,6 @@ export default function CoursePage() {
           <h2 className="sec-h">Chapters</h2>
           <ChapterList variant="course" courseId={cid} open={open} current={current} onToggle={(ci) => setOpen(open === ci ? null : ci)} />
         </section>
-
-        {course.track === 'batch' ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '18px 20px', borderRadius: 20, background: 'var(--sun)', color: 'var(--on-sun)' }}>
-            <span className="tile" style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(19,26,51,0.08)' }}><Icon name="timer" size={26} /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="disp" style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 700 }}>{testMeta.name}</div>
-              <div style={{ fontSize: 13 }}>{plural(testQs.length, 'question')} · {testMeta.seconds / 60} min · Chapters 01–06</div>
-            </div>
-            <Link href="/test" className="btn" style={{ border: 'none', padding: '0 24px', background: '#131A33', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>Start</Link>
-          </div>
-        ) : null}
       </div>
     </Shell>
   );

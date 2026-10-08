@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { boardExam, courses, newCourse, streakSeed, testMeta } from '@/lib/data';
-import { dateEn, daysTo, mmss, ordinalEn, plural, secs, taka } from '@/lib/format';
-import { batchLabel, boardRows, counts, courseKicker, courseMeta, examISO, lessonRef, studentName, weekDots } from '@/lib/selectors';
+import { boardExam, courses, newCourse, streakSeed } from '@/lib/data';
+import { dateEn, daysTo, mmss, ordinalEn, pad2, plural, secs, taka } from '@/lib/format';
+import { batchLabel, boardRows, chapterTest, counts, courseKicker, courseMeta, examISO, lessonRef, nextOpenTest, studentName, testFacts, weekDots } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -48,6 +48,9 @@ export default function Dashboard() {
   const all = boardRows(s, false);
   const me = all.find((r) => r.live) || all[0];
   const dots = weekDots();
+  // A finished chapter whose optional test is still untaken.
+  const openCh = nextOpenTest(s, courseId);
+  const openTest = openCh === null ? null : chapterTest(s, courseId, openCh);
 
   return (
     <Shell role="student" title="Home">
@@ -163,8 +166,10 @@ export default function Dashboard() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <h2 className="sec-h">This Week</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <WeekRow badge="Fri" tone={['var(--brand-soft)', 'var(--brand)']} title={testMeta.name} sub="10 questions · 25 min"
-              action={<Link href="/test" className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Start</Link>} />
+            {openCh !== null && openTest ? (
+              <WeekRow badge={pad2(openCh + 1)} big tone={['var(--brand-soft)', 'var(--brand)']} title={'Chapter ' + pad2(openCh + 1) + ' test'} sub={testFacts(openTest) + ' · optional'}
+                action={<Link href={`/test/${courseId}/${openCh}`} className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Take test</Link>} />
+            ) : null}
             <WeekRow badge="Mon" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="7:00 PM"
               action={<button className="btn btn-sm" disabled title="লিংক ক্লাসের আগে আসবে">Link</button>} />
             <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="ব্যাচে তোমার অবস্থান" sub={ordinalEn(me.rank) + ' of ' + all.length} last

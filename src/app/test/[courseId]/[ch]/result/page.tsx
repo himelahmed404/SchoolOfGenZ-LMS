@@ -1,54 +1,81 @@
 'use client';
 
 import Link from 'next/link';
+import { notFound, useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { testMeta, testQs } from '@/lib/data';
+import { courses } from '@/lib/data';
 import { mmss, pad2 } from '@/lib/format';
+import { counts, frontier, testKey, testStatus } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
+import type { CourseId } from '@/lib/types';
 
-export default function ResultPage() {
+/** Result of the latest attempt at a chapter's test, with a question-by-question review. */
+export default function ChapterTestResultPage() {
+  const p = useParams<{ courseId: string; ch: string }>();
   const { s } = useStore();
   const [wrongOnly, setWrongOnly] = useState(false);
 
-  if (s.test.score === null) {
+  const cid = p.courseId as CourseId, ci = Number(p.ch);
+  const chapter = courses[cid]?.chapters[ci];
+  if (!chapter) notFound();
+
+  const courseHref = '/course/' + cid, testHref = `/test/${cid}/${ci}`;
+  const res = s.testResults[testKey(cid, ci)];
+  const name = 'Chapter ' + pad2(ci + 1) + ' test';
+
+  if (!res) {
+    const canTake = ['ready', 'running'].includes(testStatus(s, cid, ci));
     return (
-      <Shell role="student" title="Result" back="/">
+      <Shell role="student" title="Result" back={courseHref}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '44px 24px', textAlign: 'center' }}>
           <Penguin size={84} />
-          <div className="disp" style={{ fontSize: 19, fontWeight: 700 }}>এখনো কোনো টেস্ট জমা দাওনি</div>
-          <Link href="/test" className="btn btn-primary">Start</Link>
+          <div className="disp" style={{ fontSize: 19, fontWeight: 700 }}>এই চ্যাপ্টারের টেস্ট এখনো দাওনি</div>
+          <Link href={canTake ? testHref : courseHref} className="btn btn-primary">{canTake ? 'Take test' : 'Back to course'}</Link>
         </div>
       </Shell>
     );
   }
 
-  const review = testQs.map((q, i) => {
-    const mine = s.test.ans[i];
-    return { i, ok: mine === q.a, stem: q.stem, yours: mine === undefined ? 'দাওনি' : q.o[mine], right: q.o[q.a as number] };
+  // After the test: on to the next unfinished lesson, or the certificate once the course is done.
+  const cnt = counts(s, cid), f = frontier(s, cid);
+  const done = cnt.done >= cnt.total;
+  const onward = done ? '/certificate' : `/learn/${cid}/${f[0]}/${f[1]}`;
+
+  const review = res.qs.map((q, i) => {
+    const mine = res.ans[i];
+    return { i, ok: mine === q.a, stem: q.stem, yours: mine === undefined ? 'দাওনি' : q.o[mine], right: q.o[q.a as number], why: q.why || '' };
   }).filter((r) => (wrongOnly ? !r.ok : true));
 
   return (
-    <Shell role="student" title="Result" back="/">
+    <Shell role="student" title="Result" back={courseHref}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div className="hero" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 20 }}>
           <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{testMeta.name} · Result</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{name} · Result</div>
+            <div style={{ fontSize: 13, opacity: 0.85 }}>{chapter.name}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{s.test.score}</span>
-              <span className="disp" style={{ fontSize: 28, fontWeight: 700, opacity: 0.85 }}>/ {testQs.length}</span>
+              <span className="disp" style={{ fontSize: 80, lineHeight: 1, fontWeight: 800 }}>{res.score}</span>
+              <span className="disp" style={{ fontSize: 28, fontWeight: 700, opacity: 0.85 }}>/ {res.total}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}><Icon name="timer" size={18} />Time taken {mmss(s.test.elapsed)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 14 }}>
+              <Icon name="timer" size={18} />Time taken {mmss(res.elapsed)}
+              <span style={{ opacity: 0.7 }}>·</span>Best {res.best}/{res.total}
+              <span style={{ opacity: 0.7 }}>·</span>{res.tries === 1 ? '1 try' : res.tries + ' tries'}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn" aria-pressed={wrongOnly} onClick={() => setWrongOnly(!wrongOnly)}
               style={{ border: 'none', background: wrongOnly ? 'var(--sun)' : '#FFFFFF', color: '#131A33', fontSize: 15, fontWeight: 700 }}>
               {wrongOnly ? 'সব প্রশ্ন দেখো' : 'ভুলগুলো দেখো'}
             </button>
-            <Link href="/certificate" className="btn" style={{ border: '1px solid rgba(255,255,255,0.55)', background: 'transparent', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>
-              <Icon name="workspace_premium" size={20} />View Certificate
+            <Link href={testHref} className="btn" style={{ border: '1px solid rgba(255,255,255,0.55)', background: 'transparent', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>
+              <Icon name="restart_alt" size={20} />Retake
+            </Link>
+            <Link href={onward} className="btn" style={{ border: '1px solid rgba(255,255,255,0.55)', background: 'transparent', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>
+              {done ? 'View Certificate' : 'Continue'}<Icon name="arrow_forward" size={20} />
             </Link>
           </div>
         </div>
@@ -69,6 +96,7 @@ export default function ResultPage() {
                     <span style={{ padding: '3px 10px', borderRadius: 999, background: soft, color: accent }}>তোমার উত্তর — {r.yours}</span>
                     <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)' }}>সঠিক উত্তর — {r.right}</span>
                   </div>
+                  {r.why && !r.ok ? <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)' }}>{r.why}</div> : null}
                 </div>
               </div>
             );

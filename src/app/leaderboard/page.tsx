@@ -96,7 +96,7 @@ export default function LeaderboardPage() {
         <div style={{ display: 'flex', gap: 12, padding: '16px 18px', borderRadius: 18, background: 'var(--surface-sunk)', fontSize: 13, lineHeight: 1.7, color: 'var(--ink-2)' }}>
           <Icon name="info" size={20} style={{ color: 'var(--ink-3)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '62ch' }}>
-            <div>পয়েন্ট — প্রতিটা লেসন শেষ করলে ১০, মডেল টেস্টে প্রতিটা সঠিক উত্তরে ৫।</div>
+            <div>পয়েন্ট — প্রতিটা লেসন শেষ করলে ১০, চ্যাপ্টার টেস্টে প্রতিটা সঠিক উত্তরে ৫ (সবচেয়ে ভালো চেষ্টাটা ধরা হয়)।</div>
             <div>{weekly ? 'সাপ্তাহিক বোর্ড প্রতি শনিবার শূন্য থেকে শুরু হয় — পিছিয়ে থাকলেও এই সপ্তাহে সামনে আসা যায়।' : 'সব সময়ের পয়েন্ট ব্যাচ শুরুর দিন থেকে জমছে।'}</div>
             <div>পুরো তালিকা কেউ দেখে না — সবাই শুধু নিজের আশেপাশের জনদের দেখে।</div>
           </div>

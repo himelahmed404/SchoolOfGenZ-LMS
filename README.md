@@ -48,19 +48,27 @@ Two kinds of text, so no line mixes scripts:
 | | `/setup` | First-run setup (name, semester, exam date, numerals) |
 | | `/course/[cst\|eng]` | Course page |
 | | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / My note / Stuck / Quiz / Ask, bookmarks (0-based indexes) |
-| | `/test`, `/test/result` | Timed model test and review |
+| | `/test/[course]/[chapter]`, `…/result` | Optional chapter test (timed) and its review; opens once the chapter's lessons are done |
 | | `/leaderboard` | Batch leaderboard (±5 window) |
 | | `/certificate` | Certificate |
 | | `/enroll`, `/enroll/pay`, `/enroll/pending` | Enrollment with bKash/Nagad |
 | | `/profile`, `/profile/edit` (`#password`) | Profile (stats, streak calendar, badges, bookmarks, notes) and edit |
 | Teacher | `/teacher`, `/teacher/doubts` | Class progress, doubts |
-| | `/teacher/content`, `/teacher/content/[key]` | Content list, lesson editor |
+| | `/teacher/content`, `/teacher/content/[key]` | Content list; editor for a lesson or a chapter test |
 | | `/teacher/profile`, `/teacher/profile/edit` | Rating, payouts, courses; edit |
 | Admin | `/admin` | Console overview (desktop) |
-| | `/admin/payments`, `/admin/content` | Payment and content-review queues (keyboard shortcuts) |
+| | `/admin/payments`, `/admin/content` | Payment and content-review queues (keyboard shortcuts); content covers lessons and chapter tests |
 | | `/admin/[section]` | `students`, `teachers`, `certificates`, `courses`, `batches`, `coupons`, `refunds`, `announcements`, `reports`, `activity`, `settings`, `roles` |
 
 Notifications are a drawer in the student/teacher shell, not a route.
+
+## Chapter tests
+
+A chapter can end with one optional test. The teacher writes it (questions and a time limit) in the
+content editor, an admin reviews it like a lesson, and only then do students see it. A chapter with
+no published test shows no test option. For students it unlocks when the chapter's lessons are done,
+never blocks the next chapter, and can be retaken; the best score counts 5 leaderboard points per
+correct answer. Keys: revision `cid|test:ci`, attempt and result `cid:ci`.
 
 ## Layout of the code
 

@@ -1,15 +1,33 @@
 import type { AdminData } from './admin/types';
-import type { CourseId, Doubt, LessonRevision, PayMethod, PayStatus, PublishedLesson } from './types';
+import { courses } from './data';
+import type { CourseId, Doubt, LessonRevision, PayMethod, PayStatus, PublishedLesson, QuizQ } from './types';
 import type { Numerals } from './format';
 
 /**
  * Everything the prototype kept in one component, minus pure view state.
  * Persisted to localStorage for now; each slice maps to a server resource
  * (Progress, TestAttempt, Payment, LessonRevision, Doubt, Notification, Profile) once the API exists.
+ * Bump `version` when a slice changes shape: saved state from an older version is dropped.
  * New top-level slices merge in on load, so adding one does not need a version bump.
  */
+/** Result of a chapter test: the latest attempt, plus the best score so far. */
+export interface TestResult {
+  score: number;
+  total: number;
+  best: number;
+  tries: number;
+  /** Seconds the latest attempt took. */
+  elapsed: number;
+  /** When the latest attempt was submitted (ms); 0 for seeded results. */
+  at: number;
+  /** The questions as they were at that attempt, so a later edit of the test cannot scramble the review. */
+  qs: QuizQ[];
+  /** Answers of the latest attempt, by question index. */
+  ans: Record<number, number>;
+}
+
 export interface AppState {
-  version: 2;
+  version: 3;
   prefs: {
     numerals: Numerals;
     name: string;
@@ -22,15 +40,10 @@ export interface AppState {
   /** Where "চালিয়ে যাও" resumes; `t` is the playback position in seconds. */
   last: { courseId: CourseId; ch: number; li: number; t: number };
   practiceAns: Record<string, Record<number, number>>;
-  test: {
-    on: boolean;
-    startedAt: number | null;
-    ans: Record<number, number>;
-    q: number;
-    elapsed: number;
-    /** Correct answers in the last submitted attempt (feeds the leaderboard). */
-    score: number | null;
-  };
+  /** The chapter test in progress, if any; `key` is `cid:ci`. One attempt runs at a time. */
+  test: { key: string | null; startedAt: number | null; ans: Record<number, number>; q: number };
+  /** Results per chapter test, keyed `cid:ci`. The best score feeds the leaderboard. */
+  testResults: Record<string, TestResult>;
   payment: { method: PayMethod | null; trxId: string; sender: string; status: 'none' | PayStatus; reason?: string };
   /** Admin decisions on seed payments. */
   decided: Record<string, { status: PayStatus; reason?: string }>;
@@ -54,12 +67,14 @@ export interface AppState {
 }
 
 export const initialState: AppState = {
-  version: 2,
+  version: 3,
   prefs: { numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
   progress: {},
   last: { courseId: 'cst', ch: 2, li: 4, t: 372 },
   practiceAns: {},
-  test: { on: false, startedAt: null, ans: {}, q: 0, elapsed: 0, score: null },
+  test: { key: null, startedAt: null, ans: {}, q: 0 },
+  // The student already took the first chapter's test (4 of 5).
+  testResults: { 'cst:0': { score: 4, total: 5, best: 4, tries: 1, elapsed: 212, at: 0, qs: courses.cst.chapters[0].test!.qs, ans: { 0: 0, 1: 0, 2: 2, 3: 0, 4: 0 } } },
   payment: { method: null, trxId: '', sender: '', status: 'none' },
   decided: {},
   myDoubts: [],

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { courses, defaultStudent, queueSeed } from './data';
 import {
-  allQueue, batchLabel, boardRows, counts, courseKicker, courseMeta, doneChapters, doubtsFor, frontier, isDone, isLocked, issues, item,
-  itemKeys, lessonCount, lessonRef, monthCells, roster, rowFlags, satIndex, statusOf, step, studentLesson, studentName, unreadCount, weekDots,
+  allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, doneChapters, doubtsFor, frontier, isDone,
+  isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, nextOpenTest, revisionRef, roster, rowFlags, satIndex, statusOf, step,
+  studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
@@ -66,6 +67,52 @@ describe('progress', () => {
   });
 });
 
+describe('chapter tests', () => {
+  it('gives a chapter a test only when one is published for it', () => {
+    expect(chapterTest(s0, 'cst', 0)!.qs).toHaveLength(5);
+    expect(testFacts(chapterTest(s0, 'cst', 0)!)).toBe('5 questions · 8 min');
+    expect(chapterTest(s0, 'cst', 3)).toBeNull();
+    expect(chapterTest(s0, 'eng', 0)).toBeNull();
+  });
+
+  it('opens the test once the chapter is finished, and never for a chapter without one', () => {
+    expect(chapterDone(s0, 'cst', 1)).toBe(true);
+    expect(chapterDone(s0, 'cst', 2)).toBe(false);
+    expect(testStatus(s0, 'cst', 0)).toBe('done');
+    expect(testStatus(s0, 'cst', 1)).toBe('ready');
+    expect(testStatus(s0, 'cst', 2)).toBe('locked');
+    expect(testStatus(s0, 'cst', 3)).toBe('none');
+    expect(testStatus(withState({ test: { key: 'cst:1', startedAt: 1, ans: {}, q: 0 } }), 'cst', 1)).toBe('running');
+  });
+
+  it('points the student to the first finished chapter with an untaken test', () => {
+    expect(nextOpenTest(s0, 'cst')).toBe(1);
+    expect(nextOpenTest(s0, 'eng')).toBeNull();
+  });
+
+  it('counts the best score of each test, optionally only recent attempts', () => {
+    expect(testPoints(s0, 'cst')).toBe(4);
+    expect(testPoints(s0, 'cst', 1)).toBe(0);
+    expect(testPoints(s0, 'eng')).toBe(0);
+  });
+
+  it('finds the revision a teacher edits for a chapter test', () => {
+    expect(testItem(s0, 'cst', 0)).toMatchObject({ kind: 'test', status: 'published', isNew: false, seconds: 480 });
+    expect(testItem(s0, 'cst', 3)).toMatchObject({ kind: 'test', status: 'review', isNew: true });
+    expect(testItem(s0, 'cst', 4)).toBeNull();
+    expect(revisionRef(testItem(s0, 'cst', 3)!)).toBe('Chapter 04 · Chapter test');
+    expect(revisionRef(item(s0, 'cst|lesson:2:4'))).toBe('Chapter 03 · Lesson 05');
+    expect(revisionRef(item(s0, 'cst|new:5:0'))).toBe('Chapter 06 · New lesson');
+  });
+
+  it('asks for five questions and a time limit before a test can be submitted', () => {
+    const ok = testItem(s0, 'cst', 0)!;
+    expect(issues(ok, 'latin')).toEqual([]);
+    expect(issues({ ...ok, quiz: ok.quiz.slice(0, 4) }, 'latin')).toHaveLength(1);
+    expect(issues({ ...ok, seconds: 0 }, 'latin')).toHaveLength(1);
+  });
+});
+
 describe('roster and leaderboard', () => {
   it('builds a stable roster of unique names plus the signed-in student', () => {
     const a = roster(s0, defaultStudent.batch), b = roster(s0, defaultStudent.batch);
@@ -94,8 +141,15 @@ describe('roster and leaderboard', () => {
   it('gives 10 points per lesson, so finishing one moves the student up or keeps the rank', () => {
     const before = boardRows(s0, false).find((r) => r.live)!;
     const after = boardRows(withState({ progress: { 'cst:2:4': true } }), false).find((r) => r.live)!;
+    expect(before.pts).toBe(12 * 10 + 4 * 5);
     expect(after.pts - before.pts).toBe(10);
     expect(after.rank).toBeLessThanOrEqual(before.rank);
+  });
+
+  it('gives 5 points per correct chapter-test answer, counting the best attempt', () => {
+    const better = { ...s0.testResults['cst:0'], score: 2, best: 5, tries: 2 };
+    const after = boardRows(withState({ testResults: { 'cst:0': better } }), false).find((r) => r.live)!;
+    expect(after.pts).toBe(12 * 10 + 5 * 5);
   });
 });
 
@@ -132,6 +186,7 @@ describe('lesson revisions', () => {
     const keys = itemKeys(withState({ tItems: { 'cst|lesson:5:4': item(s0, 'cst|lesson:5:4'), 'cst|new:1:9': item(s0, 'cst|new:1:9') } }));
     expect(keys.filter((k) => k === 'cst|lesson:5:4')).toHaveLength(1);
     expect(keys).toContain('cst|new:1:9');
+    expect(keys).toContain('cst|test:3');
   });
 
   it('shows students the last published version, not the pending one', () => {

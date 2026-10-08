@@ -1,10 +1,10 @@
 import {
-  batches, boardExam, courses, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
-  merchants, newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
+  batches, boardExam, courses, DEFAULT_TEST_SECONDS, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
+  merchants, MIN_TEST_QUESTIONS, newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
 import { dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
 import type { AppState } from './state';
-import type { Block, Course, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
+import type { Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
 
 export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
@@ -73,15 +73,57 @@ export function step(cid: CourseId, ci: number, li: number, dir: 1 | -1): [numbe
   return [nci, nli];
 }
 
+export const chapterDone = (s: AppState, cid: CourseId, ci: number) => courses[cid].chapters[ci].lessons.every((_, li) => isDone(s, cid, ci, li));
+
 /** Chapters fully complete, counted from the start (stops at the first incomplete one). */
 export function doneChapters(s: AppState, cid: CourseId) {
   const c = courses[cid];
   let n = 0;
   for (let ci = 0; ci < c.chapters.length; ci++) {
-    if (c.chapters[ci].lessons.every((_, li) => isDone(s, cid, ci, li))) n++; else break;
+    if (chapterDone(s, cid, ci)) n++; else break;
   }
   return n;
 }
+
+/* ---------- chapter tests ---------- */
+
+/** Key of a chapter's test attempt and result: `cid:ci`. */
+export const testKey = (cid: CourseId, ci: number) => cid + ':' + ci;
+/** Key of the revision a teacher edits for a chapter's test: `cid|test:ci`. */
+export const testRevKey = (cid: CourseId, ci: number) => cid + '|test:' + ci;
+
+/** The test students get for a chapter: the last one an admin published, else the seeded one. Null when there is none. */
+export function chapterTest(s: AppState, cid: CourseId, ci: number): ChapterTest | null {
+  const pub = s.published[testRevKey(cid, ci)];
+  if (pub) return { seconds: pub.seconds || DEFAULT_TEST_SECONDS, qs: pub.quiz };
+  return courses[cid]?.chapters[ci]?.test || null;
+}
+
+/** none: the chapter has no test · locked: lessons left · ready: can be taken · running: an attempt is open · done: taken, can be retaken. */
+export type TestStatus = 'none' | 'locked' | 'ready' | 'running' | 'done';
+
+export function testStatus(s: AppState, cid: CourseId, ci: number): TestStatus {
+  if (!chapterTest(s, cid, ci)) return 'none';
+  const k = testKey(cid, ci);
+  if (s.test.key === k) return 'running';
+  if (s.testResults[k]) return 'done';
+  return chapterDone(s, cid, ci) ? 'ready' : 'locked';
+}
+
+/** Correct answers across a course's chapter tests, counting the best attempt of each; `since` limits it to recent attempts. */
+export function testPoints(s: AppState, cid: CourseId, since = 0) {
+  return Object.keys(s.testResults).filter((k) => k.indexOf(cid + ':') === 0 && s.testResults[k].at >= since)
+    .reduce((a, k) => a + s.testResults[k].best, 0);
+}
+
+/** The first finished chapter whose test has not been taken yet. */
+export function nextOpenTest(s: AppState, cid: CourseId): number | null {
+  const i = courses[cid].chapters.findIndex((_, ci) => testStatus(s, cid, ci) === 'ready');
+  return i < 0 ? null : i;
+}
+
+/** "5 questions · 8 min" */
+export const testFacts = (t: ChapterTest) => plural(t.qs.length, 'question') + ' · ' + Math.round(t.seconds / 60) + ' min';
 
 /* ---------- batch roster & leaderboard ---------- */
 
@@ -111,22 +153,25 @@ export function roster(s: AppState, bid: string): RosterRow[] {
 export interface BoardRow { name: string; pts: number; rank: number; live?: boolean }
 
 /**
- * points = 10 × lessons completed + 5 × correct model-test answers. Ties share a rank.
+ * points = 10 × lessons completed + 5 × correct chapter-test answers (best attempt of each test). Ties share a rank.
  * Server note: return only the ±5 window to clients, never the full ranking.
  */
-export function boardRows(s: AppState, weekly: boolean): BoardRow[] {
+export function boardRows(s: AppState, weekly: boolean, now = Date.now()): BoardRow[] {
   const c = courses.cst, per = c.chapters.map((ch) => ch.lessons.length);
+  /** Questions in each chapter's test; 0 where the chapter has none. */
+  const testSize = c.chapters.map((_, ci) => { const t = chapterTest(s, 'cst', ci); return t ? t.qs.length : 0; });
   const hash = (x: string) => { let h = 7; for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) % 100003; return h; };
   const mine = counts(s, 'cst').done;
   const gained = Object.keys(s.progress).filter((k) => k.indexOf('cst:') === 0).length;
-  const test = s.test.score || 0;
   const rows = roster(s, defaultStudent.batch).map((r) => {
-    if (r.live) return { name: r.name, live: true, rank: 0, pts: weekly ? 30 + gained * 10 + test * 5 : mine * 10 + (19 + test) * 5 };
+    if (r.live) return { name: r.name, live: true, rank: 0, pts: weekly ? 30 + gained * 10 + testPoints(s, 'cst', now - 7 * 864e5) * 5 : mine * 10 + testPoints(s, 'cst') * 5 };
     const h = hash(r.name);
     let n = 0;
     for (let i = 0; i < r.done; i++) n += per[i];
     if (r.done < per.length) n += h % per[r.done];
-    const right = Math.round(r.done * 4.5) + ((h >> 3) % 10);
+    // Seeded peers: 3 or more right on the test of each chapter they finished.
+    let right = 0;
+    for (let i = 0; i < r.done; i++) if (testSize[i]) right += Math.min(testSize[i], 3 + ((h >> (i + 1)) % 3));
     return { name: r.name, rank: 0, pts: weekly ? ((h >> 5) % 9) * 10 + ((h >> 2) % 6) * 5 : n * 10 + right * 5 };
   });
   rows.forEach((r) => { r.rank = 1 + rows.filter((x) => x.pts > r.pts).length; });
@@ -158,6 +203,14 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 export function baseItem(k: string): LessonRevision {
   const [cid, rest] = k.split('|') as [CourseId, string];
   const r = rest.split(':'), c = courses[cid];
+  if (r[0] === 'test') {
+    // A chapter that already has a test starts published; otherwise this is a new, empty draft.
+    const ci = +r[1], t = c.chapters[ci]?.test;
+    return {
+      kind: 'test', ch: ci, isNew: !t, title: 'Chapter test', status: t ? 'published' : 'draft',
+      video: { state: 'none' }, blocks: [], quiz: t ? clone(t.qs) : [], seconds: t ? t.seconds : DEFAULT_TEST_SECONDS,
+    };
+  }
   if (r[0] === 'lesson') {
     const ci = +r[1], li = +r[2], l = c.chapters[ci].lessons[li];
     const feat = cid === 'cst' && ci === 2 && li === 4;
@@ -179,6 +232,18 @@ export function item(s: AppState, k: string): LessonRevision {
 
 export const editorHref = (k: string) => '/teacher/content/' + encodeURIComponent(k);
 
+/** The chapter-test revision the teacher works on, or null while the chapter has no test at all. */
+export function testItem(s: AppState, cid: CourseId, ci: number): LessonRevision | null {
+  const k = testRevKey(cid, ci);
+  return s.tItems[k] || itemSeeds[k] || courses[cid].chapters[ci]?.test ? item(s, k) : null;
+}
+
+/** Where a revision sits: "Chapter 03 · Lesson 05", "Chapter 03 · New lesson" or "Chapter 03 · Chapter test". */
+export function revisionRef(it: LessonRevision) {
+  const what = it.kind === 'test' ? 'Chapter test' : it.isNew ? 'New lesson' : 'Lesson ' + pad2((it.li as number) + 1);
+  return 'Chapter ' + pad2(it.ch + 1) + ' · ' + what;
+}
+
 export const keyCourse = (k: string) => k.split('|')[0] as CourseId;
 
 export const blockHasContent = (b: Block) => (b.t === 'img' ? !!b.file : !!(b.x || '').trim());
@@ -193,9 +258,14 @@ export function studentLesson(s: AppState, cid: CourseId, ci: number, li: number
 
 export function issues(it: LessonRevision, numerals: Numerals): string[] {
   const out: string[] = [];
-  if (!(it.title || '').trim()) out.push('লেসনের নাম দাওনি');
-  if (!it.video || it.video.state !== 'done') out.push('ভিডিও আপলোড হয়নি');
-  if (!it.blocks.some(blockHasContent)) out.push('নোটে কিছু লেখা নেই');
+  if (it.kind === 'test') {
+    if (it.quiz.length < MIN_TEST_QUESTIONS) out.push('টেস্টে অন্তত ' + digits(MIN_TEST_QUESTIONS, numerals) + 'টা প্রশ্ন লাগবে');
+    if (!it.seconds || it.seconds <= 0) out.push('সময়সীমা দাওনি');
+  } else {
+    if (!(it.title || '').trim()) out.push('লেসনের নাম দাওনি');
+    if (!it.video || it.video.state !== 'done') out.push('ভিডিও আপলোড হয়নি');
+    if (!it.blocks.some(blockHasContent)) out.push('নোটে কিছু লেখা নেই');
+  }
   it.quiz.forEach((q, i) => {
     const n = digits(i + 1, numerals) + ' নম্বর প্রশ্ন';
     if (!q.stem.trim()) out.push(n + 'টা ফাঁকা');

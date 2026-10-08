@@ -1,6 +1,6 @@
 // Seed data ported from the v6 design prototype. Replace with API data once a server exists.
 // Facts (names, batches, dates, times, counts, prices) are English; titles and lesson content are Bangla.
-import type { Block, BlockType, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, QuizQ, Tone } from './types';
+import type { Block, BlockType, ChapterTest, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, QuizQ, Tone } from './types';
 
 export const boardExam = { name: 'পর্ব সমাপনী পরীক্ষা', even: '2026-12-14', odd: '2027-04-18' };
 /** Diploma semesters a student can pick. */
@@ -93,6 +93,48 @@ export const stackBlocks: Block[] = [
   { t: 'p', x: 'কিউ-এর নিয়ম উল্টো। এক প্রান্ত দিয়ে ডেটা ঢোকে (rear), অন্য প্রান্ত দিয়ে বের হয় (front) — ঠিক টিকিট কাউন্টারের লাইনের মতো। যে আগে দাঁড়িয়েছে, সে আগে যাবে।' },
   { t: 'p', x: 'পরীক্ষায় প্রায় প্রতিবার আসে: স্ট্যাক LIFO, কিউ FIFO। আর ইনফিক্স থেকে পোস্টফিক্স রূপান্তর, ফাংশন কল ট্র্যাকিং, ব্রাউজারের ব্যাক বাটন — এই তিনটাই স্ট্যাকের প্রয়োগ।' }
 ];
+/* ---------- chapter tests ---------- */
+
+/** Time limit a new chapter test starts with. */
+export const DEFAULT_TEST_SECONDS = 600;
+/** A chapter test needs at least this many questions before it can go to review. */
+export const MIN_TEST_QUESTIONS = 5;
+
+const q = (stem: string, o: string[], a: number): QuizQ => ({ stem, o, a });
+
+const arrayTest: ChapterTest = { seconds: 480, qs: [
+  q('অ্যারের কোনো এলিমেন্ট ইনডেক্স দিয়ে পড়তে কত সময় লাগে?', ['O(1)', 'O(n)', 'O(log n)', 'O(n²)'], 0),
+  q('C ভাষায় অ্যারের প্রথম এলিমেন্টের ইনডেক্স কত?', ['0', '1', '−1', 'অ্যারের সাইজ'], 0),
+  q('অ্যারের মাঝখানে নতুন এলিমেন্ট ঢোকাতে সবচেয়ে খারাপ ক্ষেত্রে কত সময় লাগে?', ['O(1)', 'O(n)', 'O(log n)', 'O(n²)'], 1),
+  q('অ্যারের এলিমেন্টগুলো মেমরিতে কীভাবে থাকে?', ['পাশাপাশি, একটানা ঘরে', 'এলোমেলো জায়গায়', 'পয়েন্টার দিয়ে জোড়া লাগানো', 'হার্ড ডিস্কে'], 0),
+  q('O(n) বলতে কী বোঝায়?', ['ডেটা যত গুণ বাড়ে, কাজও মোটামুটি তত গুণ বাড়ে', 'কাজ শেষ হতে ঠিক n সেকেন্ড লাগে', 'ডেটা বাড়লেও সময় একই থাকে', 'সময় বাড়ে ডেটার বর্গ হারে'], 0),
+] };
+
+const linkedListTest: ChapterTest = { seconds: 480, qs: [
+  q('অ্যারের তুলনায় লিংকড লিস্টের প্রধান সুবিধা কী?', ['ইনডেক্স দিয়ে দ্রুত পড়া যায়', 'সাইজ ইচ্ছামতো বাড়ে-কমে', 'কম মেমরি লাগে', 'সবসময় সাজানো থাকে'], 1),
+  q('সিঙ্গলি লিংকড লিস্টের প্রতিটি নোডে কী থাকে?', ['শুধু ডেটা', 'ডেটা আর ইনডেক্স', 'ডেটা আর পরের নোডের ঠিকানা', 'আগের ও পরের দুই নোডের ঠিকানা'], 2),
+  q('লিংকড লিস্টের একদম শুরুতে নতুন নোড যোগ করতে কত সময় লাগে?', ['O(1)', 'O(n)', 'O(log n)', 'O(n²)'], 0),
+  q('ডাবলি লিংকড লিস্টের নোডে বাড়তি কী থাকে?', ['আরেকটা ডেটা', 'ইনডেক্স নম্বর', 'লিস্টের সাইজ', 'আগের নোডের ঠিকানা (prev)'], 3),
+  q('লিংকড লিস্টের k-তম এলিমেন্ট পড়তে কত সময় লাগে?', ['O(1)', 'O(n)', 'O(log n)', 'O(n²)'], 1),
+] };
+
+const stackQueueTest: ChapterTest = { seconds: 480, qs: [
+  q('স্ট্যাক কোন নীতিতে চলে?', ['FIFO', 'LIFO', 'প্রায়োরিটি', 'র‍্যান্ডম'], 1),
+  q('কিউ থেকে এলিমেন্ট বের করার অপারেশনের নাম কী?', ['pop()', 'enqueue()', 'dequeue()', 'peek()'], 2),
+  q('ইনফিক্স থেকে পোস্টফিক্স রূপান্তরে কোন ডেটা স্ট্রাকচার লাগে?', ['কিউ', 'স্ট্যাক', 'ট্রি', 'গ্রাফ'], 1),
+  q('অ্যারে দিয়ে বানানো খালি স্ট্যাকে top-এর মান সাধারণত কত ধরা হয়?', ['0', '1', '−1', 'অ্যারের সাইজ'], 2),
+  q('সার্কুলার কিউ ভরা — কোন শর্তে বোঝা যায়?', ['(rear + 1) % size == front', 'rear == front', 'front == 0', 'rear == size'], 0),
+] };
+
+/** Written by the teacher for the Tree chapter and waiting for admin review, so students do not see it yet. */
+const treeTestQs: QuizQ[] = [
+  q('বাইনারি ট্রিতে একটি নোডের সর্বোচ্চ কয়টি চাইল্ড থাকতে পারে?', ['১', '২', '৩', 'যত খুশি'], 1),
+  q('বাইনারি সার্চ ট্রি-তে সবচেয়ে ছোট মান কোথায় থাকে?', ['রুট নোডে', 'সবচেয়ে ডান দিকের নোডে', 'সবচেয়ে বাঁ দিকের নোডে', 'যেকোনো লিফে'], 2),
+  q('ইনঅর্ডার ট্রাভার্সালে BST-র মানগুলো কোন ক্রমে আসে?', ['ছোট থেকে বড়', 'বড় থেকে ছোট', 'এলোমেলো', 'লেভেল অনুযায়ী'], 0),
+  q('প্রি-অর্ডার ট্রাভার্সালের ক্রম কোনটি?', ['বাম → রুট → ডান', 'রুট → বাম → ডান', 'বাম → ডান → রুট', 'ডান → রুট → বাম'], 1),
+  q('ম্যাক্স-হিপের রুটে কোন মান থাকে?', ['সবচেয়ে ছোট', 'মাঝের মান', 'সবচেয়ে বড়', 'যেকোনো মান'], 2),
+];
+
 export const itemSeeds: Record<string, Partial<LessonRevision>> = {
   'cst|lesson:5:4': { status: 'review', update: true, by: 'Shahriar Hossain', subAgoMin: 35,
     quiz: [
@@ -123,6 +165,7 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
       { t: 'p', x: 'ফোনে মুখ দেখা যায় না, তাই ভদ্রতা পুরোটাই শব্দে। নিচের তিনটা লাইন মনে রাখলে বেশিরভাগ কল শুরু করা যায়।' },
       { t: 'list', x: 'Hello, this is Mahmud speaking.\nCould I speak to Rahim, please?\nSorry, could you say that again?' }
     ] },
+  'cst|test:3': { kind: 'test', ch: 3, isNew: true, status: 'review', by: 'Shahriar Hossain', subAgoMin: 20, seconds: 600, quiz: treeTestQs },
   'cst|new:5:0': { kind: 'lesson', ch: 5, isNew: true, title: 'Floyd–Warshall — সব জোড়ার শর্টেস্ট পাথ', status: 'draft', video: { state: 'none' }, quiz: [], blocks: [
     { t: 'h', x: 'কখন Dijkstra যথেষ্ট না' },
     { t: 'p', x: 'যখন প্রতিটা নোড থেকে প্রতিটা নোডের দূরত্ব লাগবে, তখন n বার Dijkstra চালানোর বদলে একবারেই পুরো টেবিল বানানো যায়।' },
@@ -150,19 +193,19 @@ export const courses: Record<CourseId, Course> = {
         { t: 'কোর্স পরিচিতি', d: '08:20', done: true },
         { t: 'ডেটা স্ট্রাকচার কেন দরকার', d: '11:05', done: true },
         { t: 'অ্যারে — মেমরি লেআউট', d: '14:30', done: true },
-        { t: 'অ্যারে অপারেশন ও কমপ্লেক্সিটি', d: '12:15', done: true } ] },
+        { t: 'অ্যারে অপারেশন ও কমপ্লেক্সিটি', d: '12:15', done: true } ], test: arrayTest },
       { name: 'লিংকড লিস্ট (Linked List)', lessons: [
         { t: 'সিঙ্গলি লিংকড লিস্ট', d: '15:40', done: true },
         { t: 'ইনসার্ট ও ডিলিট', d: '13:20', done: true },
         { t: 'ডাবলি লিংকড লিস্ট', d: '12:50', done: true },
-        { t: 'অ্যারে বনাম লিংকড লিস্ট', d: '09:35', done: true } ] },
+        { t: 'অ্যারে বনাম লিংকড লিস্ট', d: '09:35', done: true } ], test: linkedListTest },
       { name: 'স্ট্যাক ও কিউ (Stack & Queue)', lessons: [
         { t: 'স্ট্যাক কী', d: '10:10', done: true },
         { t: 'পুশ ও পপ', d: '11:45', done: true },
         { t: 'অ্যারে দিয়ে স্ট্যাক ইমপ্লিমেন্ট', d: '13:05', done: true },
         { t: 'কিউ কী', d: '09:50', done: true },
         { t: 'Stack ও Queue — বেসিক ধারণা', d: '12:30' },
-        { t: 'সার্কুলার কিউ', d: '11:20' } ] },
+        { t: 'সার্কুলার কিউ', d: '11:20' } ], test: stackQueueTest },
       { name: 'ট্রি (Tree)', lessons: [
         { t: 'বাইনারি ট্রি পরিচিতি', d: '13:10' },
         { t: 'ট্রি ট্রাভার্সাল', d: '16:00' },
@@ -225,24 +268,11 @@ export const practiceQs: QuizQ[] = [
   { stem: 'নিচের কোনটি স্ট্যাকের প্রয়োগ নয়?', o: ['ব্রাউজারের ব্যাক বাটন', 'ইনফিক্স থেকে পোস্টফিক্স', 'প্রিন্টার স্পুলিং', 'রিকার্শন'], a: 2, why: 'প্রিন্টার স্পুলিং কিউ — যে ফাইল আগে এসেছে, সেটাই আগে ছাপা হয়।' }
 ];
 
-export const testQs: QuizQ[] = [
-  { stem: 'অ্যারের কোনো এলিমেন্ট ইনডেক্স দিয়ে পড়তে কত সময় লাগে?', o: ['O(1)', 'O(n)', 'O(log n)', 'O(n²)'], a: 0 },
-  { stem: 'লিংকড লিস্টের প্রধান সুবিধা কী?', o: ['ইনডেক্স অ্যাক্সেস দ্রুত', 'ডাইনামিক সাইজ', 'কম মেমরি লাগে', 'সবসময় সাজানো থাকে'], a: 1 },
-  { stem: 'স্ট্যাক কোন নীতিতে চলে?', o: ['FIFO', 'LIFO', 'প্রায়োরিটি', 'র‍্যান্ডম'], a: 1 },
-  { stem: 'কিউ থেকে এলিমেন্ট বের করার অপারেশনের নাম কী?', o: ['pop()', 'enqueue()', 'dequeue()', 'peek()'], a: 2 },
-  { stem: 'বাইনারি সার্চ চালাতে হলে ডেটা কেমন হতে হবে?', o: ['সাজানো (sorted)', 'অসাজানো', 'সংখ্যা হতে হবে', 'যেকোনো'], a: 0 },
-  { stem: 'বাইনারি সার্চের টাইম কমপ্লেক্সিটি কত?', o: ['O(n)', 'O(1)', 'O(log n)', 'O(n log n)'], a: 2 },
-  { stem: 'ইনফিক্স থেকে পোস্টফিক্স রূপান্তরে কোন ডেটা স্ট্রাকচার লাগে?', o: ['কিউ', 'স্ট্যাক', 'ট্রি', 'গ্রাফ'], a: 1 },
-  { stem: 'BFS ট্রাভার্সালে কোন ডেটা স্ট্রাকচার ব্যবহার হয়?', o: ['স্ট্যাক', 'কিউ', 'হিপ', 'অ্যারে'], a: 1 },
-  { stem: 'মার্জ সর্টের গড় টাইম কমপ্লেক্সিটি কত?', o: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'], a: 1 },
-  { stem: 'বাইনারি সার্চ ট্রি-তে সবচেয়ে ছোট মান কোথায় থাকে?', o: ['রুট নোডে', 'সবচেয়ে ডান দিকের নোডে', 'সবচেয়ে বাঁ দিকের নোডে', 'যেকোনো লিফে'], a: 2 }
-];
 export const teacher = { name: 'Shahriar Hossain', batch: 'CST-04-B01', phone: '01711-649032', title: 'Senior Instructor · Computer Technology' };
 export const defaultStudent = { name: 'Mahmudul Hasan', phone: '01712 445589', masked: '01712-••••89', batch: 'CST-04-B01' };
 /** Subjects a teacher can list on their profile. */
 export const subjectOptions = ['Data Structure', 'C Programming', 'Algorithm', 'Database', 'Web Development', 'Networking'];
 export const supportPhone = '01777 090909';
-export const testMeta = { name: 'Model Test 04', seconds: 1500 };
 /** Seeded until activity tracking exists: the current streak ends today. */
 export const streakSeed = { current: 12, best: 19 };
 export const weekDayShort = ['Sa', 'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr'];
@@ -261,7 +291,7 @@ export const notifSeed: Record<'student' | 'teacher', Notif[]> = {
   student: [
     { id: 's1', icon: 'forum', tone: 'brand', title: 'তোমার প্রশ্নের উত্তর এসেছে', body: 'Shahriar Hossain: "খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।"', agoMin: 12, href: '/learn/cst/2/4?tab=ask' },
     { id: 's2', icon: 'check_circle', tone: 'ok', title: 'পেমেন্ট অ্যাপ্রুভ হয়েছে', body: 'Web Development কোর্সে তোমার ভর্তি নিশ্চিত।', agoMin: 60, href: '/' },
-    { id: 's3', icon: 'timer', tone: 'warn', title: 'Model Test 04 — শুক্রবার', body: '১০ প্রশ্ন · ২৫ মিনিট। প্রস্তুতি নিতে Chapter 03 রিভিশন দাও।', agoMin: 300, href: '/' },
+    { id: 's3', icon: 'quiz', tone: 'warn', title: 'Chapter 02-এর টেস্ট খোলা আছে', body: 'লিংকড লিস্ট শেষ করেছ। চাইলে চ্যাপ্টার টেস্টটা দিয়ে নাও — এটা ঐচ্ছিক।', agoMin: 300, href: '/course/cst' },
     { id: 's4', icon: 'local_fire_department', tone: 'sun', title: 'নতুন ব্যাজ: ৭ দিনের স্ট্রিক', body: 'টানা ৭ দিন পড়েছ। এভাবেই চালিয়ে যাও!', agoMin: 1500, href: '/profile' },
     { id: 's5', icon: 'videocam', tone: 'pink', title: 'Live Class সোমবার সন্ধ্যা ৭টা', body: 'Queue ও Circular Queue — প্রশ্ন নিয়ে এসো।', agoMin: 2880, href: '/' }
   ],

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  askDoubt, clearNotifs, completeLesson, createLesson, decideContent, decidePayments, markRead, newLessonKey, patchItem,
-  resetPayment, savePosition, saveStudentProfile, setMyNote, startUpload, submitForReview, submitPayment, toggleBookmark,
-  trxTaken, withdraw,
+  askDoubt, clearNotifs, completeLesson, createDraft, decideContent, decidePayments, markRead, newLessonKey, patchItem,
+  resetPayment, savePosition, saveStudentProfile, setMyNote, startTest, startUpload, submitForReview, submitPayment, submitTest,
+  testElapsed, toggleBookmark, trxTaken, withdraw,
 } from './actions';
 import { courses } from './data';
-import { allQueue, counts, item } from './selectors';
+import { allQueue, chapterTest, counts, item, testRevKey, testStatus } from './selectors';
 import { initialState, type AppState } from './state';
 
 const s0 = initialState;
@@ -33,6 +33,43 @@ describe('completing lessons', () => {
     expect(savePosition(s0, 'cst', 2, 4, 90).last.t).toBe(90);
     expect(savePosition(s0, 'cst', 0, 0, 90)).toBe(s0);
     expect(savePosition(s0, 'cst', 2, 4, s0.last.t)).toBe(s0);
+  });
+});
+
+describe('chapter tests', () => {
+  const key = 'cst:1';
+  const right = courses.cst.chapters[1].test!.qs.map((q) => q.a as number);
+  const answer = (s: AppState, ans: number[]): AppState => ({ ...s, test: { ...s.test, ans: Object.fromEntries(ans.map((a, i) => [i, a])) } });
+
+  it('opens one attempt at a time', () => {
+    const s = startTest(s0, key, 1000);
+    expect(s.test).toEqual({ key, startedAt: 1000, ans: {}, q: 0 });
+    expect(startTest(answer(s, [1]), 'cst:0', 2000).test).toEqual({ key: 'cst:0', startedAt: 2000, ans: {}, q: 0 });
+  });
+
+  it('counts elapsed seconds up to the time limit', () => {
+    const s = startTest(s0, key, 1000);
+    expect(testElapsed(s, 61_000, 480)).toBe(60);
+    expect(testElapsed(s, 9_999_000, 480)).toBe(480);
+    expect(testElapsed(s0, 61_000, 480)).toBe(0);
+  });
+
+  it('scores the attempt, closes it and keeps the questions it was answered against', () => {
+    const s = submitTest(answer(startTest(s0, key, 1000), right), 91_000);
+    expect(s.test.key).toBeNull();
+    expect(s.testResults[key]).toMatchObject({ score: 5, total: 5, best: 5, tries: 1, elapsed: 90, at: 91_000 });
+    expect(s.testResults[key].qs).toHaveLength(5);
+    expect(testStatus(s, 'cst', 1)).toBe('done');
+  });
+
+  it('keeps the best score when a retake goes worse', () => {
+    const first = submitTest(answer(startTest(s0, key, 1000), right), 2000);
+    const second = submitTest(answer(startTest(first, key, 3000), [right[0]]), 4000);
+    expect(second.testResults[key]).toMatchObject({ score: 1, best: 5, tries: 2 });
+  });
+
+  it('does nothing when no test is running', () => {
+    expect(submitTest(s0, 5000)).toBe(s0);
   });
 });
 
@@ -95,7 +132,12 @@ describe('teacher revisions', () => {
   it('creates a blank draft for a new lesson', () => {
     const nk = newLessonKey('cst', 3);
     expect(nk.startsWith('cst|new:3:')).toBe(true);
-    expect(item(createLesson(s0, nk), nk)).toMatchObject({ isNew: true, status: 'draft', ch: 3, title: '' });
+    expect(item(createDraft(s0, nk), nk)).toMatchObject({ isNew: true, status: 'draft', ch: 3, title: '' });
+  });
+
+  it('creates an empty test draft for a chapter that has none', () => {
+    const tk = testRevKey('cst', 4);
+    expect(item(createDraft(s0, tk), tk)).toMatchObject({ kind: 'test', isNew: true, status: 'draft', ch: 4, quiz: [], seconds: 600 });
   });
 
   it('starts a video upload unless the revision is locked', () => {
@@ -121,6 +163,15 @@ describe('admin content review', () => {
     const s = decideContent(s0, k, 'published');
     expect(item(s, k).status).toBe('published');
     expect(s.published[k]).toBeUndefined();
+  });
+
+  it('publishes a new chapter test, so the chapter gains a test for students', () => {
+    const k = testRevKey('cst', 3);
+    expect(chapterTest(s0, 'cst', 3)).toBeNull();
+    const s = decideContent(s0, k, 'published');
+    expect(item(s, k)).toMatchObject({ status: 'published', isNew: false });
+    expect(chapterTest(s, 'cst', 3)).toMatchObject({ seconds: 600 });
+    expect(chapterTest(s, 'cst', 3)!.qs).toHaveLength(5);
   });
 
   it('returns a revision with the reason', () => {

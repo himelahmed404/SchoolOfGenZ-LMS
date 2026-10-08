@@ -2,9 +2,9 @@
  * Domain mutations as pure (state) => state functions.
  * Each one is the seam where a server call goes once there is an API.
  */
-import { defaultStudent, testMeta, testQs } from './data';
-import { allQueue, baseItem, counts, item, lessonKey, step } from './selectors';
-import type { AppState } from './state';
+import { defaultStudent } from './data';
+import { allQueue, baseItem, chapterTest, counts, item, lessonKey, step } from './selectors';
+import type { AppState, TestResult } from './state';
 import type { CourseId, LessonRevision, PayStatus } from './types';
 
 /* ---------- student ---------- */
@@ -35,19 +35,35 @@ export function setMyNote(s: AppState, k: string, text: string): AppState {
   return { ...s, myNotes: { ...s.myNotes, [k]: text } };
 }
 
-export function startTest(s: AppState): AppState {
-  return { ...s, test: { ...s.test, on: true, startedAt: Date.now(), ans: {}, q: 0, elapsed: 0 } };
+/* ---------- student: chapter tests (`key` is `cid:ci`) ---------- */
+
+const NO_TEST: AppState['test'] = { key: null, startedAt: null, ans: {}, q: 0 };
+
+/** Open a fresh attempt. It replaces any attempt still running, so only one test is timed at a time. */
+export function startTest(s: AppState, key: string, now = Date.now()): AppState {
+  return { ...s, test: { key, startedAt: now, ans: {}, q: 0 } };
 }
 
-export function testElapsed(s: AppState, now: number) {
-  if (!s.test.on || !s.test.startedAt) return s.test.elapsed;
-  return Math.min(testMeta.seconds, Math.floor((now - s.test.startedAt) / 1000));
+/** Seconds used so far in the running attempt, capped at the time limit. */
+export function testElapsed(s: AppState, now: number, limit: number) {
+  if (!s.test.startedAt) return 0;
+  return Math.max(0, Math.min(limit, Math.floor((now - s.test.startedAt) / 1000)));
 }
 
+/** Score the running attempt against the test as it is now, and keep the best score for the chapter. */
 export function submitTest(s: AppState, now: number): AppState {
-  let score = 0;
-  testQs.forEach((q, i) => { if (s.test.ans[i] === q.a) score++; });
-  return { ...s, test: { ...s.test, on: false, elapsed: testElapsed(s, now), score } };
+  const key = s.test.key;
+  if (!key) return s;
+  const [cid, ci] = key.split(':') as [CourseId, string];
+  const t = chapterTest(s, cid, +ci);
+  if (!t) return { ...s, test: NO_TEST };
+  const score = t.qs.reduce((a, q, i) => a + (s.test.ans[i] === q.a ? 1 : 0), 0);
+  const prev = s.testResults[key];
+  const result: TestResult = {
+    score, total: t.qs.length, best: Math.max(prev ? prev.best : 0, score), tries: (prev ? prev.tries : 0) + 1,
+    elapsed: testElapsed(s, now, t.seconds), at: now, qs: t.qs, ans: s.test.ans,
+  };
+  return { ...s, test: NO_TEST, testResults: { ...s.testResults, [key]: result } };
 }
 
 /** A TrxID already in the queue — including the student's own earlier (rejected) submission. */
@@ -96,7 +112,8 @@ export function newLessonKey(cid: CourseId, ci: number) {
   return cid + '|new:' + ci + ':' + Date.now();
 }
 
-export function createLesson(s: AppState, k: string): AppState {
+/** Start a blank draft for a new lesson (`newLessonKey`) or a chapter's first test (`testRevKey`). */
+export function createDraft(s: AppState, k: string): AppState {
   return { ...s, tItems: { ...s.tItems, [k]: baseItem(k) } };
 }
 
@@ -123,9 +140,11 @@ export function decideContent(s: AppState, k: string, status: 'published' | 'ret
     return { ...s, aDecided, tItems: { ...s.tItems, [k]: { ...it, status: 'returned', live: false, reason: reason || 'কারণ লেখা নেই' } } };
   }
   const published = { ...s.published };
-  // Only existing lessons have a student-facing slot today; new lessons need course-structure support server-side.
-  if (!it.isNew) published[k] = { title: it.title, video: it.video, blocks: it.blocks, quiz: it.quiz };
-  return { ...s, aDecided, published, tItems: { ...s.tItems, [k]: { ...it, status: 'published', update: false, live: false, reason: '' } } };
+  const isTest = it.kind === 'test';
+  // Chapter tests and existing lessons have a student-facing slot. Brand-new lessons need course-structure support server-side.
+  if (isTest || !it.isNew) published[k] = { title: it.title, video: it.video, blocks: it.blocks, quiz: it.quiz, ...(isTest ? { seconds: it.seconds } : {}) };
+  const next: LessonRevision = { ...it, status: 'published', update: false, live: false, reason: '', ...(isTest ? { isNew: false } : {}) };
+  return { ...s, aDecided, published, tItems: { ...s.tItems, [k]: next } };
 }
 
 /* ---------- notifications ---------- */

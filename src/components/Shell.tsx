@@ -16,7 +16,6 @@ const NAV: Record<AppRole, NavItem[]> = {
   student: [
     { label: 'Home', icon: 'home', href: '/', match: (p) => p === '/' },
     { label: 'My Courses', icon: 'menu_book', href: '/course/cst', match: (p) => p.startsWith('/course') || p.startsWith('/learn') },
-    { label: 'Test', icon: 'timer', href: '/test', match: (p) => p.startsWith('/test') },
     { label: 'Leaderboard', icon: 'leaderboard', href: '/leaderboard', match: (p) => p.startsWith('/leaderboard') },
     { label: 'Profile', icon: 'person', href: '/profile', match: (p) => p.startsWith('/profile') },
   ],
