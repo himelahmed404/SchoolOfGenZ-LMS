@@ -18,6 +18,23 @@ export function completeLesson(s: AppState, cid: CourseId, ci: number, li: numbe
   return { s: next, next: nx, courseDone: c.done >= c.total };
 }
 
+/** Remember where playback stopped, if this is the resume lesson. */
+export function savePosition(s: AppState, cid: CourseId, ci: number, li: number, t: number): AppState {
+  const l = s.last;
+  if (l.courseId !== cid || l.ch !== ci || l.li !== li || l.t === t) return s;
+  return { ...s, last: { ...l, t } };
+}
+
+export function toggleBookmark(s: AppState, k: string): AppState {
+  const bookmarks = { ...s.bookmarks };
+  if (bookmarks[k]) delete bookmarks[k]; else bookmarks[k] = true;
+  return { ...s, bookmarks };
+}
+
+export function setMyNote(s: AppState, k: string, text: string): AppState {
+  return { ...s, myNotes: { ...s.myNotes, [k]: text } };
+}
+
 export function startTest(s: AppState): AppState {
   return { ...s, test: { ...s.test, on: true, startedAt: Date.now(), ans: {}, q: 0, elapsed: 0 } };
 }

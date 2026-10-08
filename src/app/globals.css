@@ -399,9 +399,26 @@ a.card:hover, a.plain:hover { text-decoration: none; color: var(--ink); }
 a.card:hover { border-color: var(--line-strong); }
 a.btn-link { color: var(--brand); }
 .video-wrap { background: var(--paper); }
-.dl-btn { margin-left: auto; }
-@media (min-width: 768px) and (max-width: 1179px) { .dl-btn { margin-left: 8px; } }
-@media (max-width: 767px) { .video-wrap { position: sticky; top: -18px; z-index: 5; padding: 18px 0 8px; margin-top: -18px; } }
+@media (max-width: 767px) { .video-wrap { position: sticky; top: 0; z-index: 5; padding-bottom: 8px; } }
+/* first right-aligned control after the tab strip; sits next to "Chapters" when that shows */
+.push-right { margin-left: auto; }
+@media (min-width: 768px) and (max-width: 1179px) { .push-right { margin-left: 8px; } }
+.ctl {
+  height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface);
+  color: var(--ink); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.ctl-round { width: 40px; height: 40px; padding: 0; }
+/* ruled writing paper (private notes) */
+.ruled {
+  width: 100%; min-height: 220px; padding: 14px 18px; border: 1px solid var(--line-strong); border-radius: 18px;
+  background: repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px), var(--surface); background-attachment: local;
+  color: var(--ink); font-family: var(--font-read); font-size: 17px; line-height: 32px; outline: none; resize: vertical;
+}
+.ruled:focus, .ask-box:focus { border-color: var(--brand); }
+.ask-box {
+  width: 100%; min-height: 88px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface-sunk); color: var(--ink); font-size: 16px; resize: vertical; outline: none;
+}
 .seg-cell { width: 22px; }
 @media (max-width: 767px) { .seg-cell { width: 14px; } .grid-2 { grid-template-columns: 1fr !important; } }
 .title-input {
