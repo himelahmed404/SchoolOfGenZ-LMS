@@ -125,6 +125,18 @@ h1, h2, h3 { margin: 0; }
 .lift-hover { transition: transform 160ms ease; }
 .lift-hover:hover { transform: translateY(-2px); }
 .hover-line:hover { border-color: var(--line-strong) !important; }
+/* chapter lists (course cards, lesson spine, mobile sheet) */
+.ch-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 10px; border: none; border-radius: 12px;
+  background: var(--row-bg, transparent); color: var(--ink); text-align: left; white-space: normal;
+}
+.ch-row:hover:not(:disabled) { background: var(--surface-sunk); }
+.ch-row:disabled { cursor: default; }
+.ch-head {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border: none; border-radius: 12px;
+  background: transparent; color: var(--ink); text-align: left; white-space: normal;
+}
+.ch-head:hover { background: var(--surface-sunk); }
 /* dashboard exam tile: tall on desktop, a strip on mobile */
 .exam-tile { flex-direction: column; align-items: stretch; }
 @media (max-width: 767px) { .exam-tile { flex-direction: row; align-items: center; } }
