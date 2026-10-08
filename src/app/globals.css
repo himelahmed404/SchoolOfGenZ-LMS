@@ -365,7 +365,8 @@ textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height
 .djumps a[aria-current="page"] { color: #FFE45C; border-bottom-color: #FFE45C; }
 
 /* ---------- admin console (desktop only) ---------- */
-.adm-root { position: fixed; top: var(--devbar-h, 0px); left: 0; right: 0; bottom: 0; display: flex; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; overflow-x: auto; }
+/* The console is English only (lang="en"); digits line up in columns. */
+.adm-root { font-variant-numeric: tabular-nums; position: fixed; top: var(--devbar-h, 0px); left: 0; right: 0; bottom: 0; display: flex; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; overflow-x: auto; }
 .adm-side { flex-shrink: 0; height: 100%; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--surface); transition: width .18s ease; }
 .adm-icon-btn { width: 28px; height: 28px; flex-shrink: 0; border: none; border-radius: 8px; background: transparent; color: var(--ink-3); display: flex; align-items: center; justify-content: center; }
 .adm-icon-btn:hover { background: var(--surface-sunk); color: var(--ink); }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { courses, defaultStudent, queueSeed } from './data';
+import { contentReasons, courses, defaultStudent, queueSeed, rejectReasons } from './data';
 import {
   allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, frontier,
-  isDone, isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, myPayments, myQuestions, nextOpenTest, refundPolicy, revisionRef,
-  roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
+  isDone, isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, myPayments, myQuestions, nextOpenTest, reasonText, refundPolicy,
+  returnReason, revisionRef, roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
@@ -225,6 +225,13 @@ describe('lesson revisions', () => {
     expect(issues(badQuiz, 'latin')).toHaveLength(1);
   });
 
+  it('explains a return with the picked reason and the admin\'s note, per audience', () => {
+    const it0 = item(s0, 'cst|lesson:4:3');
+    expect(returnReason(it0, 'en')).toBe('Video sound or picture unclear — 4:10 to 6:00');
+    expect(returnReason(it0, 'bn')).toBe(contentReasons[0].bn + ' — 4:10 to 6:00');
+    expect(returnReason(item(s0, 'cst|lesson:0:0'), 'en')).toBe('');
+  });
+
   it('labels each status', () => {
     expect(statusOf(item(s0, 'cst|lesson:5:4'))[0]).toBe('● Pending');
     expect(statusOf(item(s0, 'cst|lesson:4:3'))[0]).toBe('✗ Returned');
@@ -242,8 +249,8 @@ describe('payment queue', () => {
   });
 
   it('applies admin decisions to seed rows', () => {
-    const s = withState({ decided: { q1: { status: 'rejected', reason: 'ভুল TrxID' } } });
-    expect(allQueue(s).find((r) => r.id === 'q1')).toMatchObject({ status: 'rejected', rejectReason: 'ভুল TrxID' });
+    const s = withState({ decided: { q1: { status: 'rejected', reason: 'wrong_trx' } } });
+    expect(allQueue(s).find((r) => r.id === 'q1')).toMatchObject({ status: 'rejected', rejectReason: 'wrong_trx' });
   });
 
   it('flags short payments, reused TrxIDs and a different sender', () => {
@@ -252,6 +259,14 @@ describe('payment queue', () => {
     expect(by('q2')).toHaveLength(1);
     expect(by('q3')).toHaveLength(1);
     expect(by('q6')).toHaveLength(1);
+    expect(by('q2')[0]).toBe('Short by ৳500');
+  });
+
+  it('labels a picked reason for the admin in English and for the student in Bangla', () => {
+    expect(reasonText(rejectReasons, 'wrong_trx', 'en')).toBe('Wrong TrxID');
+    expect(reasonText(rejectReasons, 'wrong_trx', 'bn')).toBe('ভুল TrxID');
+    expect(reasonText(rejectReasons, 'typed by hand', 'bn')).toBe('typed by hand');
+    expect(reasonText(rejectReasons, undefined, 'en')).toBe('');
   });
 });
 

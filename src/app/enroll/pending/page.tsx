@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { resetPayment } from '@/lib/actions';
-import { defaultStudent, newCourse, supportPhone } from '@/lib/data';
+import { defaultStudent, newCourse, rejectReasons, supportPhone } from '@/lib/data';
 import { taka } from '@/lib/format';
+import { reasonText } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 const BOX: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 24px 32px', borderRadius: 20, background: 'var(--surface)', textAlign: 'center' };
@@ -47,7 +48,7 @@ export default function PendingPage() {
         ) : (
           <div style={{ ...BOX, border: '1px solid var(--margin)' }}>
             <div style={{ fontSize: 'var(--d2)', lineHeight: 1.4, fontWeight: 600, color: 'var(--margin)' }}>অনুমোদন হয়নি</div>
-            {p.reason ? <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--margin)' }}>কারণ — {p.reason}</div> : null}
+            {p.reason ? <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--margin)' }}>কারণ — {reasonText(rejectReasons, p.reason, 'bn')}</div> : null}
             <div className="muted-p" style={{ maxWidth: '44ch' }}>তোমার TrxID মেলেনি। আবার দেখে জমা দাও, নয়তো {supportPhone} নম্বরে যোগাযোগ করো।</div>
             <button className="btn" style={{ padding: '0 24px', fontSize: 15, fontWeight: 500 }} onClick={() => { set(resetPayment); router.push('/enroll/pay'); }}>Resubmit</button>
           </div>

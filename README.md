@@ -11,11 +11,12 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build && npm start
 npm run lint       # ESLint (eslint-config-next)
+npm run check:admin-en   # fails if Bangla text appears in admin code
 npm run typecheck
 npm test           # Vitest: src/lib/*.test.ts
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the build on every push.
+CI (`.github/workflows/ci.yml`) runs lint, the admin-English check, typecheck, tests and the build on every push.
 
 ## Dev bar (no sign-in yet)
 
@@ -39,6 +40,11 @@ Two kinds of text, so no line mixes scripts:
 - **Titles and sentences are Bangla:** course, chapter and lesson titles, lesson content, greetings,
   guidance, empty states and dialogs. Digits inside a Bangla sentence follow the student's numeral
   setting (`digits`, `ordinal`).
+- **The admin console is English only,** including digits, dates and seed data (`lang="en"` on its
+  root). What people typed still appears as typed: a lesson under review, a student's name.
+- **Reasons cross that line.** `rejectReasons` and `contentReasons` in `src/lib/data.ts` carry a code
+  and two labels: the admin picks the English one, and the student or teacher reads the Bangla one
+  (`reasonText`, `returnReason`). The stored value is the code.
 
 ## Routes
 

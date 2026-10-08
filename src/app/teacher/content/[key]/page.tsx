@@ -8,7 +8,7 @@ import { Tex } from '@/components/Tex';
 import { patchItem, startUpload, submitForReview, withdraw } from '@/lib/actions';
 import { blockTypes, courses, fxKeys, MIN_TEST_QUESTIONS, teacher } from '@/lib/data';
 import { pad2 } from '@/lib/format';
-import { blockHasContent, issues, item, keyCourse, revisionRef, statusOf } from '@/lib/selectors';
+import { blockHasContent, issues, item, keyCourse, returnReason, revisionRef, statusOf } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { Block, BlockType, LessonRevision, QuizQ } from '@/lib/types';
 
@@ -80,7 +80,7 @@ export default function EditorPage() {
           className="title-input" />
       )}
 
-      {it.status === 'returned' ? <div className="alert" style={{ marginTop: 16 }}>ফেরত এসেছে — {it.reason || 'কারণ লেখা নেই'}। ঠিক করে আবার জমা দাও।</div> : null}
+      {it.status === 'returned' ? <div className="alert" style={{ marginTop: 16 }}>ফেরত এসেছে — {returnReason(it, 'bn') || 'কারণ লেখা নেই'}। ঠিক করে আবার জমা দাও।</div> : null}
       {locked ? <div className="alert alert-warn" style={{ marginTop: 16 }}>অ্যাডমিন দেখছেন। অনুমোদন হলে ছাত্ররা দেখতে পাবে — ততক্ষণ বদলানো যাবে না।</div> : null}
       {it.status === 'draft' && it.update ? <div className="fine" style={{ marginTop: 16 }}>ছাত্ররা এখনো আগের সংস্করণ দেখছে। জমা দিয়ে অনুমোদন হলে নতুনটা যাবে।</div> : null}
 

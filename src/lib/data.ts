@@ -1,6 +1,6 @@
 // Seed data ported from the v6 design prototype. Replace with API data once a server exists.
 // Facts (names, batches, dates, times, counts, prices) are English; titles and lesson content are Bangla.
-import type { Block, BlockType, ChapterTest, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, PayStatus, QuizQ, Tone } from './types';
+import type { Block, BlockType, ChapterTest, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, PayStatus, QuizQ, Reason, Tone } from './types';
 
 export const boardExam = { name: 'পর্ব সমাপনী পরীক্ষা', even: '2026-12-14', odd: '2027-04-18' };
 /** Diploma semesters a student can pick. */
@@ -51,19 +51,19 @@ export const newCourse = { code: 'WEB', title: 'ওয়েব ডেভেল�
 export const merchants: Record<PayMethod, string> = { bKash: '01777 090909', Nagad: '01888 070707' };
 
 export const queueSeed: Payment[] = [
-  { id: 'q1', name: 'Sadia Afrin', phone: '01812 337742', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01812 337742', agoMin: 12, status: 'pending' },
-  { id: 'q2', name: 'Rakibul Islam', phone: '01911 208864', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 1500, due: 2000, trx: 'NGD5K1RW83', sender: '01911 208864', agoMin: 26, status: 'pending' },
-  { id: 'q3', name: 'Nusrat Jahan Mim', phone: '01741 665503', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX2P8VC57', sender: '01918 442210', agoMin: 41, status: 'pending' },
-  { id: 'q4', name: 'Tanvir Hossain', phone: '01684 991127', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 2500, due: 2500, trx: 'BKX6Q3ZN14', sender: '01684 991127', agoMin: 60, status: 'pending' },
-  { id: 'q5', name: 'Farhana Akter', phone: '01521 774096', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'Nagad', amount: 2000, due: 2000, trx: 'NGD8W2YT65', sender: '01521 774096', agoMin: 75, status: 'pending' },
-  { id: 'q6', name: 'Ariful Islam', phone: '01733 550218', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01733 550218', agoMin: 120, status: 'pending', dup: true },
-  { id: 'q7', name: 'Sumaiya Binte Karim', phone: '01876 331409', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 2500, due: 2500, trx: 'NGD3M7QX92', sender: '01876 331409', agoMin: 140, status: 'pending' },
-  { id: 'q8', name: 'Imran Kabir', phone: '01958 002264', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX1L5HD38', sender: '01958 002264', agoMin: 180, status: 'pending' },
-  { id: 'q9', name: 'Jannatul Ferdous', phone: '01627 883351', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX4C9JR76', sender: '01627 883351', agoMin: 200, status: 'pending' },
-  { id: 'q10', name: 'Mehedi Hasan', phone: '01799 116740', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'Nagad', amount: 1000, due: 2500, trx: 'NGD7B4KF29', sender: '01799 116740', agoMin: 240, status: 'pending' },
-  { id: 'q11', name: 'Sharmin Sultana', phone: '01555 448802', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX8N2WS45', sender: '01555 448802', agoMin: 1500, status: 'approved' },
-  { id: 'q12', name: 'Nafis Iqbal', phone: '01844 907715', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'Nagad', amount: 3000, due: 3000, trx: 'NGD6V1PA83', sender: '01844 907715', agoMin: 1560, status: 'approved' },
-  { id: 'q13', name: 'Rubaiya Haque', phone: '01712 664438', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 500, due: 2500, trx: 'BKX0F3TM61', sender: '01712 664438', agoMin: 1620, status: 'rejected' }
+  { id: 'q1', name: 'Sadia Afrin', phone: '01812 337742', course: 'Data Structure & Algorithm', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01812 337742', agoMin: 12, status: 'pending' },
+  { id: 'q2', name: 'Rakibul Islam', phone: '01911 208864', course: 'Spoken English — Foundation', batch: 'ENG-02-B07', method: 'Nagad', amount: 1500, due: 2000, trx: 'NGD5K1RW83', sender: '01911 208864', agoMin: 26, status: 'pending' },
+  { id: 'q3', name: 'Nusrat Jahan Mim', phone: '01741 665503', course: 'Data Structure & Algorithm', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX2P8VC57', sender: '01918 442210', agoMin: 41, status: 'pending' },
+  { id: 'q4', name: 'Tanvir Hossain', phone: '01684 991127', course: 'Web Development Basics', batch: 'WEB-01-B03', method: 'bKash', amount: 2500, due: 2500, trx: 'BKX6Q3ZN14', sender: '01684 991127', agoMin: 60, status: 'pending' },
+  { id: 'q5', name: 'Farhana Akter', phone: '01521 774096', course: 'Spoken English — Foundation', batch: 'ENG-02-B07', method: 'Nagad', amount: 2000, due: 2000, trx: 'NGD8W2YT65', sender: '01521 774096', agoMin: 75, status: 'pending' },
+  { id: 'q6', name: 'Ariful Islam', phone: '01733 550218', course: 'Data Structure & Algorithm', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX9T4LM20', sender: '01733 550218', agoMin: 120, status: 'pending', dup: true },
+  { id: 'q7', name: 'Sumaiya Binte Karim', phone: '01876 331409', course: 'Web Development Basics', batch: 'WEB-01-B03', method: 'Nagad', amount: 2500, due: 2500, trx: 'NGD3M7QX92', sender: '01876 331409', agoMin: 140, status: 'pending' },
+  { id: 'q8', name: 'Imran Kabir', phone: '01958 002264', course: 'Spoken English — Foundation', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX1L5HD38', sender: '01958 002264', agoMin: 180, status: 'pending' },
+  { id: 'q9', name: 'Jannatul Ferdous', phone: '01627 883351', course: 'Data Structure & Algorithm', batch: 'CST-04-B01', method: 'bKash', amount: 3000, due: 3000, trx: 'BKX4C9JR76', sender: '01627 883351', agoMin: 200, status: 'pending' },
+  { id: 'q10', name: 'Mehedi Hasan', phone: '01799 116740', course: 'Web Development Basics', batch: 'WEB-01-B03', method: 'Nagad', amount: 1000, due: 2500, trx: 'NGD7B4KF29', sender: '01799 116740', agoMin: 240, status: 'pending' },
+  { id: 'q11', name: 'Sharmin Sultana', phone: '01555 448802', course: 'Spoken English — Foundation', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX8N2WS45', sender: '01555 448802', agoMin: 1500, status: 'approved' },
+  { id: 'q12', name: 'Nafis Iqbal', phone: '01844 907715', course: 'Data Structure & Algorithm', batch: 'CST-04-B01', method: 'Nagad', amount: 3000, due: 3000, trx: 'NGD6V1PA83', sender: '01844 907715', agoMin: 1560, status: 'approved' },
+  { id: 'q13', name: 'Rubaiya Haque', phone: '01712 664438', course: 'Web Development Basics', batch: 'WEB-01-B03', method: 'bKash', amount: 500, due: 2500, trx: 'BKX0F3TM61', sender: '01712 664438', agoMin: 1620, status: 'rejected' }
 ];
 
 /** What the signed-in student paid for the courses they are already in. */
@@ -72,7 +72,13 @@ export const paymentHistory: { id: string; course: CourseId; method: PayMethod; 
   { id: 'p1', course: 'cst', method: 'bKash', amount: 3000, trx: 'BKX3H8QK27', date: '2026-08-02', status: 'approved' },
 ];
 
-export const rejectReasons = ['ভুল TrxID', 'টাকা কম', 'ডুপ্লিকেট', 'অন্য নম্বর'];
+/** Why a payment is rejected. The admin picks the English label; the student reads the Bangla one. */
+export const rejectReasons: Reason[] = [
+  { code: 'wrong_trx', en: 'Wrong TrxID', bn: 'ভুল TrxID' },
+  { code: 'short', en: 'Amount too low', bn: 'টাকা কম' },
+  { code: 'duplicate', en: 'Duplicate', bn: 'ডুপ্লিকেট' },
+  { code: 'other_number', en: 'Different number', bn: 'অন্য নম্বর' },
+];
 
 export const batches: Record<string, { course: CourseId; seed: number; size: number }> = {
   'CST-04-B01': { course: 'cst', seed: 11, size: 30 },
@@ -153,7 +159,7 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
     { t: 'p', x: 'প্রতি ধাপে সবচেয়ে কাছের অদেখা নোড u বেছে নিয়ে তার প্রতিবেশী v-এর দূরত্ব হালনাগাদ করো:' },
     { t: 'fx', x: 'd[v] = \\min\\big(d[v],\\; d[u] + w(u, v)\\big)' }
   ] },
-  'cst|lesson:4:3': { status: 'returned', update: true, reason: 'ভিডিওর শব্দ অস্পষ্ট, ৪:১০ থেকে ৬:০০', by: 'Shahriar Hossain', subAgoMin: 1500 },
+  'cst|lesson:4:3': { status: 'returned', update: true, reason: 'unclear_av', reasonNote: '4:10 to 6:00', by: 'Shahriar Hossain', subAgoMin: 1500 },
   'cst|new:3:0': { kind: 'lesson', ch: 3, isNew: true, title: 'AVL ট্রি — রোটেশন দিয়ে ব্যালান্স', status: 'review', by: 'Shahriar Hossain', subAgoMin: 50,
     video: { state: 'done', name: 'VID_20260924_2215.mp4', dur: '16:45' },
     quiz: [{ stem: 'AVL ট্রিতে কোনো নোডের ব্যালান্স ফ্যাক্টর কত হলে রোটেশন লাগে?', o: ['২ বা −২', '১', '০', '−১'], a: 0, why: 'AVL-এ −১, ০ আর ১ চলে। এর বাইরে গেলেই রোটেশন।' }],
@@ -187,7 +193,13 @@ export const blockTypes: Record<BlockType, string[]> = {
   img: ['ছবি'], fx: ['সূত্র · LaTeX']
 };
 
-export const contentReasons = ['ভিডিওর শব্দ বা ছবি অস্পষ্ট', 'নোটে তথ্যগত ভুল', 'কুইজের উত্তর ভুল', 'সিলেবাসের বাইরে'];
+/** Why a lesson or test is sent back. The admin picks the English label; the teacher reads the Bangla one. */
+export const contentReasons: Reason[] = [
+  { code: 'unclear_av', en: 'Video sound or picture unclear', bn: 'ভিডিওর শব্দ বা ছবি অস্পষ্ট' },
+  { code: 'wrong_fact', en: 'Factual error in the notes', bn: 'নোটে তথ্যগত ভুল' },
+  { code: 'wrong_answer', en: 'Wrong quiz answer', bn: 'কুইজের উত্তর ভুল' },
+  { code: 'off_syllabus', en: 'Outside the syllabus', bn: 'সিলেবাসের বাইরে' },
+];
 
 export const courses: Record<CourseId, Course> = {
   cst: {

@@ -30,7 +30,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 }
 
 function AdminFrame({ children }: { children: ReactNode }) {
-  const { s, set, numerals, theme, toggleTheme } = useStore();
+  const { s, set, theme, toggleTheme } = useStore();
   const path = usePathname();
   const router = useRouter();
   const srRef = useRef<HTMLInputElement>(null);
@@ -85,7 +85,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
   }, [st.srOpen]);
 
   const env = {
-    sec, numerals, theme, today: new Date(),
+    sec, theme, today: new Date(),
     payCount: allQueue(s).filter((r) => r.status === 'pending').length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
@@ -100,7 +100,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{ vals, logic, setState, st }}>
-      <div className="adm-root">
+      <div className="adm-root" lang="en">
         <aside className="adm-side" style={{ width: mini ? 72 : 232 }}>
           <div style={{ flexShrink: 0, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 14px', borderBottom: '1px solid var(--line)' }}>
             {!mini ? (
@@ -112,15 +112,15 @@ function AdminFrame({ children }: { children: ReactNode }) {
                 </div>
               </>
             ) : null}
-            <button className="adm-icon-btn" onClick={() => setState({ navMini: !mini, viewOpen: false })} title={mini ? 'মেনু খোলো' : 'মেনু ছোট করো'} aria-label={mini ? 'মেনু খোলো' : 'মেনু ছোট করো'}>
+            <button className="adm-icon-btn" onClick={() => setState({ navMini: !mini, viewOpen: false })} title={mini ? 'Expand menu' : 'Collapse menu'} aria-label={mini ? 'Expand menu' : 'Collapse menu'}>
               <Svg d={mini ? ICON.expand : ICON.collapse} w={1.8} />
             </button>
           </div>
           <div style={{ flexShrink: 0, padding: '12px 10px 0' }}>
-            <button className="adm-search" onClick={() => setState({ srOpen: true, srQ: '', srIdx: 0 })} title="খুঁজো (Ctrl K)"
+            <button className="adm-search" onClick={() => setState({ srOpen: true, srQ: '', srIdx: 0 })} title="Search (Ctrl K)"
               style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 12px' }}>
               <Svg d={ICON.search} />
-              {!mini ? <><span style={{ flex: 1, textAlign: 'left' }}>খুঁজো…</span><span className="adm-kbd">Ctrl K</span></> : null}
+              {!mini ? <><span style={{ flex: 1, textAlign: 'left' }}>Search…</span><span className="adm-kbd">Ctrl K</span></> : null}
             </button>
           </div>
           <nav style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 14 }} aria-label="Admin">
@@ -143,7 +143,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
           <div style={{ flexShrink: 0, position: 'relative', borderTop: '1px solid var(--line)', padding: 8 }}>
             {st.viewOpen ? (
               <div className="adm-pop" role="menu">
-                <div style={{ padding: '4px 8px', fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'normal' }}>View as — প্রতিটা রোল কী দেখে যাচাই করো</div>
+                <div style={{ padding: '4px 8px', fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'normal' }}>View as — check what each role sees</div>
                 {vals.staffOpts.map((o) => (
                   <button key={o.id} role="menuitem" onClick={o.go} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 8px', border: 'none', borderRadius: 10, background: o.on ? 'var(--brand-soft)' : 'transparent', color: 'var(--ink)', textAlign: 'left' }}>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
@@ -167,7 +167,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
                   </>
                 ) : null}
               </button>
-              <button className="adm-theme" onClick={env.toggleTheme} title={theme === 'dark' ? 'লাইট মোড' : 'ডার্ক মোড'} aria-label={theme === 'dark' ? 'লাইট মোড' : 'ডার্ক মোড'}>
+              <button className="adm-theme" onClick={env.toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label="Dark mode" aria-pressed={theme === 'dark'}>
                 <Svg d={theme === 'dark' ? ICON.sun : ICON.moon} />
               </button>
             </div>
@@ -178,11 +178,11 @@ function AdminFrame({ children }: { children: ReactNode }) {
 
         {vals.srOpen ? (
           <div className="adm-ov" onClick={() => setState({ srOpen: false })} style={{ zIndex: 60, alignItems: 'flex-start', padding: '10vh 16px 16px', background: 'rgba(12,16,32,0.42)' }} data-screen-label="Global search">
-            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="খুঁজো"
+            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Search"
               style={{ width: 620, maxWidth: '100%', maxHeight: '72vh', display: 'flex', flexDirection: 'column', background: 'var(--surface)', border: '1px solid var(--line-strong)', borderRadius: 16, boxShadow: 'var(--overlay)', overflow: 'hidden' }}>
               <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, height: 56, padding: '0 16px', borderBottom: '1px solid var(--line)', color: 'var(--ink-3)' }}>
                 <Svg d={ICON.search} size={20} />
-                <input ref={srRef} value={vals.srQ} onChange={(e) => setState({ srQ: e.target.value, srIdx: 0 })} placeholder="স্টুডেন্ট, শিক্ষক, কোর্স, ব্যাচ বা পেজ খোঁজো…"
+                <input ref={srRef} value={vals.srQ} onChange={(e) => setState({ srQ: e.target.value, srIdx: 0 })} placeholder="Search students, teachers, courses, batches or pages…"
                   style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', color: 'var(--ink)', fontSize: 16 }} />
                 <span className="adm-kbd">Esc</span>
               </div>
@@ -206,12 +206,12 @@ function AdminFrame({ children }: { children: ReactNode }) {
                 {vals.srEmpty ? (
                   <div style={{ padding: '40px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <span style={{ color: 'var(--ink-3)' }}><Svg d={ICON.search} size={28} /></span>
-                    <div style={{ fontSize: 15, fontWeight: 600 }}>&ldquo;{vals.srQ}&rdquo; — কিছু পাওয়া যায়নি</div>
-                    <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>নাম, ফোন নম্বর, কোর্স কোড বা ব্যাচ আইডি দিয়ে চেষ্টা করো।</div>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>Nothing found for &ldquo;{vals.srQ}&rdquo;</div>
+                    <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>Try a name, phone number, course code or batch ID.</div>
                   </div>
                 ) : null}
               </div>
-              <div style={{ flexShrink: 0, display: 'flex', gap: 16, padding: '8px 16px', borderTop: '1px solid var(--line)', background: 'var(--paper)', fontSize: 12, color: 'var(--ink-3)' }}><span>↑↓ বাছাই</span><span>↵ খোলো</span><span>Esc বন্ধ</span></div>
+              <div style={{ flexShrink: 0, display: 'flex', gap: 16, padding: '8px 16px', borderTop: '1px solid var(--line)', background: 'var(--paper)', fontSize: 12, color: 'var(--ink-3)' }}><span>↑↓ select</span><span>↵ open</span><span>Esc close</span></div>
             </div>
           </div>
         ) : null}
@@ -224,7 +224,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
               {vals.confirm.body ? <div style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.65, whiteSpace: 'pre-line' }}>{vals.confirm.body}</div> : null}
               {vals.confirm.needReason ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>Reason <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>— আবশ্যক, activity log-এ থাকবে</span></div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>Reason <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>— required, kept in the activity log</span></div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {vals.confirm.reasons.map((r) => (
                       <button key={r.label} onClick={r.go} aria-pressed={r.bg !== 'var(--surface)'}
@@ -256,8 +256,8 @@ export function ConsoleMain() {
   const { vals, setState, st } = useConsole();
   const { v, dt } = vals;
   const panelIcon = (title: string) => {
-    const k = /attention/i.test(title) ? 'alert' : /revenue|আয়/i.test(title) ? 'reports' : /activity/i.test(title) ? 'activity' : /course|কোর্স/i.test(title) ? 'courses'
-      : /batch|ব্যাচ/i.test(title) ? 'batches' : /teacher|শিক্ষক/i.test(title) ? 'teachers' : /student|স্টুডেন্ট/i.test(title) ? 'students' : /payment|পেমেন্ট/i.test(title) ? 'payments' : null;
+    const k = /attention/i.test(title) ? 'alert' : /revenue/i.test(title) ? 'reports' : /activity/i.test(title) ? 'activity' : /course/i.test(title) ? 'courses'
+      : /batch/i.test(title) ? 'batches' : /teacher/i.test(title) ? 'teachers' : /student/i.test(title) ? 'students' : /payment/i.test(title) ? 'payments' : null;
     return k ? ICON[k] : null;
   };
 
@@ -391,7 +391,7 @@ export function ConsoleMain() {
                   ))}
                 </div>
               ) : null}
-              {dt.hasRoNote ? <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>এই অংশে তোমার শুধু দেখার অনুমতি আছে — বদলাতে Super admin-কে বলো।</div> : null}
+              {dt.hasRoNote ? <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>You can only view this area. Ask a Super admin if you need to change it.</div> : null}
             </div>
           </aside>
         ) : null}

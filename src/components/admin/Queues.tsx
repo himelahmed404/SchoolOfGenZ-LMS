@@ -7,8 +7,8 @@ import { Penguin } from '@/components/Penguin';
 import { useConsole } from './Console';
 import { decideContent, decidePayments } from '@/lib/actions';
 import { contentReasons, courses, MIN_TEST_QUESTIONS, rejectReasons, teacher } from '@/lib/data';
-import { ago, pad2, taka } from '@/lib/format';
-import { allQueue, blockHasContent, item, itemKeys, keyCourse, revisionRef, rowFlags } from '@/lib/selectors';
+import { ago, pad2, plural, taka } from '@/lib/format';
+import { allQueue, blockHasContent, item, itemKeys, keyCourse, reasonText, returnReason, revisionRef, rowFlags } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
 import type { LessonRevision, PayStatus, Payment } from '@/lib/types';
@@ -25,7 +25,7 @@ function where(k: string, x: LessonRevision) {
 
 /** Payment approvals and content review, shown beside the console sidebar. */
 export function AdminQueues({ mode }: { mode: Mode }) {
-  const { s, set, n, ready } = useStore();
+  const { s, set, ready } = useStore();
   const { logic, vals } = useConsole();
   const router = useRouter();
   // Mirrors the role's permission for the UI; the server must enforce it.
@@ -62,7 +62,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
     if (!ids.length || !canPay) return;
     set((x) => decidePayments(x, ids, status, reason));
     queue.filter((r) => ids.includes(r.id)).forEach((r) =>
-      logic.log('payments', status === 'approved' ? 'Approved payment' : 'Rejected payment', r.name + ' · ' + r.trx, reason));
+      logic.log('payments', status === 'approved' ? 'Approved payment' : 'Rejected payment', r.name + ' · ' + r.trx, reason ? reasonText(rejectReasons, reason, 'en') : ''));
     const c = { ...checked }; ids.forEach((id) => delete c[id]); setChecked(c);
     setRejectFor(null); setSel(0);
   };
@@ -86,15 +86,16 @@ export function AdminQueues({ mode }: { mode: Mode }) {
   const canRet = !!cReason || !!cNote.trim();
   const retOpen = !!ck && cRetFor === ck;
 
-  const cDecide = (k: string | null, status: 'published' | 'returned', reason?: string) => {
+  const cDecide = (k: string | null, status: 'published' | 'returned', reason?: string, note?: string) => {
     if (!k || !canContent) return;
-    set((x: AppState) => decideContent(x, k, status, reason));
+    set((x: AppState) => decideContent(x, k, status, reason, note));
     const x = item(s, k), w = where(k, x);
     const what = x.kind === 'test' ? 'test' : 'lesson';
-    logic.log('content', (status === 'published' ? 'Published ' : 'Returned ') + what, w.tag + ' · ' + w.loc + (x.kind === 'test' ? '' : ' · ' + (x.title || '')), reason);
+    logic.log('content', (status === 'published' ? 'Published ' : 'Returned ') + what, w.tag + ' · ' + w.loc + (x.kind === 'test' ? '' : ' · ' + (x.title || '')),
+      [reasonText(contentReasons, reason, 'en'), note].filter(Boolean).join(' — '));
     setCRetFor(null); setCReason(null); setCNote(''); setCSel(0);
   };
-  const doReturn = () => { if (canRet) cDecide(ck, 'returned', [cReason, cNote.trim()].filter(Boolean).join(' — ')); };
+  const doReturn = () => { if (canRet) cDecide(ck, 'returned', cReason || '', cNote.trim()); };
 
   /* ---------- keyboard ---------- */
   const onKey = (e: KeyboardEvent) => {
@@ -144,17 +145,17 @@ export function AdminQueues({ mode }: { mode: Mode }) {
               <button key={id} aria-current={on ? 'page' : undefined} onClick={() => { setMode(id); setCRetFor(null); setRejectFor(null); }}
                 style={{ height: 56, border: 'none', background: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', borderBottom: '2px solid ' + (on ? 'var(--brand)' : 'transparent') }}>
                 {label}
-                <span style={{ minWidth: 22, height: 20, padding: '0 6px', borderRadius: 10, background: count ? 'var(--warn-soft)' : 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n(count)}</span>
+                <span style={{ minWidth: 22, height: 20, padding: '0 6px', borderRadius: 10, background: count ? 'var(--warn-soft)' : 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
               </button>
             );
           })}
         </nav>
         <div className="t13 ink3 nowrap">
-          {mode === 'pay' ? 'অপেক্ষমাণ ' + n(qCounts.pending) + ' · আজ অনুমোদিত ' + n(qCounts.approved) : 'অপেক্ষায় ' + n(cCount.review) + ' · আজ প্রকাশিত ' + n(cCount.published)}
+          {mode === 'pay' ? qCounts.pending + ' pending · ' + qCounts.approved + ' approved today' : cCount.review + ' in review · ' + cCount.published + ' published today'}
         </div>
         <div style={{ flex: 1 }} />
         {mode === 'pay' ? (
-          <input ref={searchRef} value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }} placeholder="নাম, নম্বর বা TrxID খোঁজো  /" aria-label="খোঁজো"
+          <input ref={searchRef} value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }} placeholder="Search name, number or TrxID  /" aria-label="Search"
             style={{ width: 260, height: 34, padding: '0 12px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 13 }} />
         ) : null}
         <div className="row" style={{ gap: 8, paddingLeft: 16, borderLeft: '1px solid var(--line)' }}>
@@ -167,18 +168,18 @@ export function AdminQueues({ mode }: { mode: Mode }) {
         <>
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 20, height: 44, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }} role="tablist">
             {([['Pending', 'pending'], ['Approved', 'approved'], ['Rejected', 'rejected']] as [string, PayStatus][]).map(([label, id]) => (
-              <button key={id} role="tab" aria-selected={qFilter === id} style={tabStyle(qFilter === id)} onClick={() => { setQFilter(id); setSel(0); setRejectFor(null); }}>{label} {n(qCounts[id])}</button>
+              <button key={id} role="tab" aria-selected={qFilter === id} style={tabStyle(qFilter === id)} onClick={() => { setQFilter(id); setSel(0); setRejectFor(null); }}>{label} {qCounts[id]}</button>
             ))}
             {checkedIds.length ? (
               <div className="row ml-auto" style={{ gap: 8 }}>
                 <button className="btn-quiet t13 w500" style={{ height: 32, padding: '0 12px' }} onClick={() => setChecked({})}>Clear</button>
-                {canPay ? <button onClick={() => decide(checkedIds, 'approved')} style={{ height: 32, padding: '0 14px', border: 'none', borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 13, fontWeight: 500 }}>Approve selected ({n(checkedIds.length)})</button> : null}
+                {canPay ? <button onClick={() => decide(checkedIds, 'approved')} style={{ height: 32, padding: '0 14px', border: 'none', borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 13, fontWeight: 500 }}>Approve selected ({checkedIds.length})</button> : null}
               </div>
             ) : null}
           </div>
 
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }} role="grid" aria-label="পেমেন্ট">
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }} role="grid" aria-label="Payments">
               <div className="t12 ink3 pay-grid" style={{ flexShrink: 0, height: 32, padding: '0 16px', borderBottom: '1px solid var(--line)', background: 'var(--paper)', position: 'sticky', top: 0, zIndex: 2 }}>
                 <span /><span>Student</span><span>Course</span><span>Method</span><span>TrxID</span><span>Submitted</span>
               </div>
@@ -187,7 +188,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 return (
                   <div key={r.id} role="row" aria-selected={here} onClick={() => { setSel(i); setRejectFor(null); }} className="pay-grid"
                     style={{ width: '100%', height: 44, padding: '0 16px', borderLeft: '2px solid ' + (here ? 'var(--brand)' : flagged ? 'var(--margin)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', cursor: 'pointer' }}>
-                    <button role="checkbox" aria-checked={on} aria-label={r.name + ' বাছো'} onClick={(e) => { e.stopPropagation(); toggleCheck(r.id); }}
+                    <button role="checkbox" aria-checked={on} aria-label={'Select ' + r.name} onClick={(e) => { e.stopPropagation(); toggleCheck(r.id); }}
                       style={{ width: 16, height: 16, padding: 0, border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 5, background: on ? 'var(--brand)' : 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--on-brand)' }}>{on ? '✓' : ''}</button>
                     <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.4 }}>
                       <span className="t13 ellipsis" style={{ fontWeight: here ? 600 : 400 }}>{r.name}</span>
@@ -206,8 +207,8 @@ export function AdminQueues({ mode }: { mode: Mode }) {
               {rows.length === 0 ? (
                 <div className="empty" style={{ padding: '72px 24px' }}>
                   <Penguin size={80} />
-                  <div className="t17 w600">এই তালিকা খালি</div>
-                  <div className="t15 ink2" style={{ maxWidth: '36ch' }}>সব দেখা হয়ে গেছে। নতুন জমা পড়লে এখানেই আসবে।</div>
+                  <div className="t17 w600">This list is empty</div>
+                  <div className="t15 ink2" style={{ maxWidth: '36ch' }}>Everything is reviewed. New submissions appear here.</div>
                 </div>
               ) : null}
             </div>
@@ -215,7 +216,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
             {selRow ? (
               <aside style={{ width: 380, flexShrink: 0, borderLeft: '1px solid var(--line)', background: 'var(--surface)', overflow: 'auto', padding: 20 }}>
                 <div className="t12 w500" style={{ marginBottom: 8, color: selRow.status === 'approved' ? 'var(--brand)' : selRow.status === 'rejected' ? 'var(--margin)' : 'var(--warn)' }}>
-                  {selRow.status === 'approved' ? '✓ Approved' : selRow.status === 'rejected' ? '✗ Rejected' + (selRow.rejectReason ? ' · ' + selRow.rejectReason : '') : '● Pending'}
+                  {selRow.status === 'approved' ? '✓ Approved' : selRow.status === 'rejected' ? '✗ Rejected' + (selRow.rejectReason ? ' · ' + reasonText(rejectReasons, selRow.rejectReason, 'en') : '') : '● Pending'}
                 </div>
                 <div style={{ fontSize: 20, lineHeight: 1.45, fontWeight: 600 }}>{selRow.name}</div>
                 <div className="mono t13 ink3" style={{ marginBottom: 24 }}>{selRow.phone}</div>
@@ -234,25 +235,25 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                 <div className="t12 w500 ink3" style={{ marginBottom: 8 }}>Payment</div>
                 <dl className="kv">
                   <KV k="Method" v={selRow.method} />
-                  <KV k="এসেছে" v={taka(selRow.amount)} mono strong color={selRow.amount < selRow.due ? 'var(--margin)' : undefined} />
-                  <KV k="আসার কথা" v={taka(selRow.due)} mono color="var(--ink-2)" />
+                  <KV k="Received" v={taka(selRow.amount)} mono strong color={selRow.amount < selRow.due ? 'var(--margin)' : undefined} />
+                  <KV k="Expected" v={taka(selRow.due)} mono color="var(--ink-2)" />
                   <KV k="TrxID" v={selRow.trx} mono strong />
-                  <KV k="পাঠিয়েছে" v={selRow.sender} mono color={selRow.sender !== selRow.phone ? 'var(--margin)' : undefined} />
+                  <KV k="Sent from" v={selRow.sender} mono color={selRow.sender !== selRow.phone ? 'var(--margin)' : undefined} />
                   <KV k="Submitted" v={ago(selRow.agoMin)} color="var(--ink-2)" />
                 </dl>
 
-                {selRow.status === 'pending' && !canPay ? <div className="t12 ink3">এই অংশে তোমার শুধু দেখার অনুমতি আছে — অনুমোদন দিতে পারবে না।</div> : null}
+                {selRow.status === 'pending' && !canPay ? <div className="t12 ink3">You can only view this area, so you cannot approve or reject.</div> : null}
                 {selRow.status === 'pending' && canPay ? (
                   <div>
                     {rejectFor === selRow.id ? (
                       <div>
-                        <div className="t13 w500 ink2" style={{ marginBottom: 10 }}>বাতিলের কারণ</div>
+                        <div className="t13 w500 ink2" style={{ marginBottom: 10 }}>Reason for rejecting</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                          {rejectReasons.map((t) => (
-                            <button key={t} className="chip" style={{ borderColor: 'var(--margin)', color: 'var(--margin)' }} onClick={() => decide([selRow.id], 'rejected', t)}>{t}</button>
+                          {rejectReasons.map((r) => (
+                            <button key={r.code} className="chip" style={{ borderColor: 'var(--margin)', color: 'var(--margin)' }} onClick={() => decide([selRow.id], 'rejected', r.code)}>{r.en}</button>
                           ))}
                         </div>
-                        <button className="btn-quiet t13 w500" style={{ height: 36, padding: '0 12px' }} onClick={() => setRejectFor(null)}>থাক</button>
+                        <button className="btn-quiet t13 w500" style={{ height: 36, padding: '0 12px' }} onClick={() => setRejectFor(null)}>Cancel</button>
                       </div>
                     ) : null}
                     <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
@@ -261,7 +262,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                     </div>
                   </div>
                 ) : null}
-                {selRow.live ? <div className="note-dashed" style={{ marginTop: 20, borderRadius: 10 }}>এই সারিটা তোমার নিজের জমা দেওয়া। অনুমোদন করলে student ভিউতে গিয়ে দেখো।</div> : null}
+                {selRow.live ? <div className="note-dashed" style={{ marginTop: 20, borderRadius: 10 }}>You submitted this row yourself in the student view. Decide here, then look at the student view.</div> : null}
               </aside>
             ) : null}
           </div>
@@ -270,7 +271,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 20, height: 44, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }} role="tablist">
             {([['Pending', 'review'], ['Published', 'published'], ['Returned', 'returned']] as [string, CFilter][]).map(([label, id]) => (
-              <button key={id} role="tab" aria-selected={cFilter === id} style={tabStyle(cFilter === id)} onClick={() => { setCFilter(id); setCSel(0); setCRetFor(null); }}>{label} {n(cCount[id])}</button>
+              <button key={id} role="tab" aria-selected={cFilter === id} style={tabStyle(cFilter === id)} onClick={() => { setCFilter(id); setCSel(0); setCRetFor(null); }}>{label} {cCount[id]}</button>
             ))}
           </div>
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -282,7 +283,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                   <button key={k} onClick={() => { setCSel(i); setCRetFor(null); }} aria-current={here ? 'true' : undefined}
                     style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '12px 16px 12px 14px', border: 'none', borderLeft: '2px solid ' + (here ? 'var(--brand)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left', whiteSpace: 'normal' }}>
                     <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
-                    <span className="t15" style={{ lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'নাম দেওয়া হয়নি'}</span>
+                    <span className="t15" style={{ lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'Untitled'}</span>
                     <span className="row t12 ink2" style={{ gap: 8 }}><span>{x.by || teacher.name}</span><span className="tag" style={{ color: kindColor }}>{x.kind === 'test' ? (x.isNew ? 'New Test' : 'Test Update') : x.isNew ? 'New Lesson' : 'Update'}</span></span>
                   </button>
                 );
@@ -290,8 +291,8 @@ export function AdminQueues({ mode }: { mode: Mode }) {
               {cVis.length === 0 ? (
                 <div className="empty" style={{ padding: '64px 24px', gap: 12 }}>
                   <Penguin size={64} />
-                  <div className="t15 w600">{cFilter === 'review' ? 'জমা পড়া সব লেসন দেখা হয়ে গেছে' : cFilter === 'published' ? 'আজ এখনো কিছু প্রকাশ করোনি' : 'কিছু ফেরত পাঠানো হয়নি'}</div>
-                  <div className="t13 ink2" style={{ maxWidth: '30ch' }}>শিক্ষক লেসন জমা দিলে এখানে আসবে।</div>
+                  <div className="t15 w600">{cFilter === 'review' ? 'Everything submitted is reviewed' : cFilter === 'published' ? 'Nothing published yet today' : 'Nothing has been sent back'}</div>
+                  <div className="t13 ink2" style={{ maxWidth: '30ch' }}>Lessons and chapter tests appear here when a teacher submits them.</div>
                 </div>
               ) : null}
             </div>
@@ -303,21 +304,21 @@ export function AdminQueues({ mode }: { mode: Mode }) {
                     <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {retOpen ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div className="t13 w500 ink2">কেন ফেরত — শিক্ষক ঠিক এটাই দেখবেন</div>
+                          <div className="t13 w500 ink2">Why it is going back — the teacher sees this</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {contentReasons.map((t) => {
-                              const on = cReason === t;
+                            {contentReasons.map((r) => {
+                              const on = cReason === r.code;
                               return (
-                                <button key={t} className="chip" aria-pressed={on} onClick={() => setCReason(on ? null : t)}
-                                  style={{ borderColor: on ? 'var(--margin)' : 'var(--line-strong)', background: on ? 'var(--margin-soft)' : 'var(--surface)', color: on ? 'var(--margin)' : 'var(--ink-2)' }}>{t}</button>
+                                <button key={r.code} className="chip" aria-pressed={on} onClick={() => setCReason(on ? null : r.code)}
+                                  style={{ borderColor: on ? 'var(--margin)' : 'var(--line-strong)', background: on ? 'var(--margin-soft)' : 'var(--surface)', color: on ? 'var(--margin)' : 'var(--ink-2)' }}>{r.en}</button>
                               );
                             })}
                           </div>
-                          <textarea value={cNote} onChange={(e) => setCNote(e.target.value)} aria-label="কোথায় ঠিক করতে হবে"
-                            placeholder="কোথায় ঠিক করতে হবে — যেমন ৪:১০ থেকে ৬:০০, বা ২ নম্বর প্রশ্ন"
+                          <textarea value={cNote} onChange={(e) => setCNote(e.target.value)} aria-label="What to fix"
+                            placeholder="What to fix — e.g. 4:10 to 6:00, or question 2"
                             style={{ width: '100%', minHeight: 64, padding: '10px 12px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, lineHeight: 1.7, resize: 'none' }} />
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                            <button className="btn btn-quiet" style={{ height: 44 }} onClick={() => { setCRetFor(null); setCReason(null); setCNote(''); }}>থাক</button>
+                            <button className="btn btn-quiet" style={{ height: 44 }} onClick={() => { setCRetFor(null); setCReason(null); setCNote(''); }}>Cancel</button>
                             <button disabled={!canRet} onClick={doReturn}
                               style={{ height: 44, padding: '0 18px', border: '1px solid ' + (canRet ? 'var(--margin)' : 'var(--line)'), borderRadius: 10, background: canRet ? 'var(--margin-soft)' : 'var(--surface)', color: canRet ? 'var(--margin)' : 'var(--ink-3)', fontSize: 15, fontWeight: 500 }}>Send back</button>
                           </div>
@@ -353,7 +354,6 @@ function KV({ k, v, mono, strong, color }: { k: string; v: string; mono?: boolea
 }
 
 function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision; loc: { course: string; loc: string }; actions: React.ReactNode }) {
-  const { n } = useStore();
   const nb = it.blocks.filter(blockHasContent).length, vq = it.quiz.length, vOk = it.video.state === 'done';
   const status = it.status === 'published' ? ['✓ Published', 'var(--brand)'] : it.status === 'returned' ? ['✗ Returned', 'var(--margin)'] : ['● Pending review', 'var(--warn)'];
   const isTest = it.kind === 'test';
@@ -361,9 +361,9 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
     ['Questions · ' + vq, vq >= MIN_TEST_QUESTIONS],
     ['Time limit · ' + Math.round((it.seconds || 0) / 60) + ' min', !!it.seconds],
   ] : [
-    ['Video · ' + (vOk ? n(it.video.dur || '') : 'নেই'), vOk],
-    ['Notes · ' + n(nb) + ' blocks', nb > 0],
-    ['Quiz · ' + (vq ? n(vq) + ' প্রশ্ন' : 'নেই'), vq > 0],
+    ['Video · ' + (vOk ? it.video.dur || '' : 'none'), vOk],
+    ['Notes · ' + plural(nb, 'block'), nb > 0],
+    ['Quiz · ' + (vq ? plural(vq, 'question') : 'none'), vq > 0],
   ];
 
   return (
@@ -372,18 +372,18 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
         <div key={k} style={{ maxWidth: 720, margin: '0 auto', padding: '28px 32px 48px' }}>
           <div className="t12 w500" style={{ color: status[1], marginBottom: 8 }}>{status[0]}</div>
           <div className="t12 ink3">{loc.course} · {loc.loc}</div>
-          <h1 style={{ margin: '2px 0 4px', fontSize: 24, lineHeight: 1.4, fontWeight: 600 }}>{it.title || 'নাম দেওয়া হয়নি'}</h1>
+          <h1 style={{ margin: '2px 0 4px', fontSize: 24, lineHeight: 1.4, fontWeight: 600 }}>{it.title || 'Untitled'}</h1>
           <div className="t13 ink2" style={{ marginBottom: 20 }}>{(it.by || teacher.name) + ' · submitted ' + ago(it.subAgoMin ?? 0)}</div>
           {!it.isNew && it.status === 'review' ? (
-            <div className="note-dashed t13 ink2" style={{ marginBottom: 20, fontSize: 13, borderRadius: 10 }}>আগে প্রকাশিত লেসনের আপডেট। প্রকাশ করলে পুরোনোটা বদলে যাবে — শিক্ষার্থীদের অগ্রগতি আর কুইজের ফল থেকে যাবে।</div>
+            <div className="note-dashed t13 ink2" style={{ marginBottom: 20, fontSize: 13, borderRadius: 10 }}>An update to something already published. Publishing replaces the old version; student progress and results are kept.</div>
           ) : null}
           {it.status === 'returned' ? (
             <div style={{ marginBottom: 20, padding: '12px 14px', border: '1px solid var(--margin)', borderRadius: 10, background: 'var(--margin-soft)' }}>
-              <div className="t12 w500" style={{ color: 'var(--margin)' }}>ফেরতের কারণ</div>
-              <div style={{ fontSize: 14, lineHeight: 1.7 }}>{it.reason || 'কারণ লেখা নেই'}</div>
+              <div className="t12 w500" style={{ color: 'var(--margin)' }}>Sent back because</div>
+              <div style={{ fontSize: 14, lineHeight: 1.7 }}>{returnReason(it, 'en') || 'No reason given'}</div>
             </div>
           ) : null}
-          {it.live && it.status === 'review' ? <div className="note-dashed" style={{ marginBottom: 20, borderRadius: 10 }}>এটা teacher ভিউ থেকে এইমাত্র জমা দেওয়া। সিদ্ধান্ত দিলে teacher ভিউয়ের কনটেন্ট পাতায় গিয়ে দেখো।</div> : null}
+          {it.live && it.status === 'review' ? <div className="note-dashed" style={{ marginBottom: 20, borderRadius: 10 }}>Submitted just now from the teacher view. Decide here, then look at the Content page in the teacher view.</div> : null}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', padding: '12px 0', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', marginBottom: 24 }}>
             {checks.map(([label, ok]) => (
               <span key={label} className="t13 ink2" style={{ display: 'flex', gap: 6 }}><span style={{ color: ok ? 'var(--brand)' : 'var(--ink-3)' }}>{ok ? '✓' : '–'}</span><span>{label}</span></span>
@@ -391,20 +391,20 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
           </div>
           {isTest ? null : (<>
           <div style={{ height: 240, marginBottom: 32, padding: 12, background: 'var(--surface-sunk)', border: '1px solid var(--line)', borderRadius: 16, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-            <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>{vOk ? it.video.name : 'ভিডিও নেই'}</span>
-            {vOk ? <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>▶ {n(it.video.dur || '')}</span> : null}
+            <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>{vOk ? it.video.name : 'No video'}</span>
+            {vOk ? <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>▶ {it.video.dur || ''}</span> : null}
           </div>
-          <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>Notes — শিক্ষার্থী যেভাবে দেখবে</div>
+          <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>Notes — as students see them</div>
           <div style={{ marginBottom: 32, padding: '24px 28px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}><NoteBlocks blocks={it.blocks} /></div>
           </>)}
           {it.quiz.length ? (
             <div>
-              <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>{isTest ? 'Questions' : 'Quiz'} — সঠিক উত্তর চিহ্ন দেওয়া</div>
+              <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>{isTest ? 'Questions' : 'Quiz'} — correct answers marked</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {it.quiz.map((q, qi) => (
                   <div key={qi} style={{ padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                      <span className="mono t12 ink3" style={{ lineHeight: '24px' }}>{n(pad2(qi + 1))}</span>
+                      <span className="mono t12 ink3" style={{ lineHeight: '24px' }}>{pad2(qi + 1)}</span>
                       <span className="t15 w500">{q.stem}</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 8 }}>
@@ -417,7 +417,7 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
                         );
                       })}
                     </div>
-                    {q.why ? <div className="t13 ink2" style={{ marginTop: 10, lineHeight: 1.7 }}>ব্যাখ্যা · {q.why}</div> : null}
+                    {q.why ? <div className="t13 ink2" style={{ marginTop: 10, lineHeight: 1.7 }}>Explanation · {q.why}</div> : null}
                   </div>
                 ))}
               </div>

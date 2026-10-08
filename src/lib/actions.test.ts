@@ -99,8 +99,8 @@ describe('payments', () => {
 
   it('applies an admin decision to the live payment and to seed rows', () => {
     const pending = submitPayment({ ...s0, payment: { method: 'Nagad', trxId: 'OWN0000001', sender: '', status: 'none' } });
-    const s = decidePayments(pending, ['live', 'q1'], 'rejected', 'ভুল TrxID');
-    expect(s.payment).toMatchObject({ status: 'rejected', reason: 'ভুল TrxID' });
+    const s = decidePayments(pending, ['live', 'q1'], 'rejected', 'wrong_trx');
+    expect(s.payment).toMatchObject({ status: 'rejected', reason: 'wrong_trx' });
     expect(allQueue(s).find((r) => r.id === 'q1')?.status).toBe('rejected');
     expect(resetPayment(s).payment.status).toBe('none');
   });
@@ -176,7 +176,8 @@ describe('admin content review', () => {
 
   it('returns a revision with the reason', () => {
     const k = 'cst|lesson:5:4';
-    expect(item(decideContent(s0, k, 'returned', 'কুইজের উত্তর ভুল'), k)).toMatchObject({ status: 'returned', reason: 'কুইজের উত্তর ভুল' });
+    expect(item(decideContent(s0, k, 'returned', 'wrong_answer', 'question 2'), k)).toMatchObject({ status: 'returned', reason: 'wrong_answer', reasonNote: 'question 2' });
+    expect(item(submitForReview(decideContent(s0, k, 'returned', 'wrong_answer', 'question 2'), k, 'T'), k)).toMatchObject({ status: 'review', reason: '', reasonNote: '' });
   });
 });
 

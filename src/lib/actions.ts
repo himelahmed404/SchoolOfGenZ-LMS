@@ -87,6 +87,7 @@ export function askDoubt(s: AppState, cid: CourseId, ch: number, li: number, tex
 
 /* ---------- admin: payments ---------- */
 
+/** `reason` is a `rejectReasons` code. */
 export function decidePayments(s: AppState, ids: string[], status: PayStatus, reason?: string): AppState {
   const decided = { ...s.decided };
   let payment = s.payment;
@@ -119,7 +120,7 @@ export function createDraft(s: AppState, k: string): AppState {
 
 export function submitForReview(s: AppState, k: string, by: string): AppState {
   const cur = item(s, k);
-  return { ...s, tItems: { ...s.tItems, [k]: { ...cur, status: 'review', reason: '', live: true, subAgoMin: 0, by } } };
+  return { ...s, tItems: { ...s.tItems, [k]: { ...cur, status: 'review', reason: '', reasonNote: '', live: true, subAgoMin: 0, by } } };
 }
 
 export function withdraw(s: AppState, k: string): AppState {
@@ -133,17 +134,18 @@ export function startUpload(s: AppState, k: string): AppState {
 
 /* ---------- admin: content review ---------- */
 
-export function decideContent(s: AppState, k: string, status: 'published' | 'returned', reason?: string): AppState {
+/** `reason` is a `contentReasons` code and `note` the admin's words on what to fix; both go to the teacher on a return. */
+export function decideContent(s: AppState, k: string, status: 'published' | 'returned', reason?: string, note?: string): AppState {
   const it = item(s, k);
   const aDecided = { ...s.aDecided, [k]: status };
   if (status === 'returned') {
-    return { ...s, aDecided, tItems: { ...s.tItems, [k]: { ...it, status: 'returned', live: false, reason: reason || 'কারণ লেখা নেই' } } };
+    return { ...s, aDecided, tItems: { ...s.tItems, [k]: { ...it, status: 'returned', live: false, reason: reason || '', reasonNote: note || '' } } };
   }
   const published = { ...s.published };
   const isTest = it.kind === 'test';
   // Chapter tests and existing lessons have a student-facing slot. Brand-new lessons need course-structure support server-side.
   if (isTest || !it.isNew) published[k] = { title: it.title, video: it.video, blocks: it.blocks, quiz: it.quiz, ...(isTest ? { seconds: it.seconds } : {}) };
-  const next: LessonRevision = { ...it, status: 'published', update: false, live: false, reason: '', ...(isTest ? { isNew: false } : {}) };
+  const next: LessonRevision = { ...it, status: 'published', update: false, live: false, reason: '', reasonNote: '', ...(isTest ? { isNew: false } : {}) };
   return { ...s, aDecided, published, tItems: { ...s.tItems, [k]: next } };
 }
 

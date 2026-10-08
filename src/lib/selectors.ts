@@ -1,10 +1,10 @@
 import {
-  batches, boardExam, courses, DEFAULT_TEST_SECONDS, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
+  batches, boardExam, contentReasons, courses, DEFAULT_TEST_SECONDS, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
   merchants, MIN_TEST_QUESTIONS, newCourse, notifSeed, paymentHistory, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
 import { dateEn, dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
 import type { AppState } from './state';
-import type { Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, PayStatus, Payment, PublishedLesson } from './types';
+import type { Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, PayStatus, Payment, PublishedLesson, Reason } from './types';
 
 export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
@@ -302,6 +302,16 @@ export function issues(it: LessonRevision, numerals: Numerals): string[] {
   return out;
 }
 
+/** A picked reason in the reader's language. An unknown code is shown as it is. */
+export function reasonText(list: Reason[], code: string | undefined, lang: 'en' | 'bn'): string {
+  const r = list.find((x) => x.code === code);
+  return r ? r[lang] : code || '';
+}
+
+/** Why a revision was sent back: the picked reason, then the admin's note on what to fix. */
+export const returnReason = (it: LessonRevision, lang: 'en' | 'bn') =>
+  [reasonText(contentReasons, it.reason, lang), it.reasonNote].filter(Boolean).join(' — ');
+
 export function statusOf(it: LessonRevision): [string, string] {
   if (it.status === 'review') return ['● Pending', 'var(--warn)'];
   if (it.status === 'returned') return ['✗ Returned', 'var(--margin)'];
@@ -349,7 +359,7 @@ export function liveRow(s: AppState): Payment {
   const p = s.payment;
   return {
     id: 'live', live: true, name: studentName(s), phone: defaultStudent.phone,
-    course: newCourse.title, batch: newCourse.batch, method: p.method || 'bKash',
+    course: newCourse.titleEn, batch: newCourse.batch, method: p.method || 'bKash',
     amount: newCourse.price, due: newCourse.price, trx: p.trxId || '—',
     sender: p.sender || defaultStudent.phone, agoMin: 0,
     status: p.status === 'none' ? 'pending' : p.status, rejectReason: p.reason,
@@ -368,9 +378,9 @@ export function allQueue(s: AppState): Payment[] {
 
 export function rowFlags(r: Payment): string[] {
   const f: string[] = [];
-  if (r.amount < r.due) f.push('টাকা কম — ' + taka(r.due - r.amount) + ' বাকি আছে');
-  if (r.dup) f.push('এই TrxID আগেও একবার জমা পড়েছে');
-  if (r.sender !== r.phone) f.push('অন্য নম্বর থেকে পেমেন্ট এসেছে');
+  if (r.amount < r.due) f.push('Short by ' + taka(r.due - r.amount));
+  if (r.dup) f.push('This TrxID was submitted before');
+  if (r.sender !== r.phone) f.push('Paid from a different number');
   return f;
 }
 

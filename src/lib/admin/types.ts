@@ -27,7 +27,8 @@ export interface Refund {
 }
 export interface Cert { id: string; name: string; course: string; issued: string; status: 'valid' | 'revoked'; reason?: string }
 export interface Announcement { id: string; title: string; body: string; aud: 'all' | 'course' | 'batch'; target: string; ch: string[]; status: 'sent' | 'scheduled' | 'draft'; when: string }
-export interface ActivityEntry { id: string; at: string; actor: string; area: string; action: string; target: string; reason: string }
+/** `at` is a timestamp (ms). */
+export interface ActivityEntry { id: string; at: number; actor: string; area: string; action: string; target: string; reason: string }
 export interface Settings { bkash: string; nagad: string; watermark: 'on' | 'off'; devices: number; refundDays: Num; refundWatch: Num; autoClose: 'on' | 'off'; sms: 'on' | 'off' }
 
 export interface AdminData {

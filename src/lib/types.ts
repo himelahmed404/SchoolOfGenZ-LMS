@@ -65,6 +65,9 @@ export interface Video {
 
 export type RevisionStatus = 'draft' | 'review' | 'returned' | 'published';
 
+/** A reason an admin picks from a list. The admin sees `en`; the student or teacher it goes to sees `bn`. */
+export interface Reason { code: string; en: string; bn: string }
+
 /**
  * A revision as the teacher edits it, reviewed by an admin before students see it.
  * Keys: a lesson is `cid|lesson:ci:li` (existing) or `cid|new:ci:id` (new); a chapter test is `cid|test:ci`.
@@ -86,7 +89,9 @@ export interface LessonRevision {
   by?: string;
   /** Minutes since it was submitted for review. */
   subAgoMin?: number;
+  /** When returned: the code of the reason the admin picked, and their note on what to fix. */
   reason?: string;
+  reasonNote?: string;
   live?: boolean;
 }
 
@@ -118,6 +123,7 @@ export interface Payment {
   status: PayStatus;
   dup?: boolean;
   live?: boolean;
+  /** Code of the reason it was rejected for. */
   rejectReason?: string;
 }
 

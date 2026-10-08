@@ -4,7 +4,7 @@
  * pane) and the renderer draws it. Builders live in ./sections/* and register in BUILDERS.
  * Permissions are mirrored here for the UI only; the server must enforce them.
  */
-import { digits, type Numerals } from '../format';
+import { ago, dateEn } from '../format';
 import { AREAS } from './seed';
 import type {
   Action, AdminData, Area, Block, Cell, ConfirmSpec, Detail, Field, Item, KV, ListView, Perm, Role, Section, SectionView, Staff,
@@ -32,7 +32,6 @@ export const initialUi: ConsoleUi = {
 export interface ConsoleEnv {
   /** Current section, from the route. */
   sec: Section;
-  numerals: Numerals;
   theme: 'light' | 'dark';
   /** Live counts from the payment and content queues. */
   payCount: number;
@@ -65,8 +64,7 @@ const SOFT: Record<Tone, string> = { brand: 'var(--brand-soft)', blue: 'var(--ac
 export const SL: Record<string, string> = { active: 'Active', pending: 'Pending', suspended: 'Suspended', invited: 'Invited', inactive: 'Inactive', published: 'Published', draft: 'Draft', archived: 'Archived', enrolling: 'Enrolling', running: 'Running', finished: 'Finished', closed: 'Closed', expired: 'Expired', disabled: 'Disabled', usedup: 'Used up', open: 'Open', refunded: 'Refunded', denied: 'Denied', valid: 'Valid', revoked: 'Revoked', sent: 'Sent', scheduled: 'Scheduled', eligible: 'Eligible', decide: 'Admin decides' };
 const ST: Record<string, Tone> = { active: 'blue', pending: 'warn', suspended: 'danger', invited: 'warn', inactive: 'muted', published: 'brand', draft: 'muted', archived: 'muted', enrolling: 'brand', running: 'blue', finished: 'muted', closed: 'warn', expired: 'muted', disabled: 'muted', usedup: 'muted', open: 'warn', refunded: 'brand', denied: 'danger', valid: 'brand', revoked: 'danger', sent: 'blue', scheduled: 'warn', eligible: 'brand', decide: 'warn' };
 const MONO = 'var(--font-mono)';
-const MON = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রি', 'মে', 'জুন', 'জুলা', 'আগ', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
-export const OTHER = 'অন্য কারণ';
+export const OTHER = 'Other reason';
 
 /** Section builders register here (one module per group of sections). */
 export const BUILDERS: Partial<Record<Section, (c: AdminConsole) => SectionView>> = {};
@@ -82,12 +80,18 @@ export class AdminConsole {
   constructor(public S: ConsoleState, public setState: SetState, public env: ConsoleEnv) {}
 
   /* ---------- formatting ---------- */
-  bn = (v: string | number) => digits(v, this.env.numerals);
-  tk = (n: number | string) => '৳' + this.bn(Math.round(Number(n) || 0).toLocaleString('en-US'));
+  /** Numbers for display: grouped thousands, always 123 digits. The console is English only. */
+  nf = (v: string | number) => (typeof v === 'number' ? v.toLocaleString('en-US') : String(v));
+  tk = (n: number | string) => '৳' + Math.round(Number(n) || 0).toLocaleString('en-US');
+  /** A count with its noun: pl(1, 'seat') → "1 seat", pl(3, 'seat') → "3 seats", pl(2, 'batch', 'batches'). */
+  pl = (n: number, one: string, many = one + 's') => this.nf(n) + ' ' + (n === 1 ? one : many);
   private dayMs(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }
   /** Days from today to an ISO date (negative = past); null when there is no date. */
   days(d: string): number | null { return d ? Math.round((new Date(d + 'T00:00:00').getTime() - this.dayMs(this.env.today)) / 864e5) : null; }
-  fd(d: string) { if (!d) return '—'; const x = new Date(d + 'T00:00:00'); return this.bn(x.getDate()) + ' ' + MON[x.getMonth()] + (x.getFullYear() !== this.env.today.getFullYear() ? ' ' + this.bn(x.getFullYear()) : ''); }
+  /** "8 Oct", with the year when it is not this year. */
+  fd(d: string) { return d ? dateEn(d, new Date(d + 'T00:00:00').getFullYear() !== this.env.today.getFullYear()) : '—'; }
+  /** How long ago a timestamp was: "just now", "10 min ago", "yesterday". */
+  when(ts: number) { return ago((this.env.today.getTime() - ts) / 60000); }
   todayISO() { const t = this.env.today; return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
 
   /* ---------- lookups ---------- */
@@ -107,7 +111,7 @@ export class AdminConsole {
   /** Append-only activity log entry (actor = the staff member being viewed as). */
   log(area: string, action: string, target: string, reason?: string) {
     const actor = this.me().name;
-    this.setState((s) => ({ activity: [{ id: 'l' + Date.now() + Math.random(), at: 'এইমাত্র', actor, area, action, target, reason: reason || '' }].concat(s.activity) }));
+    this.setState((s) => ({ activity: [{ id: 'l' + Date.now() + Math.random(), at: Date.now(), actor, area, action, target, reason: reason || '' }].concat(s.activity) }));
   }
   flash(t: string) { this.setState({ toast: t }); }
   ask(c: ConfirmSpec) { this.setState({ confirm: c, cReason: null, cNote: '' }); }
@@ -121,7 +125,7 @@ export class AdminConsole {
     this.env.navigate(sec);
   }
   nav(sec: Section, sel?: string | null, filter?: string) {
-    if (this.perm(sec) === 'none') return this.flash('এই অংশ দেখার অনুমতি তোমার রোলে নেই।');
+    if (this.perm(sec) === 'none') return this.flash('Your role cannot view this area.');
     this.go(sec, sel, filter);
   }
   /** Edit a copy of `base` as a draft keyed by `id`; `dirty` once anything changed. */
@@ -137,7 +141,7 @@ export class AdminConsole {
     this.setState({ viewAs: id, viewOpen: false });
     const r = this.roleOf(s), p = (a: Section) => (a === 'overview' ? 'view' : r.locked ? 'edit' : r.perms[a as Area] || 'none');
     if (p(this.env.sec) === 'none') this.go('overview');
-    this.flash('এখন ' + s.name + ' (' + r.name + ') হিসেবে দেখছ');
+    this.flash('Now viewing as ' + s.name + ' (' + r.name + ')');
   }
 
   /* ---------- view-model constructors ---------- */
@@ -192,7 +196,7 @@ export class AdminConsole {
     return {
       filters: filters.map(([k, l, n, go]) => {
         const on = (go ? S.rtab : S.filter) === k;
-        return { label: l, count: n == null ? '' : this.bn(n), go: go || (() => this.setState({ filter: k, sel: S.sel === 'new' ? 'new' : null })), weight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', rule: on ? 'var(--brand)' : 'transparent' };
+        return { label: l, count: n == null ? '' : this.nf(n), go: go || (() => this.setState({ filter: k, sel: S.sel === 'new' ? 'new' : null })), weight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', rule: on ? 'var(--brand)' : 'transparent' };
       }),
       hasSearch: !!ph, ph: ph || '', cols, grid,
       rows: rows.map((r) => { const on = S.sel === r.id; return { key: r.id, cells: r.cells, go: () => this.setState({ sel: r.id, form: null, draft: null }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', rule: on ? 'var(--brand)' : 'transparent' }; }),
@@ -205,8 +209,8 @@ export class AdminConsole {
   /* ---------- domain rules ---------- */
   priceStr(c: Rec) {
     if (c.model === 'free') return 'Free';
-    let s = c.model === 'inst' ? this.bn(c.inst) + ' × ' + this.tk(Math.ceil(c.price / c.inst)) : this.tk(c.price);
-    if (c.perBatch === 'on') { const v = Object.values(c.bp || {}).map(Number); if (v.length) s = 'ব্যাচভেদে ' + this.tk(Math.min(...v)) + '–' + this.tk(Math.max(...v)); }
+    let s = c.model === 'inst' ? this.nf(c.inst) + ' × ' + this.tk(Math.ceil(c.price / c.inst)) : this.tk(c.price);
+    if (c.perBatch === 'on') { const v = Object.values(c.bp || {}).map(Number); if (v.length) s = 'Per batch ' + this.tk(Math.min(...v)) + '–' + this.tk(Math.max(...v)); }
     const d = this.days(c.earlyEnd);
     if (c.early === 'on' && d != null && d >= 0) s += ' · early ' + this.tk(c.earlyPrice);
     return s;
@@ -228,9 +232,9 @@ export class AdminConsole {
     const pages: Hit[] = (AREAS.map((a) => a[0]) as Section[]).concat(['overview']).filter((k) => this.perm(k) !== 'none')
       .map((k) => ({ title: k === 'overview' ? 'Overview' : this.areaLabel(k), sub: '', icon: ICON[k], run: close(() => this.go(k)) })).filter((p) => !q || has(p.title));
     const acts = ([
-      ['New announcement', 'নোটিশ / SMS / পুশ পাঠাও', 'announcements', () => { this.go('announcements'); this.setState({ sel: 'new', form: { title: '', body: '', aud: 'all', target: '', ch: ['app', 'push'], when: 'now', date: '' } }); }],
-      ['Invite staff', 'নতুন অ্যাডমিন বা সাপোর্ট যোগ করো', 'roles', () => { this.go('roles'); this.setState({ rtab: 'staff', sel: 'new', form: { name: '', email: '', role: 'support' } }); }],
-      ['Edit roles & permissions', 'কে কী দেখবে ও বদলাবে', 'roles', () => this.go('roles')],
+      ['New announcement', 'Send a notice, SMS or push', 'announcements', () => { this.go('announcements'); this.setState({ sel: 'new', form: { title: '', body: '', aud: 'all', target: '', ch: ['app', 'push'], when: 'now', date: '' } }); }],
+      ['Invite staff', 'Add an admin or support member', 'roles', () => { this.go('roles'); this.setState({ rtab: 'staff', sel: 'new', form: { name: '', email: '', role: 'support' } }); }],
+      ['Edit roles & permissions', 'Who can view and change what', 'roles', () => this.go('roles')],
     ] as [string, string, Section, () => void][])
       .filter((a) => this.perm(a[2]) === 'edit' && (!q || has(a[0]) || has(a[1]))).map((a) => ({ title: a[0], sub: a[1], icon: ICON.plus, run: close(a[3]) }));
     if (acts.length) groups.push(['Actions', acts]);
@@ -240,7 +244,7 @@ export class AdminConsole {
       ([
         ['Students', ent('students', S.students, (x) => x.name, (x) => x.phone + ' · ' + x.batch)],
         ['Teachers', ent('teachers', S.teachers, (x) => x.name, (x) => x.email)],
-        ['Courses', ent('courses', S.courses, (x) => x.code + ' — ' + x.title, () => 'কোর্স')],
+        ['Courses', ent('courses', S.courses, (x) => x.code + ' — ' + x.title, () => 'Course')],
         ['Batches', ent('batches', S.batches, (x) => x.id, (x) => this.course(x.course).title)],
       ] as [string, Hit[]][]).forEach((g) => { if (g[1].length) groups.push(g); });
     }
@@ -279,7 +283,7 @@ export class AdminConsole {
       items: keys.filter((k) => this.perm(k) !== 'none').map((k) => {
         const on = sec === k, c = counts[k] || 0;
         const ro = this.perm(k) === 'view' && !['overview', 'reports', 'activity'].includes(k);
-        return { key: k, label: k === 'overview' ? 'Overview' : this.areaLabel(k), go: () => this.go(k), icon: ICON[k], on, count: this.bn(c), showCount: c > 0 && !mini, dot: c > 0 && mini, ro: ro && !mini };
+        return { key: k, label: k === 'overview' ? 'Overview' : this.areaLabel(k), go: () => this.go(k), icon: ICON[k], on, count: this.nf(c), showCount: c > 0 && !mini, dot: c > 0 && mini, ro: ro && !mini };
       }),
     })).filter((g) => g.items.length).map((g, i) => ({ ...g, showRule: mini && i > 0 }));
 
@@ -287,7 +291,7 @@ export class AdminConsole {
     const build = BUILDERS[sec];
     const v: SectionView = !isQueue && build ? build(this)
       : isQueue ? { title: '', sub: '', head: [] }
-      : { title: this.areaLabel(sec), sub: 'এই অংশ পরের ধাপে তৈরি হচ্ছে।', head: [], detail: { title: this.areaLabel(sec), sub: 'Coming in a later milestone', closable: false, wide: true, blocks: [this.blk({ note: 'এই সেকশনের বিল্ডার এখনো পোর্ট করা হয়নি।' })] } };
+      : { title: this.areaLabel(sec), sub: 'This section is not built yet.', head: [], detail: { title: this.areaLabel(sec), sub: 'Coming in a later milestone', closable: false, wide: true, blocks: [this.blk({ note: 'No builder is registered for this section.' })] } };
     const d: Detail | undefined = v.detail;
     const dt = d ? {
       title: d.title, sub: d.sub || '', badge: d.badge || null, closable: !!d.closable, blocks: d.blocks, actions: d.actions || [],
@@ -301,14 +305,14 @@ export class AdminConsole {
       const other = S.cReason === OTHER, note = S.cNote.trim(), okDis = !!cf.needReason && (!S.cReason || (other && note.length < 4));
       confirm = {
         title: cf.title, body: cf.body || '', needReason: !!cf.needReason, okLabel: cf.ok || 'Confirm', okBg: cf.danger ? 'var(--margin)' : 'var(--brand)', okOp: okDis ? 0.45 : 1,
-        notePh: other ? 'কারণটা লেখো (আবশ্যক)' : 'আরও কিছু যোগ করতে চাইলে লেখো',
+        notePh: other ? 'Write the reason (required)' : 'Add a note (optional)',
         reasons: this.reasons(cf.reasons || []).map((r) => {
           const on = S.cReason === r;
           return { label: r, go: () => this.setState({ cReason: r }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--brand)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400 };
         }),
         okGo: () => {
           if (okDis) return;
-          // Stored reason is "chip — note" (or just the note for "অন্য কারণ").
+          // Stored reason is "chip — note" (or just the note for "Other reason").
           const reason = cf.needReason ? (other ? note : S.cReason + (note ? ' — ' + note : '')) : '';
           this.setState({ confirm: null });
           cf.run(reason);
