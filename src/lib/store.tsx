@@ -54,6 +54,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Saved state is read after mount: the server render has no localStorage, and the first client render must match it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setS(load());
     setSys(systemTheme());
     setReady(true);

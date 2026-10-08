@@ -42,7 +42,7 @@ export default function DoubtsPage() {
       <h1 className="d1" style={{ marginBottom: 16 }}>Student Doubts</h1>
       <div className="seg" role="tablist" style={{ display: 'inline-flex', marginBottom: 20 }}>
         {([['উত্তর বাকি', 'open', openL.length], ['উত্তর দেওয়া', 'done', doneL.length]] as const).map(([label, id, count]) => (
-          <button key={id} role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => { setTab(id); setOpenId(null); }}
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setOpenId(null); }}
             style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {n(count)}</button>
         ))}
       </div>

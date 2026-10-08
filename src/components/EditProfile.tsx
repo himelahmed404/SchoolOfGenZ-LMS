@@ -13,108 +13,110 @@ const LABEL: React.CSSProperties = { display: 'flex', flexDirection: 'column', g
 
 /** Edit profile + change password, shared by student and teacher (fields differ by role). */
 export function EditProfile({ role }: { role: 'student' | 'teacher' }) {
-  const { s, set, ready } = useStore();
+  const { ready } = useStore();
+  // The drafts start from the saved profile, so the form waits for the store.
+  return ready ? <EditProfileForm role={role} /> : <Shell role={role} title="Edit Profile">{null}</Shell>;
+}
+
+function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
+  const { s, set } = useStore();
   const router = useRouter();
   const isT = role === 'teacher';
   const back = isT ? '/teacher/profile' : '/profile';
 
-  const [stu, setStu] = useState<StudentProfileDraft | null>(null);
-  const [tch, setTch] = useState<TeacherProfileDraft | null>(null);
+  const [stu, setStu] = useState<StudentProfileDraft>(() => ({ name: studentName(s), email: s.profile.email, inst: s.profile.inst, sem: s.prefs.sem }));
+  const [tch, setTch] = useState<TeacherProfileDraft>(() => ({ email: s.tProfile.email, bio: s.tProfile.bio, subjects: s.tProfile.subjects }));
   const [saved, setSaved] = useState(false);
 
-  // Start the draft from the saved profile once the store has loaded.
   useEffect(() => {
-    if (!ready) return;
-    setStu({ name: studentName(s), email: s.profile.email, inst: s.profile.inst, sem: s.prefs.sem });
-    setTch({ email: s.tProfile.email, bio: s.tProfile.bio, subjects: s.tProfile.subjects });
-    if (window.location.hash === '#password') setTimeout(() => document.getElementById('password')?.scrollIntoView({ block: 'start' }), 60);
-  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (window.location.hash !== '#password') return;
+    const t = setTimeout(() => document.getElementById('password')?.scrollIntoView({ block: 'start' }), 60);
+    return () => clearTimeout(t);
+  }, []);
 
-  const editS = (patch: Partial<StudentProfileDraft>) => { setStu((d) => (d ? { ...d, ...patch } : d)); setSaved(false); };
-  const editT = (patch: Partial<TeacherProfileDraft>) => { setTch((d) => (d ? { ...d, ...patch } : d)); setSaved(false); };
+  const editS = (patch: Partial<StudentProfileDraft>) => { setStu((d) => ({ ...d, ...patch })); setSaved(false); };
+  const editT = (patch: Partial<TeacherProfileDraft>) => { setTch((d) => ({ ...d, ...patch })); setSaved(false); };
   const save = () => {
-    if (isT && tch) set((x) => saveTeacherProfile(x, tch));
-    if (!isT && stu) set((x) => saveStudentProfile(x, { ...stu, name: stu.name.trim() }));
+    if (isT) set((x) => saveTeacherProfile(x, tch));
+    else set((x) => saveStudentProfile(x, { ...stu, name: stu.name.trim() }));
     setSaved(true);
   };
 
-  const name = isT ? teacher.name : stu?.name || studentName(s);
+  const name = isT ? teacher.name : stu.name || studentName(s);
   const phone = isT ? teacher.phone : defaultStudent.phone.replace(' ', '-');
 
   return (
     <Shell role={role} title="Edit Profile" back={back}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 680 }}>
         <h1 className="d1 only-desktop">Edit Profile</h1>
-        {stu && tch ? (
-          <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: 'var(--card-pad)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <Avatar name={name || '?'} size={72} fontSize={34} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button className="btn btn-sm" style={{ alignSelf: 'flex-start' }}><Icon name="photo_camera" size={18} />ছবি বদলাও</button>
-                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>JPG বা PNG · ২ MB পর্যন্ত</span>
+        <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: 'var(--card-pad)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <Avatar name={name || '?'} size={72} fontSize={34} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button className="btn btn-sm" style={{ alignSelf: 'flex-start' }}><Icon name="photo_camera" size={18} />ছবি বদলাও</button>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>JPG বা PNG · ২ MB পর্যন্ত</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 14 }}>
+            <label style={LABEL}>নাম
+              <input className="field" value={isT ? teacher.name : stu.name} readOnly={isT} onChange={(e) => editS({ name: e.target.value })} />
+            </label>
+            <label style={LABEL}>ফোন নম্বর
+              <span style={{ position: 'relative', display: 'flex' }}>
+                <input className="field" value={phone} readOnly style={{ background: 'var(--surface-sunk)', color: 'var(--ink-3)', paddingRight: 40 }} />
+                <span style={{ position: 'absolute', right: 12, top: 13, color: 'var(--ink-3)' }}><Icon name="lock" size={18} /></span>
+              </span>
+            </label>
+            <label style={LABEL}>ইমেইল
+              <input className="field" type="email" value={isT ? tch.email : stu.email} onChange={(e) => (isT ? editT({ email: e.target.value }) : editS({ email: e.target.value }))} />
+            </label>
+            {!isT ? (
+              <label style={LABEL}>প্রতিষ্ঠান
+                <input className="field" value={stu.inst} onChange={(e) => editS({ inst: e.target.value })} />
+              </label>
+            ) : null}
+          </div>
+
+          {!isT ? (
+            <div style={LABEL}>সেমিস্টার
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {semNames.map((label, i) => {
+                  const on = stu.sem === i + 1;
+                  return (
+                    <button key={label} aria-pressed={on} onClick={() => editS({ sem: i + 1 })}
+                      style={{ minWidth: 52, height: 40, padding: '0 12px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 12, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 14, fontWeight: on ? 600 : 400 }}>{label}</button>
+                  );
+                })}
               </div>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 14 }}>
-              <label style={LABEL}>নাম
-                <input className="field" value={isT ? teacher.name : stu.name} readOnly={isT} onChange={(e) => editS({ name: e.target.value })} />
+          ) : (
+            <>
+              <label style={LABEL}>পরিচিতি
+                <textarea className="field" value={tch.bio} onChange={(e) => editT({ bio: e.target.value })} style={{ minHeight: 96 }} />
               </label>
-              <label style={LABEL}>ফোন নম্বর
-                <span style={{ position: 'relative', display: 'flex' }}>
-                  <input className="field" value={phone} readOnly style={{ background: 'var(--surface-sunk)', color: 'var(--ink-3)', paddingRight: 40 }} />
-                  <span style={{ position: 'absolute', right: 12, top: 13, color: 'var(--ink-3)' }}><Icon name="lock" size={18} /></span>
-                </span>
-              </label>
-              <label style={LABEL}>ইমেইল
-                <input className="field" type="email" value={isT ? tch.email : stu.email} onChange={(e) => (isT ? editT({ email: e.target.value }) : editS({ email: e.target.value }))} />
-              </label>
-              {!isT ? (
-                <label style={LABEL}>প্রতিষ্ঠান
-                  <input className="field" value={stu.inst} onChange={(e) => editS({ inst: e.target.value })} />
-                </label>
-              ) : null}
-            </div>
-
-            {!isT ? (
-              <div style={LABEL}>সেমিস্টার
+              <div style={LABEL}>যে বিষয় পড়াও
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {semNames.map((label, i) => {
-                    const on = stu.sem === i + 1;
+                  {subjectOptions.map((sub) => {
+                    const on = tch.subjects.includes(sub);
                     return (
-                      <button key={label} aria-pressed={on} onClick={() => editS({ sem: i + 1 })}
-                        style={{ minWidth: 52, height: 40, padding: '0 12px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 12, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 14, fontWeight: on ? 600 : 400 }}>{label}</button>
+                      <button key={sub} aria-pressed={on} onClick={() => editT({ subjects: on ? tch.subjects.filter((x) => x !== sub) : tch.subjects.concat([sub]) })}
+                        style={{ height: 36, padding: '0 14px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 999, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name={on ? 'check' : 'add'} size={16} />{sub}
+                      </button>
                     );
                   })}
                 </div>
               </div>
-            ) : (
-              <>
-                <label style={LABEL}>পরিচিতি
-                  <textarea className="field" value={tch.bio} onChange={(e) => editT({ bio: e.target.value })} style={{ minHeight: 96 }} />
-                </label>
-                <div style={LABEL}>যে বিষয় পড়াও
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {subjectOptions.map((sub) => {
-                      const on = tch.subjects.includes(sub);
-                      return (
-                        <button key={sub} aria-pressed={on} onClick={() => editT({ subjects: on ? tch.subjects.filter((x) => x !== sub) : tch.subjects.concat([sub]) })}
-                          style={{ height: 36, padding: '0 14px', border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 999, background: on ? 'var(--brand-soft)' : 'var(--surface)', color: on ? 'var(--brand)' : 'var(--ink-2)', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Icon name={on ? 'check' : 'add'} size={16} />{sub}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+            </>
+          )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
-              <button className="btn btn-primary" style={{ height: 46 }} onClick={save}>সেভ করো</button>
-              <button className="btn" style={{ height: 46 }} onClick={() => router.push(back)}>বাতিল</button>
-              {saved ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--ok)' }}><Icon name="check_circle" size={20} fill />সেভ হয়েছে</span> : null}
-            </div>
-          </section>
-        ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
+            <button className="btn btn-primary" style={{ height: 46 }} onClick={save}>সেভ করো</button>
+            <button className="btn" style={{ height: 46 }} onClick={() => router.push(back)}>বাতিল</button>
+            {saved ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--ok)' }}><Icon name="check_circle" size={20} fill />সেভ হয়েছে</span> : null}
+          </div>
+        </section>
 
         <PasswordCard />
       </div>

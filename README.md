@@ -10,8 +10,12 @@ claude.ai/design project).
 npm install
 npm run dev        # http://localhost:3000
 npm run build && npm start
+npm run lint       # ESLint (eslint-config-next)
 npm run typecheck
+npm test           # Vitest: src/lib/*.test.ts
 ```
+
+CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the build on every push.
 
 ## Dev bar (no sign-in yet)
 

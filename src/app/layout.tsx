@@ -26,7 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@400;500;600;700&family=Baloo+Da+2:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Tiro+Bangla&display=swap"
         />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        {/* display=block on purpose: with swap the icon names would flash as text. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block"

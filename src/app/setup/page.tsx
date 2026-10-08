@@ -37,7 +37,7 @@ export default function SetupPage() {
         <div style={LABEL}>কোন সেমিস্টার</div>
         <div role="radiogroup" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {semNames.map((label, i) => (
-            <button key={label} role="radio" aria-checked={p.sem === i + 1} aria-pressed={p.sem === i + 1} className="pick"
+            <button key={label} role="radio" aria-checked={p.sem === i + 1} className="pick"
               style={{ minWidth: 56, height: 44, padding: '0 14px', fontSize: 15 }}
               onClick={() => setPrefs({ sem: i + 1, examDate: null })}>{label}</button>
           ))}

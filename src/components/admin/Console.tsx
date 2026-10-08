@@ -20,44 +20,47 @@ export function Svg({ d, size = 16, w = 1.9 }: { d: string; size?: number; w?: n
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>;
 }
 
+const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
+
 /** Console frame for every /admin route: sidebar, overlays and the console state. Desktop only. */
 export function AdminShell({ children }: { children: ReactNode }) {
-  const { s, set, ready, numerals, theme } = useStore();
+  const { ready } = useStore();
+  // Console state starts from the saved admin data, so the frame waits for the store.
+  return ready ? <AdminFrame>{children}</AdminFrame> : <div className="adm-root" />;
+}
+
+function AdminFrame({ children }: { children: ReactNode }) {
+  const { s, set, numerals, theme } = useStore();
   const path = usePathname();
   const router = useRouter();
-  const [st, setSt] = useState<ConsoleState | null>(null);
   const srRef = useRef<HTMLInputElement>(null);
   const sec = sectionOf(path);
-  const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
-
   // Console data lives in the store (persisted); view state stays here.
-  useEffect(() => { if (ready && !st) setSt({ ...(s.admin || adminSeed()), ...initialUi, filter: defaultFilter(sec) }); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [st, setSt] = useState<ConsoleState>(() => ({ ...(s.admin || adminSeed()), ...initialUi, filter: defaultFilter(sec) }));
 
   // Section changes from outside the console (URL, dev bar, back button) start with fresh view state;
   // console navigation (go) has already set its own selection/filter.
   const consoleNav = useRef(false);
   const lastSec = useRef<Section | null>(null);
   useEffect(() => {
-    if (!st) return;
     if (lastSec.current && lastSec.current !== sec && !consoleNav.current)
-      setSt((c) => (c ? { ...c, sel: null, filter: defaultFilter(sec), q: '', form: null, draft: null, viewOpen: false, rtab: 'roles' } : c));
+      setSt((c) => ({ ...c, sel: null, filter: defaultFilter(sec), q: '', form: null, draft: null, viewOpen: false, rtab: 'roles' }));
     consoleNav.current = false;
     lastSec.current = sec;
-  }, [sec, !!st]); // eslint-disable-line react-hooks/exhaustive-deps
-  const dataDeps = DATA_KEYS.map((k) => st?.[k]);
+  }, [sec]);
+  const dataDeps = DATA_KEYS.map((k) => st[k]);
   useEffect(() => {
-    if (!st) return;
     const data = {} as Record<string, unknown>;
     DATA_KEYS.forEach((k) => { data[k] = st[k]; });
     set((x) => ({ ...x, admin: data as unknown as AdminData }));
   }, dataDeps); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!st?.toast) return;
-    const t = setTimeout(() => setSt((c) => (c ? { ...c, toast: null } : c)), 3000);
+    if (!st.toast) return;
+    const t = setTimeout(() => setSt((c) => ({ ...c, toast: null })), 3000);
     return () => clearTimeout(t);
-  }, [st?.toast]);
+  }, [st.toast]);
 
-  const setState: SetState = useCallback((p) => setSt((cur) => (cur ? { ...cur, ...(typeof p === 'function' ? p(cur) : p) } : cur)), []);
+  const setState: SetState = useCallback((p) => setSt((cur) => ({ ...cur, ...(typeof p === 'function' ? p(cur) : p) })), []);
 
   const logicRef = useRef<AdminConsole | null>(null);
   useEffect(() => {
@@ -75,9 +78,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [setState]);
-  useEffect(() => { if (st?.srOpen) setTimeout(() => srRef.current?.focus(), 30); }, [st?.srOpen]);
-
-  if (!ready || !st) return <div className="adm-root" />;
+  useEffect(() => {
+    if (!st.srOpen) return;
+    const t = setTimeout(() => srRef.current?.focus(), 30);
+    return () => clearTimeout(t);
+  }, [st.srOpen]);
 
   const env = {
     sec, numerals, theme, today: new Date(),
@@ -86,8 +91,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
     toggleTheme: () => set((x) => ({ ...x, prefs: { ...x.prefs, theme: theme === 'dark' ? 'light' : 'dark' } })),
   };
+  // The env callbacks touch refs only when a click or key press calls them, never while rendering.
+  // eslint-disable-next-line react-hooks/refs
   const logic = new AdminConsole(st, setState, env);
-  logicRef.current = logic;
+  useEffect(() => { logicRef.current = logic; });
   const vals = logic.renderVals();
   const mini = vals.mini;
 

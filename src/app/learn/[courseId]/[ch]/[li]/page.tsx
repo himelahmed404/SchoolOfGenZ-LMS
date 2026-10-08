@@ -27,20 +27,37 @@ const LETTERS = 'কখগঘ';
 
 export default function LessonPage() {
   const p = useParams<{ courseId: string; ch: string; li: string }>();
-  const query = useSearchParams();
   const router = useRouter();
-  const { s, set, n, ready, showToast } = useStore();
+  const { s, ready } = useStore();
 
   const cid = p.courseId as CourseId;
   const ci = Number(p.ch), li = Number(p.li);
+  const exists = !!courses[cid]?.chapters[ci]?.lessons[li];
+  const locked = exists && ready && isLocked(s, cid, ci, li);
+
+  useEffect(() => { if (locked) router.replace('/course/' + cid); }, [locked, cid, router]);
+
+  if (!exists) notFound();
+  // The lesson starts from saved state (the resume position), so it waits for the store.
+  if (!ready || locked) return <Shell role="student" title="Lesson" back={'/course/' + cid} lessonMode>{null}</Shell>;
+  // Keyed by lesson, so moving to another lesson starts with fresh view state.
+  return <Lesson key={cid + ':' + ci + ':' + li} cid={cid} ci={ci} li={li} />;
+}
+
+function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
+  const query = useSearchParams();
+  const router = useRouter();
+  const { s, set, n, showToast } = useStore();
+
   const course = courses[cid];
-  const lessonMeta = course?.chapters[ci]?.lessons[li];
+  const lessonMeta = course.chapters[ci].lessons[li];
+  const dur = secs(lessonMeta.d);
 
   const [tab, setTab] = useState<Tab>(() => { const q = query.get('tab'); return isTab(q) ? q : 'notes'; });
   const [playing, setPlaying] = useState(false);
-  const [t, setT] = useState(0);
-  const tRef = useRef(0);
-  tRef.current = t;
+  // Resume where "চালিয়ে যাও" left off.
+  const [t, setT] = useState(() => { const l = s.last; return l.courseId === cid && l.ch === ci && l.li === li ? Math.min(l.t, dur) : 0; });
+  const tRef = useRef(t);
   const [speed, setSpeed] = useState(1);
   const [quality, setQuality] = useState('auto');
   const [wm, setWm] = useState(0);
@@ -49,29 +66,17 @@ export default function LessonPage() {
   const [stuckOpen, setStuckOpen] = useState<Record<number, boolean>>({});
   const [askText, setAskText] = useState('');
 
-  const locked = !!lessonMeta && ready && isLocked(s, cid, ci, li);
-  const dur = lessonMeta ? secs(lessonMeta.d) : 0;
+  useEffect(() => { tRef.current = t; }, [t]);
 
-  // Reset per-lesson view state when navigating between lessons.
+  // Opening a lesson makes it the resume point; leaving it remembers the position.
   useEffect(() => {
-    const q = query.get('tab');
-    setTab(isTab(q) ? q : 'notes'); setPlaying(false); setOpenCh(ci); setStuckOpen({}); setSheet(false);
-  }, [cid, ci, li]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Resume where "চালিয়ে যাও" left off; remember the position when leaving.
-  useEffect(() => {
-    if (!ready || !lessonMeta) return;
-    if (locked) { router.replace('/course/' + cid); return; }
-    const l = s.last;
-    const same = l.courseId === cid && l.ch === ci && l.li === li;
-    setT(same ? Math.min(l.t, dur) : 0);
-    if (!same) set((x) => ({ ...x, last: { courseId: cid, ch: ci, li, t: 0 } }));
+    set((x) => (x.last.courseId === cid && x.last.ch === ci && x.last.li === li ? x : { ...x, last: { courseId: cid, ch: ci, li, t: 0 } }));
     return () => { const v = tRef.current; set((x) => savePosition(x, cid, ci, li, v)); };
-  }, [ready, locked, cid, ci, li]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cid, ci, li, set]);
 
   useEffect(() => {
-    if (ready && !playing) set((x) => savePosition(x, cid, ci, li, tRef.current));
-  }, [playing]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!playing) set((x) => savePosition(x, cid, ci, li, tRef.current));
+  }, [playing, cid, ci, li, set]);
 
   // Simulated playback clock; replace with the stream player's timeupdate events.
   useEffect(() => {
@@ -89,8 +94,6 @@ export default function LessonPage() {
     const id = setInterval(() => setWm((v) => (v + 1) % 4), 40000);
     return () => clearInterval(id);
   }, []);
-
-  if (!course || !lessonMeta) notFound();
 
   const content = studentLesson(s, cid, ci, li);
   const lk = lessonKey(cid, ci, li);
@@ -178,7 +181,7 @@ export default function LessonPage() {
       <div data-print="hide" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         <div className="seg" role="tablist">
           {TABS.map(([label, id]) => (
-            <button key={id} role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               style={{ height: 36, fontSize: 14, fontWeight: tab === id ? 600 : 400 }}>{label}</button>
           ))}
         </div>

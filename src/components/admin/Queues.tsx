@@ -121,7 +121,7 @@ export function AdminQueues({ mode }: { mode: Mode }) {
     else if (e.key === ' ') { e.preventDefault(); toggleCheck(selRow.id); setSel(Math.min(rows.length - 1, selIdx + 1)); }
   };
   const keyRef = useRef(onKey);
-  keyRef.current = onKey;
+  useEffect(() => { keyRef.current = onKey; });
   useEffect(() => {
     const h = (e: KeyboardEvent) => keyRef.current(e);
     window.addEventListener('keydown', h);

@@ -197,7 +197,7 @@ a.btn-soft:hover { color: var(--brand); }
   font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1;
 }
 
-/* pill segmented control: buttons carry aria-pressed */
+/* pill segmented control: toggle buttons carry aria-pressed, tabs aria-selected */
 .seg {
   display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--surface-sunk);
   max-width: 100%; overflow-x: auto; scrollbar-width: none;
@@ -206,11 +206,11 @@ a.btn-soft:hover { color: var(--brand); }
   height: 34px; padding: 0 14px; border: none; border-radius: 999px; background: transparent;
   color: var(--ink-3); font-size: 13px; font-weight: 600; flex-shrink: 0;
 }
-.seg > button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--seg-shadow); }
+.seg > button:is([aria-pressed="true"], [aria-selected="true"]) { background: var(--surface); color: var(--ink); box-shadow: var(--seg-shadow); }
 
 /* choice pill (semester, numerals…) */
 .pick { border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-weight: 400; }
-.pick[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.pick:is([aria-pressed="true"], [aria-checked="true"]) { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 600; }
 
 .field {
   width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 14px;

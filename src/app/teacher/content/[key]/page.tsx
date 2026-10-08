@@ -78,7 +78,7 @@ export default function EditorPage() {
 
       <div className="seg" role="tablist" style={{ display: 'inline-flex', margin: '20px 0 24px' }}>
         {tabs.map(([label, id, badge]) => (
-          <button key={id} role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => setTab(id)}
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
             style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label}{badge ? ' · ' + badge : ''}</button>
         ))}
       </div>
