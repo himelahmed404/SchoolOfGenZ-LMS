@@ -144,3 +144,18 @@ export function clearNotifs(s: AppState, ids: string[]): AppState {
   ids.forEach((id) => { gone[id] = true; });
   return { ...s, notifs: { ...s.notifs, gone } };
 }
+
+/* ---------- profile ---------- */
+
+export interface StudentProfileDraft { name: string; email: string; inst: string; sem: number }
+export interface TeacherProfileDraft { email: string; bio: string; subjects: string[] }
+
+export function saveStudentProfile(s: AppState, d: StudentProfileDraft): AppState {
+  // A different semester means a different board exam, so the manual exam date resets.
+  const examDate = d.sem === s.prefs.sem ? s.prefs.examDate : null;
+  return { ...s, prefs: { ...s.prefs, name: d.name, sem: d.sem, examDate }, profile: { ...s.profile, email: d.email, inst: d.inst } };
+}
+
+export function saveTeacherProfile(s: AppState, d: TeacherProfileDraft): AppState {
+  return { ...s, tProfile: { ...s.tProfile, ...d } };
+}

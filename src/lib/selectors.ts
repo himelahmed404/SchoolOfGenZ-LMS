@@ -239,6 +239,18 @@ export function weekDots(today = new Date()) {
   });
 }
 
+/** The month grid (6 Sat-first weeks) for the streak calendar. */
+export function monthCells(today = new Date()) {
+  const first = new Date(today.getFullYear(), today.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - satIndex(first));
+  const t0 = dayStart(today).getTime();
+  return Array.from({ length: 42 }, (_, i) => {
+    const day = new Date(start); day.setDate(start.getDate() + i);
+    const t = dayStart(day).getTime();
+    return { n: day.getDate(), other: day.getMonth() !== today.getMonth(), studied: studiedOn(day, today), today: t === t0, future: t > t0 };
+  });
+}
+
 /* ---------- notifications ---------- */
 
 export type AppRole = 'student' | 'teacher';

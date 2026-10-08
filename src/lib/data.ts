@@ -237,9 +237,11 @@ export const testQs: QuizQ[] = [
   { stem: 'মার্জ সর্টের গড় টাইম কমপ্লেক্সিটি কত?', o: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'], a: 1 },
   { stem: 'বাইনারি সার্চ ট্রি-তে সবচেয়ে ছোট মান কোথায় থাকে?', o: ['রুট নোডে', 'সবচেয়ে ডান দিকের নোডে', 'সবচেয়ে বাঁ দিকের নোডে', 'যেকোনো লিফে'], a: 2 }
 ];
-export const teacher = { name: 'শাহরিয়ার হোসেন', batch: 'CST-04-B01' };
+export const teacher = { name: 'শাহরিয়ার হোসেন', batch: 'CST-04-B01', phone: '01711-649032', title: 'সিনিয়র ইন্সট্রাক্টর · কম্পিউটার টেকনোলজি' };
 export const adminName = 'রিফাত';
 export const defaultStudent = { name: 'মাহমুদুল হাসান', phone: '01712 445589', masked: '01712-••••89', batch: 'CST-04-B01' };
+/** Subjects a teacher can list on their profile. */
+export const subjectOptions = ['Data Structure', 'C Programming', 'Algorithm', 'Database', 'Web Development', 'Networking'];
 export const supportPhone = '০১৭৭৭ ০৯০৯০৯';
 export const testMeta = { name: 'Model Test 04', seconds: 1500 };
 export const featuredLesson = { courseId: 'cst' as CourseId, ch: 2, li: 4 };
@@ -271,3 +273,18 @@ export const notifSeed: Record<'student' | 'teacher', Notif[]> = {
     { id: 't3', icon: 'payments', tone: 'sun', title: 'সেপ্টেম্বরের পেআউট পাঠানো হয়েছে', body: '৳৩৮,৪০০ — bKash 01711-••••32', time: '৬ দিন আগে', href: '/teacher/profile' }
   ]
 };
+
+/** Student badges: [icon, label, sub (date earned or what's left), earned]. */
+export const badgeSeed: [string, string, string, boolean][] = [
+  ['local_fire_department', '৭ দিনের স্ট্রিক', '২ অক্টো', true],
+  ['bolt', '১০০ পয়েন্ট', '১৮ সেপ্টে', true],
+  ['target', 'নির্ভুল কুইজ', '২৫ সেপ্টে', true],
+  ['workspace_premium', 'প্রথম সার্টিফিকেট', '৩০ সেপ্টে', true],
+  ['emoji_events', 'টপ ১০', 'বাকি ৩ ধাপ', false],
+  ['forum', 'কৌতূহলী মন', '৩/৫ প্রশ্ন', false],
+  ['nights_stay', 'রাতজাগা পাখি', 'রাত ১০টার পর ৫ লেসন', false],
+  ['school', 'কোর্স শেষ', '৬২% হয়েছে', false],
+];
+
+/** A certificate the student already holds (an earlier course). */
+export const pastCertificate = { title: 'Programming Fundamentals', meta: 'সম্পন্ন · ৩০ সেপ্টেম্বর ২০২৬' };
