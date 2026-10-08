@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { defaultStudent, teacher } from '@/lib/data';
 import { counts, studentName, unreadCount, type AppRole } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -10,20 +10,40 @@ import { Notifications } from './Notifications';
 import { ThemeToggle } from './ThemeToggle';
 import { Avatar, Icon } from './ui';
 
-interface NavItem { label: string; icon: string; href: string; match: (p: string) => boolean }
+interface NavItem {
+  label: string; icon: string; href: string; match: (p: string) => boolean;
+  /** Short label for the phone tab bar. Items without one are reached through "More". */
+  tab?: string;
+}
+interface NavGroup { label: string; items: NavItem[] }
 
-const NAV: Record<AppRole, NavItem[]> = {
+const under = (...roots: string[]) => (p: string) => roots.some((r) => p === r || p.startsWith(r + '/'));
+
+const NAV: Record<AppRole, NavGroup[]> = {
   student: [
-    { label: 'Home', icon: 'home', href: '/', match: (p) => p === '/' },
-    { label: 'My Courses', icon: 'menu_book', href: '/course/cst', match: (p) => p.startsWith('/course') || p.startsWith('/learn') },
-    { label: 'Leaderboard', icon: 'leaderboard', href: '/leaderboard', match: (p) => p.startsWith('/leaderboard') },
-    { label: 'Profile', icon: 'person', href: '/profile', match: (p) => p.startsWith('/profile') },
+    { label: 'Learn', items: [
+      { label: 'Home', icon: 'home', href: '/', match: (p) => p === '/', tab: 'Home' },
+      { label: 'My Courses', icon: 'menu_book', href: '/courses', match: under('/courses', '/course', '/learn', '/test'), tab: 'Courses' },
+      { label: 'Explore Courses', icon: 'explore', href: '/explore', match: under('/explore', '/enroll') },
+    ] },
+    { label: 'Progress', items: [
+      { label: 'Leaderboard', icon: 'leaderboard', href: '/leaderboard', match: under('/leaderboard'), tab: 'Leaderboard' },
+      { label: 'Certificates', icon: 'workspace_premium', href: '/certificates', match: under('/certificates', '/certificate') },
+      { label: 'Saved & Notes', icon: 'bookmarks', href: '/saved', match: under('/saved'), tab: 'Saved' },
+    ] },
+    { label: 'Support', items: [
+      { label: 'My Questions', icon: 'forum', href: '/questions', match: under('/questions') },
+      { label: 'Payments', icon: 'receipt_long', href: '/payments', match: under('/payments') },
+      { label: 'Help', icon: 'help', href: '/help', match: under('/help') },
+    ] },
   ],
   teacher: [
-    { label: 'Class', icon: 'groups', href: '/teacher', match: (p) => p === '/teacher' },
-    { label: 'Doubts', icon: 'forum', href: '/teacher/doubts', match: (p) => p.startsWith('/teacher/doubts') },
-    { label: 'Content', icon: 'video_library', href: '/teacher/content', match: (p) => p.startsWith('/teacher/content') },
-    { label: 'Profile', icon: 'person', href: '/teacher/profile', match: (p) => p.startsWith('/teacher/profile') },
+    { label: '', items: [
+      { label: 'Class', icon: 'groups', href: '/teacher', match: (p) => p === '/teacher', tab: 'Class' },
+      { label: 'Doubts', icon: 'forum', href: '/teacher/doubts', match: under('/teacher/doubts'), tab: 'Doubts' },
+      { label: 'Content', icon: 'video_library', href: '/teacher/content', match: under('/teacher/content'), tab: 'Content' },
+      { label: 'Profile', icon: 'person', href: '/teacher/profile', match: under('/teacher/profile'), tab: 'Profile' },
+    ] },
   ],
 };
 
@@ -48,15 +68,22 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
   const { s, ready, n, setNotifOpen } = useStore();
   const path = usePathname();
   const router = useRouter();
+  const [more, setMore] = useState(false);
   if (!ready) return <div className="shell" />;
 
-  const nav = NAV[role];
+  const groups = NAV[role];
+  const all = groups.flatMap((g) => g.items);
+  const tabs = all.filter((it) => it.tab);
+  // Everything the phone tab bar has no room for, plus the profile (the sidebar reaches it through the card at the bottom).
+  const profileHref = role === 'teacher' ? '/teacher/profile' : '/profile';
+  const onProfile = path.startsWith(profileHref);
+  const extra = all.filter((it) => !it.tab);
+  const moreOn = extra.some((it) => it.match(path)) || (role === 'student' && onProfile);
+
   const pct = role === 'student' ? counts(s, s.last.courseId).pct : 0;
   const unread = unreadCount(s, role);
   const footName = role === 'teacher' ? teacher.name : studentName(s);
   const footSub = role === 'teacher' ? teacher.batch : defaultStudent.masked;
-  const profileHref = role === 'teacher' ? '/teacher/profile' : '/profile';
-  const onProfile = path.startsWith(profileHref);
   const openNotif = () => setNotifOpen(true);
 
   return (
@@ -67,11 +94,16 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
           <div className="brand-name lbl">School of GenZ</div>
         </div>
         <nav className="nav" aria-label="Main">
-          {nav.map((it) => (
-            <Link key={it.label} href={it.href} className="nav-item" aria-current={it.match(path) ? 'page' : undefined} title={it.label}>
-              <Icon name={it.icon} />
-              <span className="lbl">{it.label}</span>
-            </Link>
+          {groups.map((g, gi) => (
+            <div key={g.label || gi} className="nav-group">
+              {g.label ? <div className="nav-group-label lbl">{g.label}</div> : null}
+              {g.items.map((it) => (
+                <Link key={it.label} href={it.href} className="nav-item" aria-current={it.match(path) ? 'page' : undefined} title={it.label}>
+                  <Icon name={it.icon} />
+                  <span className="lbl">{it.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="side-tools">
@@ -121,22 +153,43 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
         </main>
 
         <nav className="tabbar" data-print="hide" aria-label="Main">
-          {nav.map((it) => (
+          {tabs.map((it) => (
             <Link key={it.label} href={it.href} aria-current={it.match(path) ? 'page' : undefined}>
               <span className="pill"><Icon name={it.icon} /></span>
-              <span className="lbl">{it.label}</span>
+              <span className="lbl">{it.tab}</span>
             </Link>
           ))}
+          {extra.length ? (
+            <button onClick={() => setMore(true)} aria-current={moreOn ? 'page' : undefined} aria-haspopup="dialog">
+              <span className="pill"><Icon name="menu" /></span>
+              <span className="lbl">More</span>
+            </button>
+          ) : null}
         </nav>
         {lessonMode ? <div className="lesson-bar" data-print="hide">{lessonBar}</div> : null}
       </div>
+
+      {more ? (
+        <Sheet title="More" onClose={() => setMore(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0 12px' }}>
+            <Link href={profileHref} className="nav-item" aria-current={onProfile ? 'page' : undefined} onClick={() => setMore(false)}>
+              <Icon name="person" /><span>Profile</span>
+            </Link>
+            {extra.map((it) => (
+              <Link key={it.label} href={it.href} className="nav-item" aria-current={it.match(path) ? 'page' : undefined} onClick={() => setMore(false)}>
+                <Icon name={it.icon} /><span>{it.label}</span>
+              </Link>
+            ))}
+          </div>
+        </Sheet>
+      ) : null}
 
       <Notifications role={role} />
     </div>
   );
 }
 
-/** Mobile bottom sheet (chapters). */
+/** Mobile bottom sheet (chapters, the "More" menu). */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="scrim" data-print="hide" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>

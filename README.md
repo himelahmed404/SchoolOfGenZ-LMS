@@ -46,11 +46,16 @@ Two kinds of text, so no line mixes scripts:
 |---|---|---|
 | Student | `/` | Dashboard: streak, resume card, exam countdown, courses, this week (redirects to `/setup` on first visit) |
 | | `/setup` | First-run setup (name, semester, exam date, numerals) |
-| | `/course/[cst\|eng]` | Course page |
+| | `/courses`, `/course/[cst\|eng]` | My courses; course page |
+| | `/explore` | Courses open for enrollment |
 | | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / My note / Stuck / Quiz / Ask, bookmarks (0-based indexes) |
 | | `/test/[course]/[chapter]`, `…/result` | Optional chapter test (timed) and its review; opens once the chapter's lessons are done |
 | | `/leaderboard` | Batch leaderboard (±5 window) |
-| | `/certificate` | Certificate |
+| | `/certificates`, `/certificate` | Certificates earned and still locked; the certificate itself |
+| | `/saved` | Bookmarked lessons and private notes |
+| | `/questions` | Every question the student asked, with the teacher's answer |
+| | `/payments` | The student's payments and their status |
+| | `/help` | Support number and common questions (refund rule and device limit come from admin Settings) |
 | | `/enroll`, `/enroll/pay`, `/enroll/pending` | Enrollment with bKash/Nagad |
 | | `/profile`, `/profile/edit` (`#password`) | Profile (stats, streak calendar, badges, bookmarks, notes) and edit |
 | Teacher | `/teacher`, `/teacher/doubts` | Class progress, doubts |
@@ -86,7 +91,7 @@ correct answer. Keys: revision `cid|test:ci`, attempt and result `cid:ci`.
   - `seed.ts`: seed data for the store's `admin` slice.
 - `src/components/admin/Console.tsx`: the generic renderer for any `SectionView`.
 - `src/components/admin/Queues.tsx`: the payment and content queues.
-- `src/components/Shell.tsx`: the student/teacher shell (sidebar, icon rail below 1024px, mobile topbar and tab bar below 768px).
+- `src/components/Shell.tsx`: the student/teacher shell. `NAV` holds the grouped sidebar links; below 1024px the sidebar is an icon rail, and below 768px there is a top bar and a tab bar whose "More" sheet holds the links without a `tab` label.
 - `src/app/globals.css`: design tokens (light and dark), the responsive scale and shared component classes.
 
 ## Not real yet

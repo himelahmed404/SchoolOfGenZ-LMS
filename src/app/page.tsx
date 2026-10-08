@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { CourseCard } from '@/components/CourseCard';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { boardExam, courses, newCourse, streakSeed } from '@/lib/data';
 import { dateEn, daysTo, mmss, ordinalEn, pad2, plural, secs, taka } from '@/lib/format';
-import { batchLabel, boardRows, chapterTest, counts, courseKicker, courseMeta, examISO, lessonRef, nextOpenTest, studentName, testFacts, weekDots } from '@/lib/selectors';
+import { batchLabel, boardRows, chapterTest, counts, courseKicker, examISO, lessonRef, nextOpenTest, studentName, testFacts, weekDots } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -20,11 +21,6 @@ function greeting() {
   if (h < 21) return 'শুভ সন্ধ্যা';
   return 'শুভ রাত্রি';
 }
-
-const COVER: Record<CourseId, { code: string; bg: string; bar: string }> = {
-  cst: { code: 'CST', bg: 'var(--hero)', bar: 'var(--brand)' },
-  eng: { code: 'ENG', bg: '#C2357A', bar: 'var(--accent-2)' },
-};
 
 export default function Dashboard() {
   const { s, ready } = useStore();
@@ -125,32 +121,14 @@ export default function Dashboard() {
         </div>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="sec-h">My Courses</h2>
+          <SecHead title="My Courses" href="/courses" />
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 16 }}>
-            {(Object.keys(courses) as CourseId[]).map((id) => {
-              const c = courses[id], pct = counts(s, id).pct, cv = COVER[id];
-              return (
-                <Link key={id} href={`/course/${id}`} className="card tap lift-hover" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ height: 96, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, padding: '12px 16px', background: `repeating-linear-gradient(180deg, transparent 0 31px, rgba(255,255,255,0.12) 31px 32px), ${cv.bg}`, color: '#FFFFFF' }}>
-                    <span className="disp" style={{ fontSize: 44, lineHeight: 0.9, fontWeight: 800 }}>{cv.code}</span>
-                    <span style={{ padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', fontSize: 12, fontWeight: 700 }}>{pct}%</span>
-                  </div>
-                  <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1, width: '100%' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{courseKicker(c)}</div>
-                    <div className="disp" style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 700 }}>{c.title}</div>
-                    <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 12 }}>{courseMeta(c)}</div>
-                    <div style={{ marginTop: 'auto', height: 8, borderRadius: 999, background: 'var(--surface-sunk)' }}>
-                      <div style={{ height: 8, borderRadius: 999, width: pct + '%', background: cv.bar }} />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {(Object.keys(courses) as CourseId[]).map((id) => <CourseCard key={id} id={id} />)}
           </div>
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="sec-h">New Course</h2>
+          <SecHead title="New Course" href="/explore" />
           <Link href="/enroll" className="card tap" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px' }}>
             <span className="tile disp" style={{ width: 60, height: 60, borderRadius: 16, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 18, fontWeight: 800 }}>WEB</span>
             <span style={{ minWidth: 0, flex: 1 }}>
@@ -178,6 +156,16 @@ export default function Dashboard() {
         </section>
       </div>
     </Shell>
+  );
+}
+
+/** Section heading with a link to the full list. */
+function SecHead({ title, href }: { title: string; href: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <h2 className="sec-h">{title}</h2>
+      <Link href={href} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600 }}>See all<Icon name="chevron_right" size={18} /></Link>
+    </div>
   );
 }
 

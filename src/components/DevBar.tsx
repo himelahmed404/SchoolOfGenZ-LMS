@@ -14,8 +14,9 @@ type Role = 'student' | 'teacher' | 'admin';
 
 const JUMPS: Record<Role, [string, string][]> = {
   student: [
-    ['dashboard', '/'], ['course', '/course/cst'], ['lesson', '/learn/cst/2/4'], ['test', '/test/cst/1'], ['result', '/test/cst/0/result'],
-    ['board', '/leaderboard'], ['cert', '/certificate'], ['enroll', '/enroll'], ['profile', '/profile'], ['setup', '/setup'],
+    ['dashboard', '/'], ['courses', '/courses'], ['course', '/course/cst'], ['lesson', '/learn/cst/2/4'], ['test', '/test/cst/1'], ['result', '/test/cst/0/result'],
+    ['explore', '/explore'], ['enroll', '/enroll'], ['board', '/leaderboard'], ['certs', '/certificates'], ['cert', '/certificate'], ['saved', '/saved'],
+    ['questions', '/questions'], ['payments', '/payments'], ['help', '/help'], ['profile', '/profile'], ['setup', '/setup'],
   ],
   teacher: [
     ['class', '/teacher'], ['doubts', '/teacher/doubts'], ['content', '/teacher/content'],
@@ -34,12 +35,19 @@ function screenOf(p: string): string {
     return 'class';
   }
   if (p === '/') return 'dashboard';
+  if (p.startsWith('/courses')) return 'courses';
   if (p.startsWith('/course')) return 'course';
   if (p.startsWith('/learn')) return 'lesson';
   if (p.startsWith('/test')) return p.endsWith('/result') ? 'result' : 'test';
   if (p.startsWith('/leaderboard')) return 'board';
+  if (p.startsWith('/certificates')) return 'certs';
   if (p.startsWith('/certificate')) return 'cert';
+  if (p.startsWith('/explore')) return 'explore';
   if (p.startsWith('/enroll')) return 'enroll';
+  if (p.startsWith('/saved')) return 'saved';
+  if (p.startsWith('/questions')) return 'questions';
+  if (p.startsWith('/payments')) return 'payments';
+  if (p.startsWith('/help')) return 'help';
   if (p.startsWith('/profile')) return 'profile';
   if (p.startsWith('/setup')) return 'setup';
   return '';

@@ -5,13 +5,11 @@ import { useState } from 'react';
 import { ChapterList } from '@/components/ChapterList';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { courses, outcomeSets } from '@/lib/data';
+import { courseCover, courses, outcomeSets } from '@/lib/data';
 import { pad2, plural } from '@/lib/format';
 import { chapterDone, counts, courseKicker, courseMeta, frontier } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
-
-const HERO_BG: Record<CourseId, string> = { cst: 'var(--hero)', eng: '#C2357A' };
 
 export default function CoursePage() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -29,7 +27,7 @@ export default function CoursePage() {
   return (
     <Shell role="student" title={course.title} back="/">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <div className="hero" style={{ ['--hero-bg' as string]: HERO_BG[cid], color: '#FFFFFF', display: 'grid', gridTemplateColumns: 'var(--course-hero-cols)', gap: 20, alignItems: 'center' }}>
+        <div className="hero" style={{ ['--hero-bg' as string]: courseCover[cid].bg, color: '#FFFFFF', display: 'grid', gridTemplateColumns: 'var(--course-hero-cols)', gap: 20, alignItems: 'center' }}>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{courseKicker(course)}</div>
             <h1 className="d1">{course.title}</h1>

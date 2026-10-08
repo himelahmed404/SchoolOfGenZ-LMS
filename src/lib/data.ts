@@ -1,6 +1,6 @@
 // Seed data ported from the v6 design prototype. Replace with API data once a server exists.
 // Facts (names, batches, dates, times, counts, prices) are English; titles and lesson content are Bangla.
-import type { Block, BlockType, ChapterTest, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, QuizQ, Tone } from './types';
+import type { Block, BlockType, ChapterTest, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, PayStatus, QuizQ, Tone } from './types';
 
 export const boardExam = { name: 'পর্ব সমাপনী পরীক্ষা', even: '2026-12-14', odd: '2027-04-18' };
 /** Diploma semesters a student can pick. */
@@ -64,6 +64,12 @@ export const queueSeed: Payment[] = [
   { id: 'q11', name: 'Sharmin Sultana', phone: '01555 448802', course: 'স্পোকেন ইংলিশ — ফাউন্ডেশন', batch: 'ENG-02-B07', method: 'bKash', amount: 2000, due: 2000, trx: 'BKX8N2WS45', sender: '01555 448802', agoMin: 1500, status: 'approved' },
   { id: 'q12', name: 'Nafis Iqbal', phone: '01844 907715', course: 'ডেটা স্ট্রাকচার ও অ্যালগরিদম', batch: 'CST-04-B01', method: 'Nagad', amount: 3000, due: 3000, trx: 'NGD6V1PA83', sender: '01844 907715', agoMin: 1560, status: 'approved' },
   { id: 'q13', name: 'Rubaiya Haque', phone: '01712 664438', course: 'ওয়েব ডেভেলপমেন্ট বেসিক', batch: 'WEB-01-B03', method: 'bKash', amount: 500, due: 2500, trx: 'BKX0F3TM61', sender: '01712 664438', agoMin: 1620, status: 'rejected' }
+];
+
+/** What the signed-in student paid for the courses they are already in. */
+export const paymentHistory: { id: string; course: CourseId; method: PayMethod; amount: number; trx: string; date: string; status: PayStatus }[] = [
+  { id: 'p2', course: 'eng', method: 'Nagad', amount: 2000, trx: 'NGD4T9LC61', date: '2026-08-16', status: 'approved' },
+  { id: 'p1', course: 'cst', method: 'bKash', amount: 3000, trx: 'BKX3H8QK27', date: '2026-08-02', status: 'approved' },
 ];
 
 export const rejectReasons = ['ভুল TrxID', 'টাকা কম', 'ডুপ্লিকেট', 'অন্য নম্বর'];
@@ -277,6 +283,12 @@ export const supportPhone = '01777 090909';
 export const streakSeed = { current: 12, best: 19 };
 export const weekDayShort = ['Sa', 'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr'];
 export const weekDayHead = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+/** Cover and progress-bar colour per course. */
+export const courseCover: Record<CourseId, { bg: string; bar: string }> = {
+  cst: { bg: 'var(--hero)', bar: 'var(--brand)' },
+  eng: { bg: '#C2357A', bar: 'var(--accent-2)' },
+};
 
 /** Tile colours for a tone: [background, foreground]. */
 export const toneColors: Record<Tone, [string, string]> = {

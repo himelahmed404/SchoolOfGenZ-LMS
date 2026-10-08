@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { CertificateList } from '@/components/Certificates';
+import { SavedList } from '@/components/SavedList';
 import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
-import { toggleBookmark } from '@/lib/actions';
-import { badgeSeed, courses, defaultStudent, pastCertificate, streakSeed, weekDayHead } from '@/lib/data';
+import { badgeSeed, defaultStudent, streakSeed, weekDayHead } from '@/lib/data';
 import { monthEn, plural, semLabel } from '@/lib/format';
-import { boardRows, counts, lessonRef, monthCells, studentName } from '@/lib/selectors';
+import { boardRows, counts, monthCells, savedItems, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import type { CourseId } from '@/lib/types';
+
+/** How many saved lessons the profile shows before linking to the full list. */
+const PREVIEW = 3;
 
 export default function ProfilePage() {
-  const { s, set, theme, toggleTheme, setNotifOpen } = useStore();
+  const { s, theme, toggleTheme, setNotifOpen } = useStore();
   const router = useRouter();
   const name = studentName(s);
   const cst = counts(s, 'cst');
@@ -27,13 +30,7 @@ export default function ProfilePage() {
     ['leaderboard', String(me ? me.rank : 0), 'Batch rank', 'var(--brand-soft)', 'var(--brand)'],
   ];
 
-  const bookmarks = Object.keys(s.bookmarks).map((k) => {
-    const [cid, ci, li] = k.split(':');
-    const c = courses[cid as CourseId], ch = c?.chapters[+ci], l = ch?.lessons[+li];
-    if (!l) return null;
-    const note = (s.myNotes[k] || '').trim();
-    return { k, href: `/learn/${cid}/${ci}/${li}` + (note ? '?tab=mine' : ''), kicker: c.code + ' · ' + lessonRef(+ci, +li), title: l.t, note };
-  }).filter((b): b is NonNullable<typeof b> => !!b);
+  const saved = savedItems(s);
 
   return (
     <Shell role="student" title="Profile">
@@ -105,49 +102,15 @@ export default function ProfilePage() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2 className="sec-h">বুকমার্ক ও নোট</h2>
-            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{bookmarks.length} saved</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{saved.length} saved</span>
+            {saved.length > PREVIEW ? <Link href="/saved" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600 }}>See all<Icon name="chevron_right" size={18} /></Link> : null}
           </div>
-          {bookmarks.length ? (
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {bookmarks.map((b, i) => (
-                <div key={b.k} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: i === bookmarks.length - 1 ? 'none' : '1px solid var(--line)' }}>
-                  <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="bookmark" fill /></span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{b.kicker}</div>
-                    <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>{b.title}</div>
-                    {b.note ? (
-                      <div style={{ marginTop: 4, fontFamily: 'var(--font-read)', fontSize: 14, color: 'var(--ink-2)' }}>
-                        <span style={{ background: 'linear-gradient(transparent 55%, var(--hl) 55%)', padding: '0 2px' }}>{b.note}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  <Link href={b.href} className="btn btn-sm">Open</Link>
-                  <button className="icon-btn bm-x" aria-label="Remove bookmark" onClick={() => set((x) => toggleBookmark(x, b.k))} style={{ width: 36, height: 36, color: 'var(--ink-3)' }}><Icon name="close" size={18} /></button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '28px 20px', border: '2px dashed var(--line-strong)', borderRadius: 20, textAlign: 'center', color: 'var(--ink-2)' }}>
-              <Icon name="bookmark_add" size={32} style={{ color: 'var(--ink-3)' }} />
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>এখনো কিছু সেভ করোনি</div>
-              <div style={{ fontSize: 13 }}>লেসনের উপরে বুকমার্ক বাটনে চাপ দিলে এখানে চলে আসবে।</div>
-            </div>
-          )}
+          <SavedList items={saved.slice(0, PREVIEW)} />
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <h2 className="sec-h">সার্টিফিকেট</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 12 }}>
-            <CertRow icon="workspace_premium" tone={['var(--sun)', 'var(--on-sun)']} title={pastCertificate.title} meta={pastCertificate.meta}
-              action={<Link href="/certificate" className="btn btn-sm">View</Link>} />
-            {cst.done >= cst.total ? (
-              <CertRow icon="workspace_premium" tone={['var(--sun)', 'var(--on-sun)']} title="Data Structure — CST" meta="Completed · just now"
-                action={<Link href="/certificate" className="btn btn-sm">View</Link>} />
-            ) : (
-              <CertRow icon="lock" tone={['var(--surface-sunk)', 'var(--ink-3)']} title="Data Structure — CST" meta={cst.pct + '% complete · unlocks at 100%'}
-                action={<button className="btn btn-sm" disabled style={{ color: 'var(--ink-3)' }}>Locked</button>} />
-            )}
-          </div>
+          <CertificateList />
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -177,18 +140,5 @@ export default function ProfilePage() {
         </section>
       </div>
     </Shell>
-  );
-}
-
-function CertRow({ icon, tone, title, meta, action }: { icon: string; tone: [string, string]; title: string; meta: string; action: React.ReactNode }) {
-  return (
-    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-      <span className="tile" style={{ width: 48, height: 48, borderRadius: 14, background: tone[0], color: tone[1] }}><Icon name={icon} size={26} fill /></span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.35 }}>{title}</div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{meta}</div>
-      </div>
-      {action}
-    </div>
   );
 }

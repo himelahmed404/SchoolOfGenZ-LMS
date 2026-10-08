@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { courses, defaultStudent, queueSeed } from './data';
 import {
-  allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, doneChapters, doubtsFor, frontier, isDone,
-  isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, nextOpenTest, revisionRef, roster, rowFlags, satIndex, statusOf, step,
-  studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
+  allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, frontier,
+  isDone, isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, myPayments, myQuestions, nextOpenTest, refundPolicy, revisionRef,
+  roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
@@ -155,16 +155,38 @@ describe('roster and leaderboard', () => {
 
 describe('doubts', () => {
   it('lists the batch seed doubts and puts the student\'s own first', () => {
-    expect(doubtsFor(s0, 'CST-04-B01')).toHaveLength(6);
+    expect(doubtsFor(withState({ myDoubts: [] }), 'CST-04-B01')).toHaveLength(6);
     const s = withState({ myDoubts: [{ id: 'm1', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, q: 'কেন?', who: '', agoMin: 0 }] });
     const list = doubtsFor(s, 'CST-04-B01');
     expect(list).toHaveLength(7);
     expect(list[0]).toMatchObject({ id: 'm1', mine: true, who: defaultStudent.name });
+    expect(doubtsFor(s, 'ENG-02-B07').some((d) => d.mine)).toBe(false);
+  });
+
+  it('collects the student\'s own questions across courses, with replies', () => {
+    expect(myQuestions(s0)).toHaveLength(1);
+    expect(myQuestions(s0)[0]).toMatchObject({ id: 'm0', mine: true, by: 'Shahriar Hossain', replyAgoMin: 12 });
+    const asked = withState({ myDoubts: [{ id: 'm9', batch: 'ENG-02-B07', course: 'eng', ch: 0, li: 0, q: 'Why?', who: '', agoMin: 0 }], replies: { m9: { text: 'Because', by: 'T' } } });
+    expect(myQuestions(asked)[0]).toMatchObject({ reply: 'Because', by: 'T', replyAgoMin: 0 });
   });
 
   it('merges a teacher reply into the doubt', () => {
     const s = withState({ replies: { d2: { text: 'উত্তর', by: 'T' } } });
     expect(doubtsFor(s, 'CST-04-B01').find((d) => d.id === 'd2')).toMatchObject({ reply: 'উত্তর', by: 'T' });
+  });
+});
+
+describe('saved lessons', () => {
+  it('lists bookmarked lessons and lessons with a note, in course order', () => {
+    const list = savedItems(s0);
+    expect(list.map((x) => x.k)).toEqual(['cst:1:1', 'cst:2:4']);
+    expect(list[1]).toMatchObject({ ref: 'CST · Chapter 03 · Lesson 05', bookmarked: true, href: '/learn/cst/2/4?tab=mine' });
+    expect(list[0]).toMatchObject({ note: '', href: '/learn/cst/1/1' });
+  });
+
+  it('includes a lesson that only has a note, and skips blank notes and unknown lessons', () => {
+    const s = withState({ bookmarks: { 'cst:9:9': true }, myNotes: { 'eng:0:1': 'note', 'cst:0:0': '   ' } });
+    expect(savedItems(s)).toEqual([expect.objectContaining({ k: 'eng:0:1', bookmarked: false, ref: 'ENG · Chapter 01 · Lesson 02' })]);
   });
 });
 
@@ -230,6 +252,20 @@ describe('payment queue', () => {
     expect(by('q2')).toHaveLength(1);
     expect(by('q3')).toHaveLength(1);
     expect(by('q6')).toHaveLength(1);
+  });
+});
+
+describe('the student\'s own payments and policies', () => {
+  it('shows earlier payments, with the one being checked first', () => {
+    expect(myPayments(s0).map((r) => r.id)).toEqual(['p2', 'p1']);
+    expect(myPayments(s0)[1]).toMatchObject({ code: 'CST', amount: 3000, when: '2 Aug 2026', status: 'approved' });
+    const s = withState({ payment: { method: 'Nagad', trxId: 'NGD0000001', sender: '', status: 'rejected', reason: 'ভুল TrxID' } });
+    expect(myPayments(s)[0]).toMatchObject({ id: 'live', code: 'WEB', status: 'rejected', href: '/enroll/pending' });
+  });
+
+  it('reads the refund policy and device limit from the admin settings, with defaults', () => {
+    expect(refundPolicy(s0)).toEqual({ days: 7, watch: 20 });
+    expect(deviceLimit(s0)).toBe(2);
   });
 });
 

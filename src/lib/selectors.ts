@@ -1,10 +1,10 @@
 import {
   batches, boardExam, courses, DEFAULT_TEST_SECONDS, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
-  merchants, MIN_TEST_QUESTIONS, newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
+  merchants, MIN_TEST_QUESTIONS, newCourse, notifSeed, paymentHistory, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
-import { dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
+import { dateEn, dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
 import type { AppState } from './state';
-import type { Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
+import type { Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, PayStatus, Payment, PublishedLesson } from './types';
 
 export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
@@ -180,13 +180,40 @@ export function boardRows(s: AppState, weekly: boolean, now = Date.now()): Board
 
 /* ---------- doubts ---------- */
 
+/** A doubt with the teacher's reply from this session, when there is one. */
+function withReply(s: AppState, d: Doubt): Doubt {
+  const r = s.replies[d.id];
+  return r ? { ...d, reply: r.text, by: r.by, replyAgoMin: 0 } : d;
+}
+
+/** Every question the signed-in student asked, newest first, across their courses. */
+export const myQuestions = (s: AppState): Doubt[] => s.myDoubts.map((d) => withReply(s, { ...d, who: studentName(s), mine: true }));
+
+/** A batch's questions: the student's own first, then everyone else's. */
 export function doubtsFor(s: AppState, bid: string): Doubt[] {
-  const withReply = (d: Doubt): Doubt => {
-    const r = s.replies[d.id];
-    return r ? { ...d, reply: r.text, by: r.by, replyAgoMin: 0 } : d;
-  };
-  const mine = s.myDoubts.filter((d) => d.batch === bid).map((d) => withReply({ ...d, who: studentName(s), agoMin: 0, mine: true }));
-  return mine.concat(doubtSeed.filter((d) => d.batch === bid).map(withReply));
+  return myQuestions(s).filter((d) => d.batch === bid).concat(doubtSeed.filter((d) => d.batch === bid).map((d) => withReply(s, d)));
+}
+
+/* ---------- saved lessons ---------- */
+
+export interface SavedItem { k: string; cid: CourseId; ci: number; li: number; title: string; ref: string; note: string; bookmarked: boolean; href: string }
+
+/** Lessons the student bookmarked or wrote a note on, in course order. */
+export function savedItems(s: AppState): SavedItem[] {
+  const keys = new Set(Object.keys(s.bookmarks).concat(Object.keys(s.myNotes).filter((k) => s.myNotes[k].trim())));
+  const order = Object.keys(courses);
+  const out: SavedItem[] = [];
+  keys.forEach((k) => {
+    const [cid, ci, li] = k.split(':') as [CourseId, string, string];
+    const c = courses[cid], l = c?.chapters[+ci]?.lessons[+li];
+    if (!l) return;
+    const note = (s.myNotes[k] || '').trim();
+    out.push({
+      k, cid, ci: +ci, li: +li, title: l.t, ref: c.code + ' · ' + lessonRef(+ci, +li), note, bookmarked: !!s.bookmarks[k],
+      href: `/learn/${cid}/${ci}/${li}` + (note ? '?tab=mine' : ''),
+    });
+  });
+  return out.sort((a, b) => order.indexOf(a.cid) - order.indexOf(b.cid) || a.ci - b.ci || a.li - b.li);
 }
 
 /* ---------- lesson revisions ---------- */
@@ -293,7 +320,30 @@ export const merchantNumbers = (s: AppState): Record<PayMethod, string> => ({
 /** Settings → Content protection → Video watermark. */
 export const watermarkOn = (s: AppState) => s.admin?.settings.watermark !== 'off';
 
+/** Settings → Refund policy, as shown to students on the Help page. */
+export const refundPolicy = (s: AppState) => ({
+  days: Number(s.admin?.settings.refundDays ?? 7) || 7,
+  watch: Number(s.admin?.settings.refundWatch ?? 20) || 20,
+});
+
+/** Settings → Content protection → Device limit. */
+export const deviceLimit = (s: AppState) => s.admin?.settings.devices || 2;
+
 /* ---------- payments ---------- */
+
+export interface MyPayment { id: string; code: string; title: string; method: PayMethod; amount: number; trx: string; when: string; status: PayStatus; href?: string }
+
+/** The signed-in student's payments, newest first: the one being checked now, then earlier ones. */
+export function myPayments(s: AppState): MyPayment[] {
+  const p = s.payment;
+  const live: MyPayment[] = p.status === 'none' ? [] : [{
+    id: 'live', code: newCourse.code, title: newCourse.title, method: p.method || 'bKash', amount: newCourse.price,
+    trx: p.trxId || '—', when: 'just now', status: p.status, href: '/enroll/pending',
+  }];
+  return live.concat(paymentHistory.map((h) => ({
+    id: h.id, code: courses[h.course].code, title: courses[h.course].title, method: h.method, amount: h.amount, trx: h.trx, when: dateEn(h.date), status: h.status,
+  })));
+}
 
 export function liveRow(s: AppState): Payment {
   const p = s.payment;

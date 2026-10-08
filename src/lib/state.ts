@@ -77,7 +77,11 @@ export const initialState: AppState = {
   testResults: { 'cst:0': { score: 4, total: 5, best: 4, tries: 1, elapsed: 212, at: 0, qs: courses.cst.chapters[0].test!.qs, ans: { 0: 0, 1: 0, 2: 2, 3: 0, 4: 0 } } },
   payment: { method: null, trxId: '', sender: '', status: 'none' },
   decided: {},
-  myDoubts: [],
+  // Matches the first notification: a question the student asked on the resume lesson, already answered.
+  myDoubts: [{
+    id: 'm0', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: '', agoMin: 190, q: 'খালি স্ট্যাকে pop() করলে কী হয়?',
+    reply: 'খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।', by: 'Shahriar Hossain', replyAgoMin: 12,
+  }],
   replies: {},
   tItems: {},
   published: {},
