@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import 'katex/dist/katex.min.css';
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
+import { THEME_SCRIPT } from '@/lib/theme';
 import { Celebrations } from '@/components/Penguin';
 import { DevBar } from '@/components/DevBar';
 
@@ -17,8 +18,9 @@ const DEV_BAR = process.env.NEXT_PUBLIC_DEV_BAR !== '0';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="bn" suppressHydrationWarning>
+    <html lang="bn" data-theme="light" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}

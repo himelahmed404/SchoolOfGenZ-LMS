@@ -11,7 +11,6 @@ import type { Numerals } from './format';
 export interface AppState {
   version: 2;
   prefs: {
-    theme: 'light' | 'dark' | null;
     numerals: Numerals;
     name: string;
     sem: number;
@@ -56,7 +55,7 @@ export interface AppState {
 
 export const initialState: AppState = {
   version: 2,
-  prefs: { theme: null, numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
+  prefs: { numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
   progress: {},
   last: { courseId: 'cst', ch: 2, li: 4, t: 372 },
   practiceAns: {},

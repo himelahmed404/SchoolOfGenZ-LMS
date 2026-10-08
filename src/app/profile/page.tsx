@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
 export default function ProfilePage() {
-  const { s, set, n, theme, setNotifOpen } = useStore();
+  const { s, set, n, theme, toggleTheme, setNotifOpen } = useStore();
   const router = useRouter();
   const name = studentName(s);
   const cst = counts(s, 'cst');
@@ -33,8 +33,6 @@ export default function ProfilePage() {
     const note = (s.myNotes[k] || '').trim();
     return { k, href: `/learn/${cid}/${ci}/${li}` + (note ? '?tab=mine' : ''), kicker: cid.toUpperCase() + ' · অধ্যায় ' + ch.n + ' · লেসন ' + l.n, title: l.t, note };
   }).filter((b): b is NonNullable<typeof b> => !!b);
-
-  const toggleTheme = () => set((x) => ({ ...x, prefs: { ...x.prefs, theme: theme === 'dark' ? 'light' : 'dark' } }));
 
   return (
     <Shell role="student" title="Profile">

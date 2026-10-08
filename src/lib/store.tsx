@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { applyBrand, BRAND } from './brand';
 import { digits, type Numerals } from './format';
 import { item } from './selectors';
 import { initialState, type AppState } from './state';
+import { readTheme, subscribeTheme, writeTheme, type Theme } from './theme';
 
 const STORAGE_KEY = 'sgz-lms-v1';
 
@@ -18,7 +19,8 @@ interface Store {
   /** Digits in the viewer's numeral preference. */
   n: (v: string | number) => string;
   numerals: Numerals;
-  theme: 'light' | 'dark';
+  theme: Theme;
+  toggleTheme: () => void;
   toast: Toast;
   showToast: (t: Toast) => void;
   /** Notifications drawer (view state, not persisted). */
@@ -40,15 +42,9 @@ function load(): AppState {
   }
 }
 
-function systemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined' || !window.matchMedia) return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [s, setS] = useState<AppState>(initialState);
   const [ready, setReady] = useState(false);
-  const [sys, setSys] = useState<'light' | 'dark'>('light');
   const [toast, setToast] = useState<Toast>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,15 +53,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Saved state is read after mount: the server render has no localStorage, and the first client render must match it.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setS(load());
-    setSys(systemTheme());
     setReady(true);
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const on = () => setSys(mq.matches ? 'dark' : 'light');
-    mq.addEventListener('change', on);
     // Keep tabs in sync (e.g. student in one tab, admin in another) until there is a server.
     const onStorage = (e: StorageEvent) => { if (e.key === STORAGE_KEY) setS(load()); };
     window.addEventListener('storage', onStorage);
-    return () => { mq.removeEventListener('change', on); window.removeEventListener('storage', onStorage); };
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   useEffect(() => {
@@ -73,12 +65,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* storage unavailable */ }
   }, [s, ready]);
 
-  const theme = s.prefs.theme || sys;
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light' as Theme);
+  const toggleTheme = useCallback(() => writeTheme(readTheme() === 'dark' ? 'light' : 'dark'), []);
   useEffect(() => {
+    // Until the store is ready the <head> script's choice stands; writing here earlier could flash the wrong theme.
+    if (!ready) return;
     const el = document.documentElement;
     el.dataset.theme = theme;
     applyBrand(el, BRAND, theme === 'dark');
-  }, [theme]);
+  }, [theme, ready]);
 
   // Simulated video upload progress (replace with real upload events).
   const uploading = !!s.upload;
@@ -105,9 +100,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const numerals = s.prefs.numerals;
   const value = useMemo<Store>(() => ({
-    s, ready, set, numerals, theme, toast, showToast, notifOpen, setNotifOpen,
+    s, ready, set, numerals, theme, toggleTheme, toast, showToast, notifOpen, setNotifOpen,
     n: (v) => digits(v, numerals),
-  }), [s, ready, set, numerals, theme, toast, showToast, notifOpen]);
+  }), [s, ready, set, numerals, theme, toggleTheme, toast, showToast, notifOpen]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

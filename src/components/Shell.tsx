@@ -7,6 +7,7 @@ import { defaultStudent, teacher } from '@/lib/data';
 import { counts, studentName, unreadCount, type AppRole } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { Notifications } from './Notifications';
+import { ThemeToggle } from './ThemeToggle';
 import { Avatar, Icon } from './ui';
 
 interface NavItem { label: string; icon: string; href: string; match: (p: string) => boolean }
@@ -74,14 +75,17 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
             </Link>
           ))}
         </nav>
-        <button className="side-notif" onClick={openNotif} title="Notifications">
-          <span style={{ position: 'relative', display: 'flex' }}>
-            <Icon name="notifications" />
-            {unread ? <span className="badge-dot" /> : null}
-          </span>
-          <span className="lbl" style={{ flex: 1 }}>Notifications</span>
-          {unread ? <span className="count-pill">{n(unread)}</span> : null}
-        </button>
+        <div className="side-tools">
+          <button className="side-notif" onClick={openNotif} title="Notifications">
+            <span style={{ position: 'relative', display: 'flex' }}>
+              <Icon name="notifications" />
+              {unread ? <span className="badge-dot" /> : null}
+            </span>
+            <span className="lbl" style={{ flex: 1 }}>Notifications</span>
+            {unread ? <span className="count-pill">{n(unread)}</span> : null}
+          </button>
+          <ThemeToggle className="icon-btn side-theme" />
+        </div>
         <Link href={profileHref} className="side-foot" aria-current={onProfile ? 'page' : undefined} title="Profile">
           <Avatar name={footName} size={38} fontSize={17} />
           <div className="lbl" style={{ minWidth: 0 }}>
@@ -104,6 +108,7 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
               <Icon name="notifications" size={24} />
               {unread ? <span className="badge-dot" /> : null}
             </button>
+            <ThemeToggle size={24} />
             {topAction}
           </div>
           <div className="progress4"><span style={{ width: pct + '%' }} /></div>

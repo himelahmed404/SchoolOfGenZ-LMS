@@ -19,10 +19,15 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the build on eve
 
 ## Dev bar (no sign-in yet)
 
-There is no auth. A dark strip at the top of every page switches role (student / teacher / admin),
-theme (light / dark) and numerals (bn / latin), and has a jump menu to every screen of the current
-role. Hide it with `NEXT_PUBLIC_DEV_BAR=0`; remove it once real sign-in exists. Logout and password
+There is no auth. A dark strip at the top of every page switches role (student / teacher / admin)
+and numerals (bn / latin), and has a jump menu to every screen of the current role. Hide it with `NEXT_PUBLIC_DEV_BAR=0`; remove it once real sign-in exists. Logout and password
 change are UI-only.
+
+## Theme
+
+The app is light on every device, whatever the system setting. The sun/moon button (sidebar, phone
+top bar, setup screen, admin console) switches to dark, and the choice is saved on that device.
+`src/lib/theme.ts` holds the rule and the script that applies it before first paint.
 
 ## Routes
 
@@ -54,6 +59,7 @@ Notifications are a drawer in the student/teacher shell, not a route.
 - `src/lib/actions.ts`: pure mutations, each the seam for a future API call.
 - `src/lib/store.tsx`: React provider. It persists to `localStorage` and syncs across tabs.
 - `src/lib/brand.ts`: derives all brand tokens (including `--hero`) from one hex (`BRAND`).
+- `src/lib/theme.ts`: light/dark choice, kept per device outside the app state.
 - `src/lib/admin/`: the admin console.
   - `console.ts`: `AdminConsole` holds the helpers, permissions, View-as, search, confirm-with-reason and the activity log.
   - `sections/*`: each section builder returns a `SectionView` (a list, dashboard or detail pane).

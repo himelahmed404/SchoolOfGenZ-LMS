@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { semNames } from '@/lib/data';
 import { dateLabel, daysTo } from '@/lib/format';
 import { examISO } from '@/lib/selectors';
@@ -26,6 +27,7 @@ export default function SetupPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <div style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 12, background: 'var(--brand)' }} />
           <div style={{ fontSize: 15, fontWeight: 600 }}>School of GenZ</div>
+          <ThemeToggle style={{ marginLeft: 'auto', marginRight: -10 }} />
         </div>
         <h1 className="d1" style={{ marginBottom: 8 }}>শুরুর আগে চারটা কথা</h1>
         <div className="muted-p" style={{ marginBottom: 36 }}>একবারই জিজ্ঞেস করবো। পরে সেটিংসে বদলাতে পারবে।</div>

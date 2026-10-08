@@ -48,10 +48,9 @@ function screenOf(p: string): string {
 
 export function DevBar() {
   const path = usePathname();
-  const { set, theme, numerals } = useStore();
+  const { set, numerals } = useStore();
   const role: Role = path.startsWith('/teacher') ? 'teacher' : path.startsWith('/admin') ? 'admin' : 'student';
   const here = screenOf(path);
-  const setTheme = (t: 'light' | 'dark') => set((x) => ({ ...x, prefs: { ...x.prefs, theme: t } }));
   const setNumerals = (v: 'bn' | 'latin') => set((x) => ({ ...x, prefs: { ...x.prefs, numerals: v } }));
 
   return (
@@ -61,10 +60,6 @@ export function DevBar() {
         {([['student', '/'], ['teacher', '/teacher'], ['admin', '/admin']] as [Role, string][]).map(([r, href]) => (
           <Link key={r} href={href} aria-current={role === r ? 'true' : undefined}>{r}</Link>
         ))}
-      </div>
-      <div className="dseg">
-        <button aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>light</button>
-        <button aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>dark</button>
       </div>
       <div className="dseg">
         <button aria-pressed={numerals === 'bn'} onClick={() => setNumerals('bn')} title="বাংলা সংখ্যা">১২৩</button>

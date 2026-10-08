@@ -30,7 +30,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 }
 
 function AdminFrame({ children }: { children: ReactNode }) {
-  const { s, set, numerals, theme } = useStore();
+  const { s, set, numerals, theme, toggleTheme } = useStore();
   const path = usePathname();
   const router = useRouter();
   const srRef = useRef<HTMLInputElement>(null);
@@ -89,7 +89,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
     payCount: allQueue(s).filter((r) => r.status === 'pending').length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
-    toggleTheme: () => set((x) => ({ ...x, prefs: { ...x.prefs, theme: theme === 'dark' ? 'light' : 'dark' } })),
+    toggleTheme,
   };
   // The env callbacks touch refs only when a click or key press calls them, never while rendering.
   // eslint-disable-next-line react-hooks/refs
