@@ -39,10 +39,12 @@ export default function DoubtsPage() {
           {lateN ? n(lateN) + 'টি ' + n(24) + ' ঘণ্টা পেরিয়েছে' : openL.length ? 'সব সময়ের মধ্যে' : 'কোনো প্রশ্ন বাকি নেই'}
         </span>
       </div>
-      <h1 className="h1" style={{ marginBottom: 16 }}>Student Doubts</h1>
-      <div className="tabs" role="tablist" style={{ marginBottom: 20 }}>
-        <button role="tab" className="tab" aria-selected={tab === 'open'} onClick={() => { setTab('open'); setOpenId(null); }}>উত্তর বাকি {n(openL.length)}</button>
-        <button role="tab" className="tab" aria-selected={tab === 'done'} onClick={() => { setTab('done'); setOpenId(null); }}>উত্তর দেওয়া {n(doneL.length)}</button>
+      <h1 className="d1" style={{ marginBottom: 16 }}>Student Doubts</h1>
+      <div className="seg" role="tablist" style={{ display: 'inline-flex', marginBottom: 20 }}>
+        {([['উত্তর বাকি', 'open', openL.length], ['উত্তর দেওয়া', 'done', doneL.length]] as const).map(([label, id, count]) => (
+          <button key={id} role="tab" aria-selected={tab === id} aria-pressed={tab === id} onClick={() => { setTab(id); setOpenId(null); }}
+            style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {n(count)}</button>
+        ))}
       </div>
 
       {list.length ? (
@@ -53,7 +55,7 @@ export default function DoubtsPage() {
             return (
               <div key={d.id}>
                 <button onClick={() => setOpenId(open ? null : d.id)} aria-expanded={open}
-                  style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', border: 'none', background: 'var(--surface)', textAlign: 'left', whiteSpace: 'normal' }}>
+                  style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', border: 'none', background: 'var(--surface)', color: 'var(--ink)', textAlign: 'left', whiteSpace: 'normal' }}>
                   <span style={{ width: 3, alignSelf: 'stretch', flexShrink: 0, background: late ? 'var(--margin)' : open ? 'var(--brand)' : 'var(--line)' }} />
                   <span className="grow">
                     <span className="t12 ink3" style={{ display: 'block' }}>{d.who} · {where}</span>
@@ -70,12 +72,13 @@ export default function DoubtsPage() {
                       </div>
                     ) : (
                       <div>
-                        <textarea className="field field-sunk" style={{ minHeight: 96 }} value={draft} placeholder="উত্তর লেখো" aria-label="উত্তর"
-                          onChange={(e) => setDrafts({ ...drafts, [d.id]: e.target.value })} />
+                        <textarea value={draft} placeholder="উত্তর লেখো" aria-label="উত্তর" onChange={(e) => setDrafts({ ...drafts, [d.id]: e.target.value })}
+                          style={{ width: '100%', minHeight: 96, padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
                         <div className="row wrap" style={{ gap: '8px 12px', marginTop: 10 }}>
-                          <button className="btn btn-link t13" style={{ height: 36, padding: 0 }} onClick={() => router.push(editorHref(d.course + '|lesson:' + d.ch + ':' + d.li))}>লেসনটা খোলো</button>
+                          <button onClick={() => router.push(editorHref(d.course + '|lesson:' + d.ch + ':' + d.li))}
+                            style={{ height: 36, padding: 0, border: 'none', background: 'none', color: 'var(--brand)', fontSize: 13, fontWeight: 500 }}>লেসনটা খোলো</button>
                           <span className="t12 ink3">লেসনের প্রশ্ন ট্যাবে ব্যাচের সবাই দেখবে</span>
-                          <button className="btn btn-primary ml-auto" style={{ padding: '0 18px' }} disabled={!draft.trim()} onClick={() => send(d.id)}>উত্তর পাঠাও</button>
+                          <button className="btn btn-primary ml-auto" style={{ padding: '0 18px', fontWeight: 500 }} disabled={!draft.trim()} onClick={() => send(d.id)}>উত্তর পাঠাও</button>
                         </div>
                       </div>
                     )}
@@ -88,7 +91,7 @@ export default function DoubtsPage() {
       ) : (
         <div className="card empty">
           <Penguin size={72} />
-          <div className="t17 w600">{tab === 'open' ? (doubts.length ? 'সব প্রশ্নের উত্তর দেওয়া হয়েছে' : 'এখনো কোনো প্রশ্ন আসেনি') : 'এখনো কোনো উত্তর দাওনি'}</div>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{tab === 'open' ? (doubts.length ? 'সব প্রশ্নের উত্তর দেওয়া হয়েছে' : 'এখনো কোনো প্রশ্ন আসেনি') : 'এখনো কোনো উত্তর দাওনি'}</div>
           <div className="muted-p" style={{ maxWidth: '40ch' }}>{tab === 'open' ? 'ছাত্ররা লেসনের প্রশ্ন ট্যাব থেকে জিজ্ঞেস করলে এখানে আসবে।' : 'উত্তর দিলে এখানে জমা থাকবে।'}</div>
         </div>
       )}
