@@ -19,8 +19,8 @@ export interface AppState {
   };
   /** Lessons completed in this session, keyed `cid:ci:li` (seed data marks earlier ones done). */
   progress: Record<string, true>;
-  /** Where "চালিয়ে যাও" resumes. */
-  last: { courseId: CourseId; ch: number; li: number };
+  /** Where "চালিয়ে যাও" resumes; `t` is the playback position in seconds. */
+  last: { courseId: CourseId; ch: number; li: number; t: number };
   practiceAns: Record<string, Record<number, number>>;
   test: {
     on: boolean;
@@ -55,7 +55,7 @@ export const initialState: AppState = {
   version: 2,
   prefs: { theme: null, numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
   progress: {},
-  last: { courseId: 'cst', ch: 2, li: 4 },
+  last: { courseId: 'cst', ch: 2, li: 4, t: 372 },
   practiceAns: {},
   test: { on: false, startedAt: null, ans: {}, q: 0, elapsed: 0, score: null },
   payment: { method: null, trxId: '', sender: '', status: 'none' },

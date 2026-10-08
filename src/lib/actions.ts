@@ -14,7 +14,7 @@ export function completeLesson(s: AppState, cid: CourseId, ci: number, li: numbe
   let next = { ...s, progress };
   const c = counts(next, cid);
   const nx = step(cid, ci, li, 1);
-  if (nx) next = { ...next, last: { courseId: cid, ch: nx[0], li: nx[1] } };
+  if (nx) next = { ...next, last: { courseId: cid, ch: nx[0], li: nx[1], t: 0 } };
   return { s: next, next: nx, courseDone: c.done >= c.total };
 }
 

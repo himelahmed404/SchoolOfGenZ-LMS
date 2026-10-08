@@ -243,6 +243,10 @@ export const defaultStudent = { name: 'মাহমুদুল হাসান'
 export const supportPhone = '০১৭৭৭ ০৯০৯০৯';
 export const testMeta = { name: 'Model Test 04', seconds: 1500 };
 export const featuredLesson = { courseId: 'cst' as CourseId, ch: 2, li: 4 };
+/** Seeded until activity tracking exists: the current streak ends today. */
+export const streakSeed = { current: 12, best: 19 };
+export const weekDayShort = ['শ', 'র', 'সো', 'ম', 'বু', 'বৃ', 'শু'];
+export const weekDayHead = ['শনি', 'রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র'];
 
 /** Tile colours for a tone: [background, foreground]. */
 export const toneColors: Record<Tone, [string, string]> = {

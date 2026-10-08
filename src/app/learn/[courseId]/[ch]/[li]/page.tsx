@@ -53,7 +53,7 @@ export default function LessonPage() {
   useEffect(() => {
     if (!ready || !lessonMeta) return;
     if (locked) { router.replace('/course/' + cid); return; }
-    set((x) => (x.last.courseId === cid && x.last.ch === ci && x.last.li === li ? x : { ...x, last: { courseId: cid, ch: ci, li } }));
+    set((x) => (x.last.courseId === cid && x.last.ch === ci && x.last.li === li ? x : { ...x, last: { courseId: cid, ch: ci, li, t: 0 } }));
   }, [ready, locked, cid, ci, li, lessonMeta, router, set]);
 
   // Simulated playback clock; replace with the stream player's timeupdate events.

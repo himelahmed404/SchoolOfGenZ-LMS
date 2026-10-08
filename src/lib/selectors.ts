@@ -1,6 +1,6 @@
 import {
   batches, boardExam, courses, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
-  newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, teacher,
+  newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
 import { digits, pad2, taka, type Numerals } from './format';
 import type { AppState } from './state';
@@ -215,6 +215,28 @@ export function rowFlags(r: Payment, numerals: Numerals): string[] {
   if (r.dup) f.push('এই TrxID আগেও একবার জমা পড়েছে');
   if (r.sender !== r.phone) f.push('অন্য নম্বর থেকে পেমেন্ট এসেছে');
   return f;
+}
+
+/* ---------- streak ---------- */
+
+/** Saturday-first weekday index (the Bangladeshi week): Sat = 0 … Fri = 6. */
+export const satIndex = (d: Date) => (d.getDay() + 1) % 7;
+
+const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+
+/** Whether `day` falls inside the current streak, which ends today. */
+export function studiedOn(day: Date, today = new Date()) {
+  const diff = Math.round((dayStart(today).getTime() - dayStart(day).getTime()) / 86400000);
+  return diff >= 0 && diff < streakSeed.current;
+}
+
+/** This week's dots, Saturday to Friday. */
+export function weekDots(today = new Date()) {
+  const ti = satIndex(today);
+  return weekDayShort.map((d, i) => {
+    const day = new Date(today); day.setDate(today.getDate() - ti + i);
+    return { d, studied: studiedOn(day, today), today: i === ti };
+  });
 }
 
 /* ---------- notifications ---------- */

@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Shell } from '@/components/Shell';
-import { boardExam, courses, newCourse, testMeta } from '@/lib/data';
-import { daysTo, dateLabel, ordinal, pad2, secs, taka } from '@/lib/format';
-import { boardRows, counts, examISO, studentName } from '@/lib/selectors';
+import { Icon } from '@/components/ui';
+import { boardExam, courses, newCourse, streakSeed, testMeta } from '@/lib/data';
+import { daysTo, dateLabel, mmss, ordinal, pad2, secs, taka } from '@/lib/format';
+import { boardRows, counts, examISO, studentName, weekDots } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -20,6 +21,11 @@ function greeting() {
   return 'শুভ রাত্রি';
 }
 
+const COVER: Record<CourseId, { code: string; bg: string; bar: string }> = {
+  cst: { code: 'CST', bg: 'var(--hero)', bar: 'var(--brand)' },
+  eng: { code: 'ENG', bg: '#C2357A', bar: 'var(--accent-2)' },
+};
+
 export default function Dashboard() {
   const { s, ready, n, numerals } = useStore();
   const router = useRouter();
@@ -28,10 +34,12 @@ export default function Dashboard() {
     if (ready && !s.prefs.setupDone) router.replace('/setup');
   }, [ready, s.prefs.setupDone, router]);
 
-  const { courseId, ch, li } = s.last;
+  const { courseId, ch, li, t } = s.last;
   const course = courses[courseId];
   const lesson = course.chapters[ch].lessons[li];
-  const resumePct = counts(s, courseId).pct;
+  const lessonHref = `/learn/${courseId}/${ch}/${li}`;
+  const coursePct = counts(s, courseId).pct;
+  const minsLeft = Math.max(1, Math.round((secs(lesson.d) - t) / 60));
 
   const iso = examISO(s);
   const days = daysTo(iso);
@@ -39,98 +47,144 @@ export default function Dashboard() {
 
   const all = boardRows(s, false);
   const me = all.find((r) => r.live) || all[0];
+  const dots = weekDots();
 
   return (
     <Shell role="student" title="Home">
-      <div style={{ marginBottom: 20 }}>
-        <div className="t13 ink3">{greeting()}</div>
-        <h1 className="h1">{studentName(s)}</h1>
-      </div>
-
-      <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 16 }}>
-        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20, padding: 'var(--hero-pad)', borderRadius: 4, background: 'var(--brand)', color: 'var(--on-brand)' }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            <div style={{ width: 132, height: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-end', padding: 8, borderRadius: 2, background: 'color-mix(in srgb, var(--on-brand) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--on-brand) 30%, transparent)' }}>
-              <span className="mono" style={{ fontSize: 11, color: 'var(--brand)', background: 'var(--on-brand)', borderRadius: 1, padding: '1px 5px' }}>▶ {n(lesson.d)}</span>
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div className="t13 w500">আবার শুরু করো · Chapter {n(pad2(ch + 1))} · Lesson {n(pad2(li + 1))}</div>
-              <div style={{ marginTop: 4, fontSize: 'var(--d2)', lineHeight: 1.4, fontWeight: 600 }}>{lesson.t}</div>
-              <div className="t13" style={{ marginTop: 2 }}>{course.kicker}</div>
-            </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-2)' }}>{greeting()},</div>
+            <h1 className="disp" style={{ margin: '2px 0 0', fontSize: 'var(--d1)', lineHeight: 1.25, fontWeight: 800 }}>
+              <span className="hl">{studentName(s)}</span>
+            </h1>
           </div>
-          <div className="row">
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'color-mix(in srgb, var(--on-brand) 28%, transparent)' }}>
-              <div style={{ height: 4, borderRadius: 2, width: resumePct + '%', background: 'var(--on-brand)' }} />
-            </div>
-            <span className="t13 w500 nowrap">কোর্সের {n(resumePct)}% শেষ</span>
-          </div>
-          <div className="row wrap" style={{ gap: 16 }}>
-            <Link href={`/learn/${courseId}/${ch}/${li}`} className="btn" style={{ border: 'none', background: 'var(--on-brand)', color: 'var(--brand)', padding: '0 22px', fontWeight: 600, textDecoration: 'none' }}>চালিয়ে যাও</Link>
-            <span className="ml-auto t13 nowrap">{n(Math.round(secs(lesson.d) / 60))} মিনিট বাকি</span>
-          </div>
+          <Link href="/profile" title="স্ট্রিক ক্যালেন্ডার দেখো" className="tap hover-line"
+            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px 10px 10px', border: '1px solid var(--line)', borderRadius: 18, background: 'var(--surface)', boxShadow: 'var(--lift)' }}>
+            <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--sun)', color: '#D23B45' }}><Icon name="local_fire_department" size={26} fill /></span>
+            <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+              <span className="disp" style={{ fontSize: 19, fontWeight: 800 }}>{n(streakSeed.current)} দিন</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>স্ট্রিক চলছে</span>
+            </span>
+            <span style={{ display: 'flex', gap: 5, paddingLeft: 12, borderLeft: '1px solid var(--line)' }}>
+              {dots.map((w) => (
+                <span key={w.d} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 10, lineHeight: 1, color: 'var(--ink-3)' }}>{w.d}</span>
+                  <span className="tile" style={{ width: 16, height: 16, borderRadius: 999, background: w.studied ? 'var(--sun)' : 'transparent', border: '2px solid ' + (w.today ? 'var(--brand)' : w.studied ? 'var(--sun)' : 'var(--line-strong)'), color: 'var(--on-sun)' }}>
+                    <Icon name="check" size={11} style={{ fontWeight: 700, opacity: w.studied ? 1 : 0 }} />
+                  </span>
+                </span>
+              ))}
+            </span>
+          </Link>
         </div>
 
-        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, padding: 'var(--hero-pad)', borderRadius: 4, background: urgent ? 'var(--margin-soft)' : 'var(--warn-soft)' }}>
-          <div className="t13 w500 ink2">{boardExam.name}</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 'auto' }}>
-            <span style={{ fontSize: 48, lineHeight: 1.15, fontWeight: 600, color: urgent ? 'var(--margin)' : 'var(--warn)' }}>{n(Math.max(0, days))}</span>
-            <span className="t15 ink2">{days > 0 ? 'দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
-          </div>
-          <div className="t13 ink2">{dateLabel(iso, numerals)}</div>
-        </div>
-      </div>
-
-      <div className="section-label">My Courses</div>
-      <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 16 }}>
-        {(Object.keys(courses) as CourseId[]).map((id) => {
-          const c = courses[id], pct = counts(s, id).pct;
-          const fg = id === 'cst' ? 'var(--brand)' : 'var(--accent-2)', bg = id === 'cst' ? 'var(--brand-soft)' : 'var(--accent-2-soft)';
-          return (
-            <Link key={id} href={`/course/${id}`} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', color: 'var(--ink)', textDecoration: 'none' }}>
-              <div className="mono" style={{ height: 88, background: bg, display: 'flex', alignItems: 'flex-end', padding: '12px 16px', fontSize: 22, fontWeight: 500, color: fg }}>{id === 'cst' ? 'CST' : 'ENG'}</div>
-              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                <div className="t12 ink3">{c.kicker}</div>
-                <div className="t17 w600" style={{ lineHeight: 1.5 }}>{c.title}</div>
-                <div className="t12 ink3" style={{ marginBottom: 8 }}>{c.meta}</div>
-                <div className="row" style={{ marginTop: 'auto', gap: 10 }}>
-                  <div className="bar grow"><span style={{ width: pct + '%', background: fg }} /></div>
-                  <span className="t12 ink2">{n(pct)}%</span>
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'var(--hero-cols)', gap: 16 }}>
+          <div className="hero" style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+              <Icon name="history" size={18} />আবার শুরু করো · Chapter {n(pad2(ch + 1))} · Lesson {n(pad2(li + 1))}
+            </div>
+            <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+              <Link href={lessonHref} aria-label="চালিয়ে যাও" className="tile"
+                style={{ position: 'relative', width: 'var(--thumb-w)', aspectRatio: '16/10', borderRadius: 16, background: 'rgba(255,255,255,0.14)' }}>
+                <span className="tile" style={{ width: 44, height: 44, borderRadius: 999, background: '#FFFFFF', color: 'var(--hero)' }}><Icon name="play_arrow" size={28} fill /></span>
+                <span className="mono" style={{ position: 'absolute', left: 8, bottom: 8, padding: '1px 6px', borderRadius: 6, background: 'rgba(12,16,32,0.55)', color: '#FFFFFF', fontSize: 11, fontWeight: 600 }}>{n(mmss(t).replace(/^0/, ''))}</span>
+              </Link>
+              <div style={{ minWidth: 0 }}>
+                <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700 }}>{lesson.t}</div>
+                <div style={{ marginTop: 4, fontSize: 13, opacity: 0.85 }}>{course.kicker}</div>
               </div>
-            </Link>
-          );
-        })}
-      </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.22)' }}>
+                <div style={{ height: 8, borderRadius: 999, width: coursePct + '%', background: 'var(--sun)' }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>কোর্সের {n(coursePct)}% শেষ</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <Link href={lessonHref} className="btn btn-white" style={{ padding: '0 22px', gap: 8 }}>চালিয়ে যাও<Icon name="arrow_forward" size={20} /></Link>
+              <span style={{ marginLeft: 'auto', fontSize: 13, opacity: 0.85, whiteSpace: 'nowrap' }}>{n(minsLeft)} মিনিট বাকি</span>
+            </div>
+          </div>
 
-      <div className="section-label">New Course</div>
-      <Link href="/enroll" className="card" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', color: 'var(--ink)', textDecoration: 'none' }}>
-        <span className="mono t13 w500" style={{ width: 56, height: 56, flexShrink: 0, borderRadius: 2, background: 'var(--warn-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warn)' }}>WEB</span>
-        <span style={{ minWidth: 0 }}>
-          <span className="t15 w600" style={{ display: 'block' }}>{newCourse.title}</span>
-          <span className="t13 ink3" style={{ display: 'block' }}>{newCourse.kicker} · {taka(newCourse.price, numerals)}</span>
-        </span>
-        <span className="btn btn-sm ml-auto" style={{ flexShrink: 0, padding: '0 14px' }}>Enroll</span>
-      </Link>
+          <div className="exam-tile" style={{ minWidth: 0, display: 'flex', justifyContent: 'space-between', gap: 12, padding: 'var(--hero-pad)', borderRadius: 24, background: urgent ? '#D23B45' : 'var(--sun)', color: urgent ? '#FFFFFF' : 'var(--on-sun)' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>
+                <Icon name="event" size={18} /><span>{boardExam.name}</span>
+              </div>
+              <div style={{ marginTop: 2, fontSize: 13 }}>{dateLabel(iso, numerals)}</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className="disp" style={{ fontSize: 'var(--exam-num)', lineHeight: 0.95, fontWeight: 800 }}>{n(Math.max(0, days))}</span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{days > 0 ? 'দিন বাকি' : days === 0 ? 'আজই পরীক্ষা' : 'শেষ হয়েছে'}</span>
+            </div>
+          </div>
+        </div>
 
-      <div className="section-label">This Week</div>
-      <div className="stack">
-        <WeekRow badge="শুক্র" tone="brand" label={testMeta.name} action={<Link href="/test" className="btn btn-sm" style={{ textDecoration: 'none', color: 'var(--ink)' }}>Start</Link>} />
-        <WeekRow badge="সোম" tone="accent" label="Live Class · সন্ধ্যা ৭টা" action={<button className="btn btn-sm" disabled title="লিংক ক্লাসের আগে আসবে">Link</button>} />
-        <WeekRow badge={n(me.rank)} tone="warn" big label={'ব্যাচে তোমার অবস্থান · ' + ordinal(me.rank, numerals) + ' · ' + n(all.length) + ' জনের মধ্যে'}
-          action={<Link href="/leaderboard" className="btn btn-sm" style={{ textDecoration: 'none', color: 'var(--ink)' }}>View</Link>} />
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <h2 className="sec-h">My Courses</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 16 }}>
+            {(Object.keys(courses) as CourseId[]).map((id) => {
+              const c = courses[id], pct = counts(s, id).pct, cv = COVER[id];
+              return (
+                <Link key={id} href={`/course/${id}`} className="card tap lift-hover" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ height: 96, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, padding: '12px 16px', background: `repeating-linear-gradient(180deg, transparent 0 31px, rgba(255,255,255,0.12) 31px 32px), ${cv.bg}`, color: '#FFFFFF' }}>
+                    <span className="disp" style={{ fontSize: 44, lineHeight: 0.9, fontWeight: 800 }}>{cv.code}</span>
+                    <span style={{ padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', fontSize: 12, fontWeight: 700 }}>{n(pct)}%</span>
+                  </div>
+                  <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1, width: '100%' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{c.kicker}</div>
+                    <div className="disp" style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 700 }}>{c.title}</div>
+                    <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 12 }}>{c.meta}</div>
+                    <div style={{ marginTop: 'auto', height: 8, borderRadius: 999, background: 'var(--surface-sunk)' }}>
+                      <div style={{ height: 8, borderRadius: 999, width: pct + '%', background: cv.bar }} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <h2 className="sec-h">New Course</h2>
+          <Link href="/enroll" className="card tap" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px' }}>
+            <span className="tile disp" style={{ width: 60, height: 60, borderRadius: 16, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 18, fontWeight: 800 }}>WEB</span>
+            <span style={{ minWidth: 0, flex: 1 }}>
+              <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{newCourse.title}</span>
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{newCourse.kicker} · {taka(newCourse.price, numerals)}</span>
+            </span>
+            <span style={{ flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', gap: 4, padding: '0 14px', borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>
+              Enroll<Icon name="arrow_forward" size={18} />
+            </span>
+          </Link>
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <h2 className="sec-h">This Week</h2>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <WeekRow badge="শুক্র" tone={['var(--brand-soft)', 'var(--brand)']} title={testMeta.name} sub="১০ প্রশ্ন · ২৫ মিনিট"
+              action={<Link href="/test" className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Start</Link>} />
+            <WeekRow badge="সোম" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="সন্ধ্যা ৭টা"
+              action={<button className="btn btn-sm" disabled title="লিংক ক্লাসের আগে আসবে">Link</button>} />
+            <WeekRow badge={n(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="ব্যাচে তোমার অবস্থান" sub={ordinal(me.rank, numerals) + ' · ' + n(all.length) + ' জনের মধ্যে'} last
+              action={<Link href="/leaderboard" className="btn btn-sm">View</Link>} />
+          </div>
+        </section>
       </div>
     </Shell>
   );
 }
 
-function WeekRow({ badge, tone, big, label, action }: { badge: string; tone: 'brand' | 'accent' | 'warn'; big?: boolean; label: string; action: React.ReactNode }) {
-  const c = tone === 'brand' ? ['var(--brand-soft)', 'var(--brand)'] : tone === 'accent' ? ['var(--accent-2-soft)', 'var(--accent-2)'] : ['var(--warn-soft)', 'var(--warn)'];
+function WeekRow({ badge, tone, big, title, sub, action, last }: { badge: string; tone: [string, string]; big?: boolean; title: string; sub: string; action: React.ReactNode; last?: boolean }) {
   return (
-    <div className="row wrap" style={{ padding: '14px 16px' }}>
-      <span style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 2, background: c[0], color: c[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: big ? 15 : 13, fontWeight: 600 }}>{badge}</span>
-      <div className="t15">{label}</div>
-      <div className="ml-auto">{action}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: last ? 'none' : '1px solid var(--line)' }}>
+      <span className={'tile' + (big ? ' disp' : '')} style={{ width: 48, height: 48, borderRadius: 14, background: tone[0], color: tone[1], fontSize: big ? 20 : 14, fontWeight: big ? 800 : 700 }}>{badge}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{sub}</div>
+      </div>
+      {action}
     </div>
   );
 }
