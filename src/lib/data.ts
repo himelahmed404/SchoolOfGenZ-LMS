@@ -288,3 +288,18 @@ export const badgeSeed: [string, string, string, boolean][] = [
 
 /** A certificate the student already holds (an earlier course). */
 export const pastCertificate = { title: 'Programming Fundamentals', meta: 'সম্পন্ন · ৩০ সেপ্টেম্বর ২০২৬' };
+
+/** Teacher profile stats (seeded until ratings and payouts come from the server). */
+export const teacherStats = {
+  rating: '4.8', reviews: 312,
+  /** [stars, % of reviews] */
+  stars: [[5, 78], [4, 15], [3, 5], [2, 1], [1, 1]] as [number, number][],
+  earned: 42500, pending: 8200, nextPayout: '১০ অক্টোবর', payoutTo: 'bKash · 01711-••••32',
+  // v6 used #0F7A55 for ALG, which is now the brand (DS) colour; the orange preset keeps the three tiles distinct.
+  courses: [
+    { code: 'DS', title: 'Data Structure — CST', batch: 'CST-04-B01', students: 86, rating: '4.9', bg: 'var(--hero)' },
+    { code: 'C', title: 'C Programming', batch: 'CST-02-B03', students: 124, rating: '4.7', bg: '#C2357A' },
+    { code: 'ALG', title: 'Algorithm Basics', batch: 'রেকর্ডেড', students: 410, rating: '4.8', bg: '#D2561B' },
+  ],
+  payouts: [['সেপ্টেম্বর ২০২৬', 38400, 'TRX 9KD27HQ1PX'], ['আগস্ট ২০২৬', 35150, 'TRX 8JB11ZK0MA'], ['জুলাই ২০২৬', 31900, 'TRX 7HC94LR3QE']] as [string, number, string][],
+};
