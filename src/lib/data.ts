@@ -238,13 +238,11 @@ export const testQs: QuizQ[] = [
   { stem: 'বাইনারি সার্চ ট্রি-তে সবচেয়ে ছোট মান কোথায় থাকে?', o: ['রুট নোডে', 'সবচেয়ে ডান দিকের নোডে', 'সবচেয়ে বাঁ দিকের নোডে', 'যেকোনো লিফে'], a: 2 }
 ];
 export const teacher = { name: 'শাহরিয়ার হোসেন', batch: 'CST-04-B01', phone: '01711-649032', title: 'সিনিয়র ইন্সট্রাক্টর · কম্পিউটার টেকনোলজি' };
-export const adminName = 'রিফাত';
 export const defaultStudent = { name: 'মাহমুদুল হাসান', phone: '01712 445589', masked: '01712-••••89', batch: 'CST-04-B01' };
 /** Subjects a teacher can list on their profile. */
 export const subjectOptions = ['Data Structure', 'C Programming', 'Algorithm', 'Database', 'Web Development', 'Networking'];
 export const supportPhone = '০১৭৭৭ ০৯০৯০৯';
 export const testMeta = { name: 'Model Test 04', seconds: 1500 };
-export const featuredLesson = { courseId: 'cst' as CourseId, ch: 2, li: 4 };
 /** Seeded until activity tracking exists: the current streak ends today. */
 export const streakSeed = { current: 12, best: 19 };
 export const weekDayShort = ['শ', 'র', 'সো', 'ম', 'বু', 'বৃ', 'শু'];

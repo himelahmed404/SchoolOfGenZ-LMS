@@ -1,7 +1,8 @@
 # School of GenZ LMS
 
-Bangla-first learning platform: student, teacher and admin apps, built from the v3 design handoff
-(`School of GenZ LMS v3.dc.html` in the claude.ai/design project).
+Bangla-first learning platform: student, teacher and admin apps, built from the v6 design handoff
+(`School of GenZ LMS v6.dc.html` and the `Admin Console v5.dc.html` it imports, in the
+claude.ai/design project).
 
 ## Run
 
@@ -12,43 +13,73 @@ npm run build && npm start
 npm run typecheck
 ```
 
+## Dev bar (no sign-in yet)
+
+There is no auth. A dark strip at the top of every page switches role (student / teacher / admin),
+theme (light / dark) and numerals (bn / latin), and has a jump menu to every screen of the current
+role. Hide it with `NEXT_PUBLIC_DEV_BAR=0`; remove it once real sign-in exists. Logout and password
+change are UI-only.
+
 ## Routes
 
 | Role | Path | Screen |
 |---|---|---|
-| Student | `/` | Dashboard (redirects to `/setup` on first visit) |
-| | `/setup` | First-run setup / profile (name, semester, exam date, numerals) |
+| Student | `/` | Dashboard: streak, resume card, exam countdown, courses, this week (redirects to `/setup` on first visit) |
+| | `/setup` | First-run setup (name, semester, exam date, numerals) |
 | | `/course/[cst\|eng]` | Course page |
-| | `/learn/[course]/[chapter]/[lesson]` | Lesson player (0-based indexes) |
+| | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / My note / Stuck / Quiz / Ask, bookmarks (0-based indexes) |
 | | `/test`, `/test/result` | Timed model test and review |
 | | `/leaderboard` | Batch leaderboard (±5 window) |
 | | `/certificate` | Certificate |
 | | `/enroll`, `/enroll/pay`, `/enroll/pending` | Enrollment with bKash/Nagad |
-| Teacher | `/teacher`, `/teacher/doubts`, `/teacher/content`, `/teacher/content/[key]` | Class, doubts, content, lesson editor |
-| Admin | `/admin` | Payments queue + content review (desktop, keyboard shortcuts) |
+| | `/profile`, `/profile/edit` (`#password`) | Profile (stats, streak calendar, badges, bookmarks, notes) and edit |
+| Teacher | `/teacher`, `/teacher/doubts` | Class progress, doubts |
+| | `/teacher/content`, `/teacher/content/[key]` | Content list, lesson editor |
+| | `/teacher/profile`, `/teacher/profile/edit` | Rating, payouts, courses; edit |
+| Admin | `/admin` | Console overview (desktop) |
+| | `/admin/payments`, `/admin/content` | Payment and content-review queues (keyboard shortcuts) |
+| | `/admin/[section]` | `students`, `teachers`, `certificates`, `courses`, `batches`, `coupons`, `refunds`, `announcements`, `reports`, `activity`, `settings`, `roles` |
+
+Notifications are a drawer in the student/teacher shell, not a route.
 
 ## Layout of the code
 
-- `src/lib/data.ts` — seed data ported from the prototype.
-- `src/lib/state.ts` — the persisted app state shape.
-- `src/lib/selectors.ts` — pure reads (progress, roster, leaderboard, queue flags, revisions).
-- `src/lib/actions.ts` — pure mutations; each is the seam for a future API call.
-- `src/lib/store.tsx` — React provider; persists to `localStorage` and syncs across tabs.
-- `src/lib/brand.ts` — derives all brand tokens from one hex (`BRAND`).
-- `src/app/globals.css` — design tokens, responsive scale, shared component classes.
+- `src/lib/data.ts`: seed data ported from the prototype.
+- `src/lib/state.ts`: the persisted app state shape (`version` bumps reset old saved state).
+- `src/lib/selectors.ts`: pure reads (progress, roster, leaderboard, queue flags, revisions).
+- `src/lib/actions.ts`: pure mutations, each the seam for a future API call.
+- `src/lib/store.tsx`: React provider. It persists to `localStorage` and syncs across tabs.
+- `src/lib/brand.ts`: derives all brand tokens (including `--hero`) from one hex (`BRAND`).
+- `src/lib/admin/`: the admin console.
+  - `console.ts`: `AdminConsole` holds the helpers, permissions, View-as, search, confirm-with-reason and the activity log.
+  - `sections/*`: each section builder returns a `SectionView` (a list, dashboard or detail pane).
+  - `index.ts`: builders register in `BUILDERS` here.
+  - `seed.ts`: seed data for the store's `admin` slice.
+- `src/components/admin/Console.tsx`: the generic renderer for any `SectionView`.
+- `src/components/admin/Queues.tsx`: the payment and content queues.
+- `src/components/Shell.tsx`: the student/teacher shell (sidebar, icon rail below 1024px, mobile topbar and tab bar below 768px).
+- `src/app/globals.css`: design tokens (light and dark), the responsive scale and shared component classes.
 
 ## Not real yet
 
-There is no server. State lives in `localStorage`, so the cross-role flows (student pays → admin
-approves → student sees it; teacher submits → admin publishes → students see the new version) work
-within one browser, including across tabs. Also simulated: video playback and upload, image picking,
-the roster, doubts and leaderboard peers. Fonts load from Google Fonts. Mascot, covers and avatars
+There is no server. State lives in `localStorage`, so the cross-role flows work within one browser,
+including across tabs:
+- Student pays → admin approves → the student sees it.
+- Teacher submits → admin publishes → students see the new version.
+- Teacher replies → the student's Ask tab shows it.
+
+Also simulated:
+- video playback and upload, and image picking
+- the roster, doubts and leaderboard peers
+- the admin console's students, refunds, reports and staff
+
+Fonts and icons (Material Symbols Rounded) load from Google Fonts. The mascot, covers and avatars
 are placeholders.
 
 Before production:
-- Auth and roles (routes are open).
-- API and persistence for Progress, TestAttempt, Payment, LessonRevision and Doubt. The duplicate
-  TrxID check must run server-side, and the leaderboard API must return only the ±5 window.
-- Stream player (bunny.net), real uploads, SMS on payment decisions.
+- Auth and roles. Routes are open, and admin permissions are enforced only in the UI.
+- API and persistence for Progress, TestAttempt, Payment, LessonRevision, Doubt and the admin data.
+  The duplicate TrxID check must run server-side, and the leaderboard API must return only the ±5 window.
+- Stream player (bunny.net), real uploads, SMS/push for payment decisions and announcements.
 - Newly created lessons that the admin publishes need course-structure support before students can
   see them. Updates to existing lessons already reach students.

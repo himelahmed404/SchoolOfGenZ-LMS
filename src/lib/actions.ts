@@ -2,7 +2,7 @@
  * Domain mutations as pure (state) => state functions.
  * Each one is the seam where a server call goes once there is an API.
  */
-import { courses, defaultStudent, queueSeed, testMeta, testQs } from './data';
+import { defaultStudent, testMeta, testQs } from './data';
 import { allQueue, baseItem, counts, item, lessonKey, step } from './selectors';
 import type { AppState } from './state';
 import type { CourseId, LessonRevision, PayStatus } from './types';
@@ -50,9 +50,10 @@ export function submitTest(s: AppState, now: number): AppState {
   return { ...s, test: { ...s.test, on: false, elapsed: testElapsed(s, now), score } };
 }
 
+/** A TrxID already in the queue — including the student's own earlier (rejected) submission. */
 export function trxTaken(s: AppState, trx: string) {
   const t = trx.trim().toUpperCase();
-  return queueSeed.some((r) => r.trx === t);
+  return allQueue(s).some((r) => r.trx === t);
 }
 
 export function submitPayment(s: AppState): AppState {
@@ -79,8 +80,6 @@ export function decidePayments(s: AppState, ids: string[], status: PayStatus, re
   });
   return { ...s, decided, payment };
 }
-
-export const pendingCount = (s: AppState) => allQueue(s).filter((r) => r.status === 'pending').length;
 
 /* ---------- teacher: revisions ---------- */
 
@@ -128,8 +127,6 @@ export function decideContent(s: AppState, k: string, status: 'published' | 'ret
   if (!it.isNew) published[k] = { title: it.title, video: it.video, blocks: it.blocks, quiz: it.quiz };
   return { ...s, aDecided, published, tItems: { ...s.tItems, [k]: { ...it, status: 'published', update: false, live: false, reason: '' } } };
 }
-
-export const courseTitle = (cid: CourseId) => courses[cid].title;
 
 /* ---------- notifications ---------- */
 
