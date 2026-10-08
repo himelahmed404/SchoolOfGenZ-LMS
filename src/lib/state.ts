@@ -1,3 +1,4 @@
+import type { AdminData } from './admin/types';
 import type { CourseId, Doubt, LessonRevision, PayMethod, PayStatus, PublishedLesson } from './types';
 import type { Numerals } from './format';
 
@@ -49,6 +50,8 @@ export interface AppState {
   myNotes: Record<string, string>;
   profile: { email: string; inst: string };
   tProfile: { email: string; bio: string; subjects: string[] };
+  /** Admin console data; seeded the first time the console opens. */
+  admin: AdminData | null;
 }
 
 export const initialState: AppState = {
@@ -75,4 +78,5 @@ export const initialState: AppState = {
     bio: '১০ বছর ধরে ডিপ্লোমা শিক্ষার্থীদের প্রোগ্রামিং পড়াচ্ছি। কঠিন জিনিস সহজ উদাহরণে বোঝাতে ভালোবাসি।',
     subjects: ['Data Structure', 'C Programming', 'Algorithm'],
   },
+  admin: null,
 };
