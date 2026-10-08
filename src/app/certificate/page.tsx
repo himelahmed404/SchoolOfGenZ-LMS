@@ -15,7 +15,7 @@ export default function CertificatePage() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--test-pad)', background: 'var(--paper)' }}>
+    <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--test-pad)', background: 'var(--paper)' }}>
       <div className="card" style={{ width: '100%', maxWidth: 680, padding: 'var(--cert-pad)', textAlign: 'center' }}>
         <div className="row" style={{ justifyContent: 'center', gap: 8, marginBottom: 40 }}>
           <div className="logo" style={{ width: 22, height: 22 }} />

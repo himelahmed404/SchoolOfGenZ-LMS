@@ -1,5 +1,5 @@
-// Seed data ported from the v3 design prototype. Replace with API data once a server exists.
-import type { Block, BlockType, Confusion, Course, CourseId, Doubt, LessonRevision, PayMethod, Payment, QuizQ } from './types';
+// Seed data ported from the v6 design prototype. Replace with API data once a server exists.
+import type { Block, BlockType, Confusion, Course, CourseId, Doubt, LessonRevision, Notif, PayMethod, Payment, QuizQ, Tone } from './types';
 
 export const boardExam = { name: 'পর্ব সমাপনী পরীক্ষা', even: '2026-12-14', odd: '2027-04-18' };
 export const bnMonths = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
@@ -131,10 +131,10 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
 };
 export const fxKeys: [string, string][] = [['×', ' \\times '], ['÷', ' \\div '], ['x²', '^{2}'], ['√', '\\sqrt{}'], ['a/b', '\\frac{a}{b}'], ['Σ', '\\sum '], ['π', '\\pi '], ['≤', ' \\le '], ['≥', ' \\ge '], ['→', ' \\to ']];
 export const blockTypes: Record<BlockType, string[]> = {
-  h: ['শিরোনাম', "'Anek Bangla','IBM Plex Sans',sans-serif", '600', '1.45', 'শিরোনাম লেখো'],
-  p: ['অনুচ্ছেদ', "'Tiro Bangla','IBM Plex Serif',Georgia,serif", '400', '1.85', 'লেখা শুরু করো'],
-  list: ['তালিকা · প্রতি লাইনে একটা', "'Tiro Bangla','IBM Plex Serif',Georgia,serif", '400', '1.85', 'প্রতি লাইনে একটা পয়েন্ট'],
-  code: ['কোড', "'IBM Plex Mono',monospace", '400', '1.7', 'কোড বা ফর্মুলা টেক্সট'],
+  h: ['শিরোনাম', "'Anek Bangla',sans-serif", '600', '1.45', 'শিরোনাম লেখো'],
+  p: ['অনুচ্ছেদ', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'লেখা শুরু করো'],
+  list: ['তালিকা · প্রতি লাইনে একটা', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'প্রতি লাইনে একটা পয়েন্ট'],
+  code: ['কোড', "'JetBrains Mono',monospace", '400', '1.7', 'কোড বা ফর্মুলা টেক্সট'],
   img: ['ছবি'], fx: ['সূত্র · LaTeX']
 };
 
@@ -243,3 +243,27 @@ export const defaultStudent = { name: 'মাহমুদুল হাসান'
 export const supportPhone = '০১৭৭৭ ০৯০৯০৯';
 export const testMeta = { name: 'Model Test 04', seconds: 1500 };
 export const featuredLesson = { courseId: 'cst' as CourseId, ch: 2, li: 4 };
+
+/** Tile colours for a tone: [background, foreground]. */
+export const toneColors: Record<Tone, [string, string]> = {
+  brand: ['var(--brand-soft)', 'var(--brand)'],
+  ok: ['var(--ok-soft)', 'var(--ok)'],
+  warn: ['var(--warn-soft)', 'var(--warn)'],
+  sun: ['var(--sun)', 'var(--on-sun)'],
+  pink: ['var(--accent-2-soft)', 'var(--accent-2)'],
+};
+
+export const notifSeed: Record<'student' | 'teacher', Notif[]> = {
+  student: [
+    { id: 's1', icon: 'forum', tone: 'brand', title: 'তোমার প্রশ্নের উত্তর এসেছে', body: 'শাহরিয়ার স্যার: "খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।"', time: '১২ মিনিট আগে', href: '/learn/cst/2/4?tab=ask' },
+    { id: 's2', icon: 'check_circle', tone: 'ok', title: 'পেমেন্ট অ্যাপ্রুভ হয়েছে', body: 'Web Development কোর্সে তোমার ভর্তি নিশ্চিত।', time: '১ ঘণ্টা আগে', href: '/' },
+    { id: 's3', icon: 'timer', tone: 'warn', title: 'Model Test 04 — শুক্রবার', body: '১০ প্রশ্ন · ২৫ মিনিট। প্রস্তুতি নিতে Chapter 03 রিভিশন দাও।', time: 'আজ সকাল', href: '/' },
+    { id: 's4', icon: 'local_fire_department', tone: 'sun', title: 'নতুন ব্যাজ: ৭ দিনের স্ট্রিক', body: 'টানা ৭ দিন পড়েছ। এভাবেই চালিয়ে যাও!', time: 'গতকাল', href: '/profile' },
+    { id: 's5', icon: 'videocam', tone: 'pink', title: 'Live Class সোমবার সন্ধ্যা ৭টা', body: 'Queue ও Circular Queue — প্রশ্ন নিয়ে এসো।', time: '২ দিন আগে', href: '/' }
+  ],
+  teacher: [
+    { id: 't1', icon: 'forum', tone: 'brand', title: '৪টি নতুন প্রশ্ন', body: 'CST-04-B01 ব্যাচ থেকে — Stack ও Queue লেসনে।', time: '৮ মিনিট আগে', href: '/teacher/doubts' },
+    { id: 't2', icon: 'task_alt', tone: 'ok', title: 'কনটেন্ট অ্যাপ্রুভ হয়েছে', body: '"Linked List — ইনসার্শন" লেসন এখন লাইভ।', time: '৩ ঘণ্টা আগে', href: '/teacher/content' },
+    { id: 't3', icon: 'payments', tone: 'sun', title: 'সেপ্টেম্বরের পেআউট পাঠানো হয়েছে', body: '৳৩৮,৪০০ — bKash 01711-••••32', time: '৬ দিন আগে', href: '/teacher/profile' }
+  ]
+};

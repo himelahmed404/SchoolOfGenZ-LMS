@@ -1,6 +1,6 @@
 import {
   batches, boardExam, courses, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
-  newCourse, practiceQs, queueSeed, stackBlocks, teacher,
+  newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, teacher,
 } from './data';
 import { digits, pad2, taka, type Numerals } from './format';
 import type { AppState } from './state';
@@ -216,5 +216,12 @@ export function rowFlags(r: Payment, numerals: Numerals): string[] {
   if (r.sender !== r.phone) f.push('অন্য নম্বর থেকে পেমেন্ট এসেছে');
   return f;
 }
+
+/* ---------- notifications ---------- */
+
+export type AppRole = 'student' | 'teacher';
+
+export const notifsFor = (s: AppState, role: AppRole) => notifSeed[role].filter((x) => !s.notifs.gone[x.id]);
+export const unreadCount = (s: AppState, role: AppRole) => notifsFor(s, role).filter((x) => !s.notifs.read[x.id]).length;
 
 export { teacher };

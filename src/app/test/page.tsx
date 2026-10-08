@@ -35,14 +35,14 @@ export default function TestPage() {
     if (ready && s.test.on && left === 0) submit();
   }, [left, ready, s.test.on]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ready || !s.test.on) return <div style={{ minHeight: '100dvh', background: 'var(--paper)' }} />;
+  if (!ready || !s.test.on) return <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', background: 'var(--paper)' }} />;
 
   const qi = s.test.q, q = testQs[qi];
   const setQ = (i: number) => set((x) => ({ ...x, test: { ...x.test, q: i } }));
   const pick = (oi: number) => set((x) => ({ ...x, test: { ...x.test, ans: { ...x.test.ans, [qi]: oi } } }));
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
+    <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '0 var(--test-pad)', height: 56, borderBottom: '1px solid var(--line)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 5 }}>
         <button className="btn btn-sm" onClick={() => setExitAsk(true)}>Exit</button>
         <div className="t15 w600">{testMeta.name}</div>

@@ -113,3 +113,17 @@ export function decideContent(s: AppState, k: string, status: 'published' | 'ret
 }
 
 export const courseTitle = (cid: CourseId) => courses[cid].title;
+
+/* ---------- notifications ---------- */
+
+export function markRead(s: AppState, ids: string[]): AppState {
+  const read = { ...s.notifs.read };
+  ids.forEach((id) => { read[id] = true; });
+  return { ...s, notifs: { ...s.notifs, read } };
+}
+
+export function clearNotifs(s: AppState, ids: string[]): AppState {
+  const gone = { ...s.notifs.gone };
+  ids.forEach((id) => { gone[id] = true; });
+  return { ...s, notifs: { ...s.notifs, gone } };
+}

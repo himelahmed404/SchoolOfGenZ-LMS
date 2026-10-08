@@ -21,6 +21,9 @@ interface Store {
   theme: 'light' | 'dark';
   toast: Toast;
   showToast: (t: Toast) => void;
+  /** Notifications drawer (view state, not persisted). */
+  notifOpen: boolean;
+  setNotifOpen: (open: boolean) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -47,6 +50,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [sys, setSys] = useState<'light' | 'dark'>('light');
   const [toast, setToast] = useState<Toast>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -99,9 +103,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const numerals = s.prefs.numerals;
   const value = useMemo<Store>(() => ({
-    s, ready, set, numerals, theme, toast, showToast,
+    s, ready, set, numerals, theme, toast, showToast, notifOpen, setNotifOpen,
     n: (v) => digits(v, numerals),
-  }), [s, ready, set, numerals, theme, toast, showToast]);
+  }), [s, ready, set, numerals, theme, toast, showToast, notifOpen]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -19,7 +19,7 @@ export default function SetupPage() {
   const finish = () => { setPrefs({ setupDone: true }); router.push('/'); };
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--paper)' }}>
+    <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', background: 'var(--paper)' }}>
       <div style={{ maxWidth: 540, margin: '0 auto', padding: 'var(--test-pad) var(--test-pad) 56px' }}>
         <div className="row" style={{ gap: 10, marginBottom: 28 }}>
           <div className="logo" />

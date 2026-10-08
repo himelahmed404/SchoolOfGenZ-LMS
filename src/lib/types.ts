@@ -114,3 +114,17 @@ export interface Confusion {
   q: string;
   a: string;
 }
+
+export type Tone = 'brand' | 'ok' | 'warn' | 'sun' | 'pink';
+
+export interface Notif {
+  id: string;
+  /** Material Symbols icon name. */
+  icon: string;
+  tone: Tone;
+  title: string;
+  body: string;
+  time: string;
+  /** Route the notification opens. */
+  href: string;
+}

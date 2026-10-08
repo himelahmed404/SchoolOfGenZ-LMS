@@ -119,7 +119,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--paper)', minWidth: 960 }}>
+    <div style={{ position: 'fixed', top: 'var(--devbar-h, 0px)', left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', background: 'var(--paper)', minWidth: 960 }}>
       <header style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, height: 56, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }}>
         <div className="logo" style={{ width: 22, height: 22 }} />
         <nav style={{ display: 'flex', alignItems: 'stretch', gap: 20, height: 56 }} aria-label="Admin">
