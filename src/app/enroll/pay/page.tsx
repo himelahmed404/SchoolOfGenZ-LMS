@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { submitPayment, trxTaken } from '@/lib/actions';
-import { merchants, newCourse } from '@/lib/data';
+import { newCourse } from '@/lib/data';
 import { taka } from '@/lib/format';
+import { merchantNumbers } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { PayMethod } from '@/lib/types';
 
@@ -17,6 +18,7 @@ export default function PayPage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const p = s.payment;
+  const merchants = merchantNumbers(s);
   const price = taka(newCourse.price, numerals);
   const canSubmit = !!p.method && p.trxId.trim().length >= 6;
   const setPay = (patch: Partial<typeof p>) => set((x) => ({ ...x, payment: { ...x.payment, ...patch } }));

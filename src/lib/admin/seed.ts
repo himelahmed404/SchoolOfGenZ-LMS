@@ -96,7 +96,8 @@ export function adminSeed(): AdminData {
       { id: 'l6', at: '৩ দিন আগে', actor: 'রিফাত আহমেদ', area: 'certificates', action: 'Revoked certificate', target: 'SGZ-CST-2026-0119', reason: 'পরীক্ষায় অসদুপায়' },
       { id: 'l7', at: '৪ দিন আগে', actor: 'রিফাত আহমেদ', area: 'courses', action: 'Changed price', target: 'WEB · ৳২,৮০০ → ৳২,৫০০', reason: 'প্রতিযোগীদের দামের সাথে মেলানো' },
     ],
-    settings: { bkash: '01711 000 222', nagad: '01811 000 333', watermark: 'on', devices: 2, refundDays: 7, refundWatch: 20, autoClose: 'on', sms: 'on' },
+    // Merchant numbers are the ones students see on the payment page.
+    settings: { bkash: '01777 090909', nagad: '01888 070707', watermark: 'on', devices: 2, refundDays: 7, refundWatch: 20, autoClose: 'on', sms: 'on' },
     viewAs: 's1',
     navMini: false,
   };

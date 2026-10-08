@@ -1,10 +1,10 @@
 import {
   batches, boardExam, courses, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
-  newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
+  merchants, newCourse, notifSeed, practiceQs, queueSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
 import { digits, pad2, taka, type Numerals } from './format';
 import type { AppState } from './state';
-import type { Block, CourseId, Doubt, LessonRevision, Payment, PublishedLesson } from './types';
+import type { Block, CourseId, Doubt, LessonRevision, PayMethod, Payment, PublishedLesson } from './types';
 
 export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
@@ -185,6 +185,17 @@ export function statusOf(it: LessonRevision): [string, string] {
   if (it.status === 'draft') return [it.update ? 'Draft · Update' : 'Draft', 'var(--ink-2)'];
   return ['Published', 'var(--ink-3)'];
 }
+
+/* ---------- platform settings (admin console) ---------- */
+
+/** Merchant numbers students send money to (Settings → Payment numbers). */
+export const merchantNumbers = (s: AppState): Record<PayMethod, string> => ({
+  bKash: s.admin?.settings.bkash || merchants.bKash,
+  Nagad: s.admin?.settings.nagad || merchants.Nagad,
+});
+
+/** Settings → Content protection → Video watermark. */
+export const watermarkOn = (s: AppState) => s.admin?.settings.watermark !== 'off';
 
 /* ---------- payments ---------- */
 

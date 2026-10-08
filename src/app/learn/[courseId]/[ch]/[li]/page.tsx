@@ -11,7 +11,7 @@ import { Icon, initial } from '@/components/ui';
 import { askDoubt, completeLesson, savePosition, setMyNote, toggleBookmark } from '@/lib/actions';
 import { confusions, courses, defaultStudent } from '@/lib/data';
 import { mmss, pad2, secs } from '@/lib/format';
-import { doubtsFor, isLocked, lessonKey, step, studentLesson } from '@/lib/selectors';
+import { doubtsFor, isLocked, lessonKey, step, studentLesson, watermarkOn } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -24,8 +24,6 @@ const WM_SPOTS: React.CSSProperties[] = [
   { top: 12, right: 14 }, { bottom: 44, right: 14 }, { bottom: 44, left: 14 }, { top: 12, left: 14 },
 ];
 const LETTERS = 'কখগঘ';
-/** Video watermark (content protection); becomes the admin Settings toggle once that exists. */
-const WATERMARK = true;
 
 export default function LessonPage() {
   const p = useParams<{ courseId: string; ch: string; li: string }>();
@@ -144,7 +142,7 @@ export default function LessonPage() {
       }>
       <div className="video-wrap" data-print="hide">
         <div style={{ position: 'relative', aspectRatio: '16/9', background: '#0C1020', borderRadius: 'var(--video-r)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {WATERMARK ? <span className="mono" style={{ position: 'absolute', ...WM_SPOTS[wm], fontSize: 12, whiteSpace: 'nowrap', color: '#FFFFFF', opacity: 0.35 }}>{defaultStudent.masked}</span> : null}
+          {watermarkOn(s) ? <span className="mono" style={{ position: 'absolute', ...WM_SPOTS[wm], fontSize: 12, whiteSpace: 'nowrap', color: '#FFFFFF', opacity: 0.35 }}>{defaultStudent.masked}</span> : null}
           <button onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} className="tile"
             style={{ width: 68, height: 68, border: 'none', borderRadius: 999, background: '#FFFFFF', color: 'var(--hero)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
             <Icon name={playing ? 'pause' : 'play_arrow'} size={38} fill />

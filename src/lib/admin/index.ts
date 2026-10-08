@@ -5,6 +5,7 @@ import { announcements } from './sections/announcements';
 import { batches, coupons, courses } from './sections/catalog';
 import { certificates, students, teachers } from './sections/people';
 import { refunds } from './sections/refunds';
+import { activity, reports, roles, settings } from './sections/system';
 
 BUILDERS.overview = overview;
 BUILDERS.students = students;
@@ -15,6 +16,10 @@ BUILDERS.batches = batches;
 BUILDERS.coupons = coupons;
 BUILDERS.refunds = refunds;
 BUILDERS.announcements = announcements;
+BUILDERS.reports = reports;
+BUILDERS.activity = activity;
+BUILDERS.settings = settings;
+BUILDERS.roles = roles;
 
 export * from './console';
 export { AREAS, adminSeed } from './seed';
