@@ -87,6 +87,16 @@ describe('rules the database itself keeps', () => {
     await expect(o.db.insert(users).values({ kind: 'student', name: 'Twin', phone: '01700000001' })).rejects.toThrow();
   });
 
+  it('seeds the demo people with one shared password, hashed', async () => {
+    const all = await o.db.select().from(users);
+    const demoStudent = all.find((u) => u.phone === '01712445589')!;
+    expect(demoStudent).toMatchObject({ kind: 'student', status: 'active', name: 'Mahmudul Hasan' });
+    expect(demoStudent.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(all.filter((u) => u.kind === 'staff')).toHaveLength(4);
+    // An invited teacher cannot sign in until they open their link.
+    expect(all.find((u) => u.email === 'maruf.h@gmail.com')).toMatchObject({ status: 'invited', passwordHash: null });
+  });
+
   it('lets the activity log be added to and never changed', async () => {
     const [row] = await o.db.insert(activityLog).values({ actorName: 'Nabila Chowdhury', area: 'payments', action: 'Approved payment', target: 'BKX0000001' }).returning();
     await expect(o.db.update(activityLog).set({ action: 'Rejected payment' }).where(eq(activityLog.id, row!.id))).rejects.toThrow();

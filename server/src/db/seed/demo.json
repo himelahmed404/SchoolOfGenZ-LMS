@@ -1,4 +1,106 @@
 {
+ "people": {
+  "students": [
+   {
+    "name": "Mahmudul Hasan",
+    "phone": "01712445589",
+    "email": "mahmud.cst@gmail.com",
+    "institute": "Dhaka Polytechnic Institute",
+    "semester": 4,
+    "enrollments": [
+     {
+      "program": "cst-4th-semester",
+      "batch": "CST-04-B01",
+      "price": 3000
+     },
+     {
+      "program": "spoken-english-foundation",
+      "batch": null,
+      "price": 2000
+     }
+    ]
+   }
+  ],
+  "teachers": [
+   {
+    "name": "Shahriar Hossain",
+    "email": "shahriar@schoolofgenz.com",
+    "status": "active",
+    "courses": [
+     "dsa",
+     "math4",
+     "java"
+    ],
+    "bio": "১০ বছর ধরে ডিপ্লোমা শিক্ষার্থীদের প্রোগ্রামিং পড়াচ্ছি। কঠিন জিনিস সহজ উদাহরণে বোঝাতে ভালোবাসি।",
+    "subjects": [
+     "Data Structure",
+     "C Programming",
+     "Algorithm"
+    ]
+   },
+   {
+    "name": "Tanvir Ahmed",
+    "email": "tanvir@schoolofgenz.com",
+    "status": "active",
+    "courses": [
+     "dbms",
+     "wdd",
+     "net",
+     "se",
+     "web",
+     "uix"
+    ]
+   },
+   {
+    "name": "Farzana Yasmin",
+    "email": "farzana@schoolofgenz.com",
+    "status": "active",
+    "courses": [
+     "soc",
+     "eng",
+     "car"
+    ]
+   },
+   {
+    "name": "Imtiaz Rahman",
+    "email": "imtiaz@schoolofgenz.com",
+    "status": "active",
+    "courses": [
+     "de2",
+     "mp",
+     "os"
+    ]
+   },
+   {
+    "name": "Maruf Hasan",
+    "email": "maruf.h@gmail.com",
+    "status": "invited",
+    "courses": []
+   }
+  ],
+  "staff": [
+   {
+    "name": "Rifat Ahmed",
+    "email": "rifat@schoolofgenz.com",
+    "role": "super"
+   },
+   {
+    "name": "Nabila Chowdhury",
+    "email": "nabila@schoolofgenz.com",
+    "role": "finance"
+   },
+   {
+    "name": "Sakib Rahman",
+    "email": "sakib@schoolofgenz.com",
+    "role": "content"
+   },
+   {
+    "name": "Tasnim Jahan",
+    "email": "tasnim@schoolofgenz.com",
+    "role": "support"
+   }
+  ]
+ },
  "settings": {
   "bkash": "01777 090909",
   "nagad": "01888 070707",
