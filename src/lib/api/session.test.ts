@@ -69,6 +69,13 @@ describe('a link cannot send a person somewhere else', () => {
     }
     expect(afterSignIn(person('student'), '//evil.example/x')).toBe('/');
   });
+  it('reads the address as a browser does, so a tab or a line break cannot hide another site', () => {
+    for (const bad of ['/\t/evil.example', '/\n/evil.example', '\t//evil.example', '/\r\n/evil.example/courses', '/\u0000/evil.example']) {
+      expect(safeNext(bad)).toBeNull();
+    }
+    expect(safeNext('/courses/../signin')).toBeNull();
+    expect(safeNext('/learn/dsa/2/4?tab=notes#top')).toBe('/learn/dsa/2/4?tab=notes#top');
+  });
   it('does not loop back to a sign-in screen', () => {
     expect(safeNext('/signin')).toBeNull();
     expect(safeNext('/forgot?x=1')).toBeNull();

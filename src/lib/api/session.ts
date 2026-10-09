@@ -26,13 +26,20 @@ export function kindFor(url: string): Kind {
   return under(path, '/teacher') ? 'teacher' : under(path, '/admin') ? 'staff' : 'student';
 }
 
+/** A stand-in for this site, so an address can be resolved without knowing where the site is. */
+const HERE = 'http://local.invalid';
+
 /**
  * A place on this site to go back to after signing in, or null. Anything else is dropped (another site,
  * a `//host` address, a sign-in screen), so a link someone sends cannot take a person elsewhere.
+ * The address is read the way a browser reads it, which drops tabs and line breaks: `/\t/host` is `//host`.
  */
 export function safeNext(next: string | null | undefined): string | null {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\') || isOpen(pathOnly(next))) return null;
-  return next;
+  if (!next || /[\u0000-\u001f\\]/.test(next) || !next.startsWith('/') || next.startsWith('//')) return null;
+  let u: URL;
+  try { u = new URL(next, HERE); } catch { return null; }
+  if (u.origin !== HERE || isOpen(u.pathname)) return null;
+  return u.pathname + u.search + u.hash;
 }
 
 /** The sign-in screen, remembering where the person was going. */
