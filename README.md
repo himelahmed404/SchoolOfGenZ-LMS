@@ -32,14 +32,18 @@ top bar, setup screen, admin console) switches to dark, and the choice is saved 
 
 ## Language
 
-Two kinds of text, so no line mixes scripts:
+Three kinds of text, so no line mixes scripts:
 
+- **Labels are English:** whatever names a thing or an action. Headings, navigation, tabs, buttons,
+  badges, field labels, status words and accessible names.
 - **Facts are English with 123 digits:** names of instructors and staff, course code, semester, batch,
   dates and times, durations, counts, percentages, prices and ranks. They come from the formatters
   in the first half of `src/lib/format.ts` and the course-fact selectors in `src/lib/selectors.ts`.
-- **Titles and sentences are Bangla:** course, chapter and lesson titles, lesson content, greetings,
-  guidance, empty states and dialogs. Digits inside a Bangla sentence follow the student's numeral
-  setting (`digits`, `ordinal`).
+  A line made of figures is a fact ("15 points to 20th"), and so is a count in a badge.
+- **Sentences are Bangla:** whatever talks to the person. Course, chapter and lesson titles, lesson
+  content, greetings, the text under a heading, placeholders, empty states and dialog text. Digits
+  inside a Bangla sentence follow the student's numeral setting (`n()`, `digits`, `ordinal`); they
+  are never typed in as Bangla digits.
 - **The admin console is English only,** including digits, dates and seed data (`lang="en"` on its
   root). What people typed still appears as typed: a lesson under review, a student's name.
 - **Reasons cross that line.** `rejectReasons` and `contentReasons` in `src/lib/data.ts` carry a code
@@ -54,7 +58,7 @@ Two kinds of text, so no line mixes scripts:
 | | `/setup` | First-run setup (name, semester, exam date, numerals) |
 | | `/courses`, `/course/[cst\|eng]` | My courses; course page |
 | | `/explore` | Courses open for enrollment |
-| | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / My note / Stuck / Quiz / Ask, bookmarks (0-based indexes) |
+| | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / Stuck? / Quiz / Q&A / My Note, bookmarks (0-based indexes) |
 | | `/test/[course]/[chapter]`, `…/result` | Optional chapter test (timed) and its review; opens once the chapter's lessons are done |
 | | `/leaderboard` | Batch leaderboard (±5 window) |
 | | `/certificates`, `/certificate` | Certificates earned and still locked; the certificate itself |
@@ -78,8 +82,9 @@ Notifications are a drawer in the student/teacher shell, not a route.
 A chapter can end with one optional test. The teacher writes it (questions and a time limit) in the
 content editor, an admin reviews it like a lesson, and only then do students see it. A chapter with
 no published test shows no test option. For students it unlocks when the chapter's lessons are done,
-never blocks the next chapter, and can be retaken; the best score counts 5 leaderboard points per
-correct answer. Keys: revision `cid|test:ci`, attempt and result `cid:ci`.
+never blocks the next chapter, and can be retaken. Submit asks first and says how many questions are
+unanswered. The best score counts 5 leaderboard points per correct answer. Keys: revision
+`cid|test:ci`, attempt and result `cid:ci`.
 
 ## Layout of the code
 

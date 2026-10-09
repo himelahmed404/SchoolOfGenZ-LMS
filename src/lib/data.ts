@@ -186,11 +186,11 @@ export const itemSeeds: Record<string, Partial<LessonRevision>> = {
 };
 export const fxKeys: [string, string][] = [['×', ' \\times '], ['÷', ' \\div '], ['x²', '^{2}'], ['√', '\\sqrt{}'], ['a/b', '\\frac{a}{b}'], ['Σ', '\\sum '], ['π', '\\pi '], ['≤', ' \\le '], ['≥', ' \\ge '], ['→', ' \\to ']];
 export const blockTypes: Record<BlockType, string[]> = {
-  h: ['শিরোনাম', "'Anek Bangla',sans-serif", '600', '1.45', 'শিরোনাম লেখো'],
-  p: ['অনুচ্ছেদ', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'লেখা শুরু করো'],
-  list: ['তালিকা · প্রতি লাইনে একটা', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'প্রতি লাইনে একটা পয়েন্ট'],
-  code: ['কোড', "'JetBrains Mono',monospace", '400', '1.7', 'কোড বা ফর্মুলা টেক্সট'],
-  img: ['ছবি'], fx: ['সূত্র · LaTeX']
+  h: ['Heading', "'Anek Bangla',sans-serif", '600', '1.45', 'শিরোনাম লেখো'],
+  p: ['Paragraph', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'লেখা শুরু করো'],
+  list: ['List · one per line', "'Tiro Bangla',Georgia,serif", '400', '1.85', 'প্রতি লাইনে একটা পয়েন্ট'],
+  code: ['Code', "'JetBrains Mono',monospace", '400', '1.7', 'কোড বা ফর্মুলা টেক্সট'],
+  img: ['Image'], fx: ['Formula · LaTeX']
 };
 
 /** Why a lesson or test is sent back. The admin picks the English label; the teacher reads the Bangla one. */
@@ -304,7 +304,7 @@ export const courseCover: Record<CourseId, { bg: string; bar: string }> = {
 
 /** Tile colours for a tone: [background, foreground]. */
 export const toneColors: Record<Tone, [string, string]> = {
-  brand: ['var(--brand-soft)', 'var(--brand)'],
+  brand: ['var(--brand-soft)', 'var(--on-brand-soft)'],
   ok: ['var(--ok-soft)', 'var(--ok)'],
   warn: ['var(--warn-soft)', 'var(--warn)'],
   sun: ['var(--sun)', 'var(--on-sun)'],

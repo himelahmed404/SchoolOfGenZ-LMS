@@ -64,6 +64,15 @@ describe('stat tiles', () => {
   });
 });
 
+describe('status badges', () => {
+  const c = consoleAt('students');
+  it('leaves the normal state without a fill, so the exceptions stand out', () => {
+    expect(c.B('active')).toMatchObject({ t: 'Active', bg: 'transparent', fg: 'var(--ink-2)' });
+    expect(c.B('pending').bg).toBe('var(--warn-soft)');
+    expect(c.B('suspended').bg).toBe('var(--margin)');
+  });
+});
+
 describe('lists', () => {
   const rows = Array.from({ length: 60 }, (_, i) => ({ id: 'r' + i, cells: [] }));
   const list = (page: number) => consoleAt('students', { page }).mkList([['all', 'All', 60]], 'Search', ['Name'], '1fr', rows, 'Nothing found.');

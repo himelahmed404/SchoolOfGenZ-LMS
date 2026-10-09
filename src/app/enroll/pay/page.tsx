@@ -14,7 +14,7 @@ import type { PayMethod } from '@/lib/types';
 const METHOD_TILE: Record<PayMethod, [string, string]> = { bKash: ['#E2136E', 'b'], Nagad: ['#F26522', 'N'] };
 
 export default function PayPage() {
-  const { s, set, n } = useStore();
+  const { s, set } = useStore();
   const router = useRouter();
   const [error, setError] = useState('');
   const p = s.payment;
@@ -41,15 +41,15 @@ export default function PayPage() {
   };
 
   const label: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 10 };
-  const input: React.CSSProperties = { width: '100%', height: 52, padding: '0 14px', border: '1px solid var(--line-strong)', borderRadius: 14, background: 'var(--paper)', color: 'var(--ink)', fontSize: 15 };
+  const input: React.CSSProperties = { width: '100%', height: 52, padding: '0 14px', border: '1px solid var(--field-line)', borderRadius: 14, background: 'var(--paper)', color: 'var(--ink)', fontSize: 15 };
 
   return (
     <Shell role="student" title="Payment" back="/enroll">
       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>{newCourse.title}</div>
-      <h1 className="d1" style={{ margin: '2px 0 6px' }}>{price} পাঠাও</h1>
+      <h1 className="d1" style={{ margin: '2px 0 6px' }}>Send {price}</h1>
       <div className="muted-p" style={{ maxWidth: '52ch', marginBottom: 24 }}>কোনটা দিয়ে পাঠাবে বেছে নাও। টাকা পাঠানোর পর TrxID-টা নিচে লিখে জমা দাও।</div>
 
-      <div role="radiogroup" aria-label="পেমেন্ট মাধ্যম" style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 12, marginBottom: 28 }}>
+      <div role="radiogroup" aria-label="Payment method" style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 12, marginBottom: 28 }}>
         {(['bKash', 'Nagad'] as PayMethod[]).map((m) => {
           const on = p.method === m;
           return (
@@ -68,17 +68,17 @@ export default function PayPage() {
 
       {p.method ? (
         <div>
-          <div style={label}>কীভাবে পাঠাবে</div>
+          <div style={label}>How to Send</div>
           <ol className="card" style={{ margin: '0 0 28px', padding: 'var(--card-pad)', listStyle: 'none' }}>
             {steps.map((t, i) => (
               <li key={i} style={{ display: 'flex', gap: 12, padding: '6px 0' }}>
-                <span className="tile" style={{ width: 28, height: 28, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 14, fontWeight: 700 }}>{n(i + 1)}</span>
+                <span className="tile" style={{ width: 28, height: 28, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)', fontSize: 14, fontWeight: 700 }}>{i + 1}</span>
                 <span style={{ fontSize: 15, lineHeight: 1.8 }}>{t}</span>
               </li>
             ))}
           </ol>
 
-          <div style={label}>যা পাঠিয়েছ তার তথ্য</div>
+          <div style={label}>What You Sent</div>
           <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <label style={{ display: 'block' }}>
               <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>TrxID</span>
@@ -86,7 +86,7 @@ export default function PayPage() {
                 onChange={(e) => { setError(''); setPay({ trxId: e.target.value.toUpperCase() }); }} placeholder="BKX7M2QP41" />
             </label>
             <label style={{ display: 'block' }}>
-              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>যে নম্বর থেকে পাঠিয়েছ</span>
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)', marginBottom: 6 }}>Sent from</span>
               <input className="mono" style={input} inputMode="tel" value={p.sender} onChange={(e) => setPay({ sender: e.target.value })} placeholder="01712 445589" />
             </label>
             {error ? <div className="alert" role="alert">{error}</div> : null}

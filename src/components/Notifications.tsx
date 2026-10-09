@@ -32,9 +32,9 @@ export function Notifications({ role }: { role: AppRole }) {
   return (
     <div className="ov drawer-scrim" data-print="hide">
       <div onClick={close} style={{ flex: 1 }} />
-      <div className="drawer" role="dialog" aria-modal="true" aria-label="নোটিফিকেশন">
+      <div className="drawer" role="dialog" aria-modal="true" aria-label="Notifications">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 12px 12px 20px', borderBottom: '1px solid var(--line)' }}>
-          <div className="disp" style={{ fontSize: 20, fontWeight: 800 }}>নোটিফিকেশন</div>
+          <div className="disp" style={{ fontSize: 20, fontWeight: 800 }}>Notifications</div>
           {unread.length ? (
             <span style={{ padding: '0 8px', borderRadius: 999, background: 'var(--margin)', color: '#FFFFFF', fontSize: 12, fontWeight: 700 }}>{unread.length} new</span>
           ) : null}
@@ -44,7 +44,7 @@ export function Notifications({ role }: { role: AppRole }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderBottom: '1px solid var(--line)' }}>
-          {([['সব', 'all'], ['না পড়া', 'unread']] as const).map(([label, id]) => {
+          {([['All', 'all'], ['Unread', 'unread']] as const).map(([label, id]) => {
             const on = tab === id;
             return (
               <button key={id} aria-pressed={on} onClick={() => setTab(id)}
@@ -55,7 +55,7 @@ export function Notifications({ role }: { role: AppRole }) {
           })}
           <button onClick={() => set((x) => markRead(x, all.map((a) => a.id)))}
             style={{ marginLeft: 'auto', height: 32, padding: '0 10px', border: 'none', borderRadius: 999, background: 'transparent', color: 'var(--brand)', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Icon name="done_all" size={18} />সব পড়া হয়েছে
+            <Icon name="done_all" size={18} />Mark all read
           </button>
         </div>
 
@@ -88,7 +88,7 @@ export function Notifications({ role }: { role: AppRole }) {
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line)' }}>
             <button onClick={() => set((x) => clearNotifs(x, all.map((a) => a.id)))}
               style={{ width: '100%', height: 42, border: '1px solid var(--line-strong)', borderRadius: 999, background: 'var(--surface)', color: 'var(--ink-2)', fontSize: 14, fontWeight: 600 }}>
-              সব মুছে ফেলো
+              Clear all
             </button>
           </div>
         ) : null}

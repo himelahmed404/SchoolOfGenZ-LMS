@@ -360,7 +360,7 @@ function CellView({ c, extra, label }: { c: Cell; extra?: boolean; label?: strin
           {c.hasSub ? <span className="adm-cell-s" style={{ fontFamily: c.subFont, color: c.subFg }}>{c.sub}</span> : null}
         </>
       ) : (
-        <span className="adm-badge" style={{ background: c.bg, color: c.fg }}>{c.t}</span>
+        <span className="adm-badge" data-plain={c.plain} style={{ background: c.bg, color: c.fg }}>{c.t}</span>
       )}
     </span>
   );
@@ -559,7 +559,7 @@ function DetailPane({ dt }: { dt: Dt }) {
             <div className="adm-pane-title">{dt.title}</div>
             {dt.sub ? <div className="adm-muted">{dt.sub}</div> : null}
           </div>
-          {dt.badge ? <span className="adm-badge" style={{ background: dt.badge.bg, color: dt.badge.fg }}>{dt.badge.t}</span> : null}
+          {dt.badge ? <span className="adm-badge" data-plain={dt.badge.plain} style={{ background: dt.badge.bg, color: dt.badge.fg }}>{dt.badge.t}</span> : null}
           {dt.closable ? <button className="adm-x-btn" onClick={() => setState({ sel: null, form: null, draft: null })} aria-label="Close">✕</button> : null}
         </div>
         {dt.blocks.map((b, bi) => (

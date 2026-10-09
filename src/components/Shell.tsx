@@ -65,7 +65,7 @@ interface ShellProps {
 }
 
 export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAction, aside, children }: ShellProps) {
-  const { s, ready, n, setNotifOpen } = useStore();
+  const { s, ready, setNotifOpen } = useStore();
   const path = usePathname();
   const router = useRouter();
   const [more, setMore] = useState(false);
@@ -113,7 +113,7 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
               {unread ? <span className="badge-dot" /> : null}
             </span>
             <span className="lbl" style={{ flex: 1 }}>Notifications</span>
-            {unread ? <span className="count-pill">{n(unread)}</span> : null}
+            {unread ? <span className="count-pill">{unread}</span> : null}
           </button>
           <ThemeToggle className="icon-btn side-theme" />
         </div>
@@ -197,7 +197,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 20px 12px' }}>
           <div className="t15 w600">{title}</div>
-          <button onClick={onClose} aria-label="বন্ধ করো" style={{ marginLeft: 'auto', width: 44, height: 44, border: 'none', background: 'none', fontSize: 16, color: 'var(--ink-2)' }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ marginLeft: 'auto', width: 44, height: 44, border: 'none', background: 'none', fontSize: 16, color: 'var(--ink-2)' }}>✕</button>
         </div>
         {children}
       </div>

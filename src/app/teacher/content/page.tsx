@@ -79,7 +79,7 @@ export default function ContentPage() {
                       <button key={k} onClick={() => router.push(editorHref(k))}
                         style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, padding: '8px 8px 8px 0', border: 'none', borderTop: '1px solid var(--line)', background: 'none', color: 'var(--ink)', textAlign: 'left' }}>
                         <span className="mono t12 ink3" style={{ flexShrink: 0 }}>{num}</span>
-                        <span className="grow t15 ellipsis">{it.title || 'নাম দেওয়া হয়নি'}</span>
+                        <span className="grow t15 ellipsis">{it.title || 'Untitled'}</span>
                         <span className="t12 w500" style={{ flexShrink: 0, color }}>{label}</span>
                       </button>
                     );

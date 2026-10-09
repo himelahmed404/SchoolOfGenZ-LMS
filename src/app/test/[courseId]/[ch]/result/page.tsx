@@ -46,7 +46,7 @@ export default function ChapterTestResultPage() {
 
   const review = res.qs.map((q, i) => {
     const mine = res.ans[i];
-    return { i, ok: mine === q.a, stem: q.stem, yours: mine === undefined ? 'দাওনি' : q.o[mine], right: q.o[q.a as number], why: q.why || '' };
+    return { i, ok: mine === q.a, stem: q.stem, yours: mine === undefined ? 'Not answered' : q.o[mine], right: q.o[q.a as number], why: q.why || '' };
   }).filter((r) => (wrongOnly ? !r.ok : true));
 
   return (
@@ -69,7 +69,7 @@ export default function ChapterTestResultPage() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn" aria-pressed={wrongOnly} onClick={() => setWrongOnly(!wrongOnly)}
               style={{ border: 'none', background: wrongOnly ? 'var(--sun)' : '#FFFFFF', color: '#131A33', fontSize: 15, fontWeight: 700 }}>
-              {wrongOnly ? 'সব প্রশ্ন দেখো' : 'ভুলগুলো দেখো'}
+              {wrongOnly ? 'Show All' : 'Show Mistakes'}
             </button>
             <Link href={testHref} className="btn" style={{ border: '1px solid rgba(255,255,255,0.55)', background: 'transparent', color: '#FFFFFF', fontSize: 15, fontWeight: 700 }}>
               <Icon name="restart_alt" size={20} />Retake
@@ -89,12 +89,12 @@ export default function ChapterTestResultPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, fontSize: 12, fontWeight: 700 }}>
                     <span style={{ color: 'var(--ink-3)' }}>Question {pad2(r.i + 1)}</span>
-                    <span style={{ color: accent }}>{r.ok ? 'ঠিক' : 'ভুল'}</span>
+                    <span style={{ color: accent }}>{r.ok ? 'Correct' : 'Wrong'}</span>
                   </div>
                   <div style={{ fontSize: 15, lineHeight: 1.6, fontWeight: 600, marginBottom: 10 }}>{r.stem}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 8px', fontSize: 13 }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 999, background: soft, color: accent }}>তোমার উত্তর — {r.yours}</span>
-                    <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)' }}>সঠিক উত্তর — {r.right}</span>
+                    <span style={{ padding: '3px 10px', borderRadius: 999, background: soft, color: accent }}>Your answer — {r.yours}</span>
+                    <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)' }}>Correct answer — {r.right}</span>
                   </div>
                   {r.why && !r.ok ? <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.7, color: 'var(--ink-2)' }}>{r.why}</div> : null}
                 </div>

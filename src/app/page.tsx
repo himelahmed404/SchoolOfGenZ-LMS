@@ -58,7 +58,7 @@ export default function Dashboard() {
               <span className="hl">{studentName(s)}</span>
             </h1>
           </div>
-          <Link href="/profile" title="স্ট্রিক ক্যালেন্ডার দেখো" className="tap hover-line"
+          <Link href="/profile" title="Open the streak calendar" className="tap hover-line"
             style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px 10px 10px', border: '1px solid var(--line)', borderRadius: 18, background: 'var(--surface)', boxShadow: 'var(--lift)' }}>
             <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--sun)', color: '#D23B45' }}><Icon name="local_fire_department" size={26} fill /></span>
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
@@ -81,10 +81,10 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'var(--hero-cols)', gap: 16 }}>
           <div className="hero" style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
-              <Icon name="history" size={18} />আবার শুরু করো · {lessonRef(ch, li)}
+              <Icon name="history" size={18} />Resume · {lessonRef(ch, li)}
             </div>
             <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-              <Link href={lessonHref} aria-label="চালিয়ে যাও" className="tile"
+              <Link href={lessonHref} aria-label="Continue" className="tile"
                 style={{ position: 'relative', width: 'var(--thumb-w)', aspectRatio: '16/10', borderRadius: 16, background: 'rgba(255,255,255,0.14)' }}>
                 <span className="tile" style={{ width: 44, height: 44, borderRadius: 999, background: '#FFFFFF', color: 'var(--hero)' }}><Icon name="play_arrow" size={28} fill /></span>
                 <span className="mono" style={{ position: 'absolute', left: 8, bottom: 8, padding: '1px 6px', borderRadius: 6, background: 'rgba(12,16,32,0.55)', color: '#FFFFFF', fontSize: 11, fontWeight: 600 }}>{mmss(t).replace(/^0/, '')}</span>
@@ -101,7 +101,7 @@ export default function Dashboard() {
               <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{coursePct}% complete</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <Link href={lessonHref} className="btn btn-white" style={{ padding: '0 22px', gap: 8 }}>চালিয়ে যাও<Icon name="arrow_forward" size={20} /></Link>
+              <Link href={lessonHref} className="btn btn-white" style={{ padding: '0 22px', gap: 8 }}>Continue<Icon name="arrow_forward" size={20} /></Link>
               <span style={{ marginLeft: 'auto', fontSize: 13, opacity: 0.85, whiteSpace: 'nowrap' }}>{minsLeft} min left</span>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function Dashboard() {
               <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{newCourse.title}</span>
               <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>Skill course · {batchLabel(newCourse.batchNo)} · {taka(newCourse.price)}</span>
             </span>
-            <span style={{ flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', gap: 4, padding: '0 14px', borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>
+            <span style={{ flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', gap: 4, padding: '0 14px', borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)', fontSize: 13, fontWeight: 700 }}>
               Enroll<Icon name="arrow_forward" size={18} />
             </span>
           </Link>
@@ -145,12 +145,12 @@ export default function Dashboard() {
           <h2 className="sec-h">This Week</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {openCh !== null && openTest ? (
-              <WeekRow badge={pad2(openCh + 1)} big tone={['var(--brand-soft)', 'var(--brand)']} title={'Chapter ' + pad2(openCh + 1) + ' test'} sub={testFacts(openTest) + ' · optional'}
+              <WeekRow badge={pad2(openCh + 1)} big tone={['var(--brand-soft)', 'var(--on-brand-soft)']} title={'Chapter ' + pad2(openCh + 1) + ' test'} sub={testFacts(openTest) + ' · optional'}
                 action={<Link href={`/test/${courseId}/${openCh}`} className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Take test</Link>} />
             ) : null}
             <WeekRow badge="Mon" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="7:00 PM"
-              action={<button className="btn btn-sm" disabled title="লিংক ক্লাসের আগে আসবে">Link</button>} />
-            <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="ব্যাচে তোমার অবস্থান" sub={ordinalEn(me.rank) + ' of ' + all.length} last
+              action={<button className="btn btn-sm" disabled title="The link appears before class">Link</button>} />
+            <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="Batch Rank" sub={ordinalEn(me.rank) + ' of ' + all.length} last
               action={<Link href="/leaderboard" className="btn btn-sm">View</Link>} />
           </div>
         </section>
@@ -164,7 +164,7 @@ function SecHead({ title, href }: { title: string; href: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <h2 className="sec-h">{title}</h2>
-      <Link href={href} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600 }}>See all<Icon name="chevron_right" size={18} /></Link>
+      <Link href={href} style={{ marginLeft: 'auto', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600 }}>See all<Icon name="chevron_right" size={18} /></Link>
     </div>
   );
 }

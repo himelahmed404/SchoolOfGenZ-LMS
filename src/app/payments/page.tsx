@@ -17,7 +17,7 @@ const STATUS: Record<PayStatus, [string, string, string]> = {
 
 /** The student's own payments and where each one stands. */
 export default function PaymentsPage() {
-  const { s } = useStore();
+  const { s, n } = useStore();
   const rows = myPayments(s);
   const paid = rows.filter((r) => r.status === 'approved').reduce((a, r) => a + r.amount, 0);
   const waiting = rows.filter((r) => r.status === 'pending').length;
@@ -60,7 +60,7 @@ export default function PaymentsPage() {
               : <div key={r.id} style={style}>{body}</div>;
           })}
         </div>
-        <div className="fine" style={{ maxWidth: '60ch' }}>টাকা পাঠিয়ে TrxID জমা দিলে সাধারণত ২–৪ ঘণ্টার মধ্যে অনুমোদন হয়। কোনো সমস্যা হলে Help পাতায় সাপোর্টের নম্বর আছে।</div>
+        <div className="fine" style={{ maxWidth: '60ch' }}>টাকা পাঠিয়ে TrxID জমা দিলে সাধারণত {n('2–4')} ঘণ্টার মধ্যে অনুমোদন হয়। কোনো সমস্যা হলে Help পাতায় সাপোর্টের নম্বর আছে।</div>
       </div>
     </Shell>
   );

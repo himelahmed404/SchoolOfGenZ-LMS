@@ -8,7 +8,7 @@ import { batchLabel } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function EnrollPage() {
-  const { s } = useStore();
+  const { s, n } = useStore();
   const submitted = s.payment.status !== 'none';
 
   return (
@@ -31,9 +31,9 @@ export default function EnrollPage() {
           {submitted ? 'Status' : 'Enroll'}
         </Link>
       </div>
-      <div className="fine" style={{ marginTop: 14, maxWidth: '52ch' }}>bKash বা Nagad-এ টাকা পাঠিয়ে TrxID জমা দিলেই হবে। অনুমোদন হলে SMS পাবে — সাধারণত ২-৪ ঘণ্টা লাগে।</div>
+      <div className="fine" style={{ marginTop: 14, maxWidth: '52ch' }}>bKash বা Nagad-এ টাকা পাঠিয়ে TrxID জমা দিলেই হবে। অনুমোদন হলে SMS পাবে — সাধারণত {n('2-4')} ঘণ্টা লাগে।</div>
 
-      <h2 className="sec-h" style={{ margin: '36px 0 12px' }}>কোর্স শেষে তুমি পারবে</h2>
+      <h2 className="sec-h" style={{ margin: '36px 0 12px' }}>What You Will Learn</h2>
       <div className="card" style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {newCourseOutcomes.map((o) => (
           <div key={o} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>

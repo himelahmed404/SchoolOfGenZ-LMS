@@ -15,10 +15,11 @@ const LETTERS = 'কখগঘ';
 /** Chapter test runner. The test is optional and opens once the chapter's lessons are done. */
 export default function ChapterTestPage() {
   const p = useParams<{ courseId: string; ch: string }>();
-  const { s, set, ready } = useStore();
+  const { s, set, ready, n } = useStore();
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [exitAsk, setExitAsk] = useState(false);
+  const [submitAsk, setSubmitAsk] = useState(false);
 
   const cid = p.courseId as CourseId, ci = Number(p.ch);
   const chapter = courses[cid]?.chapters[ci];
@@ -60,14 +61,15 @@ export default function ChapterTestPage() {
   const setQ = (i: number) => set((x) => ({ ...x, test: { ...x.test, q: i } }));
   const pick = (oi: number) => set((x) => ({ ...x, test: { ...x.test, ans: { ...x.test.ans, [qi]: oi } } }));
 
-  const answered = Object.keys(s.test.ans).length;
+  const answered = Object.keys(s.test.ans).length, unanswered = qs.length - answered;
+  const last = qi === qs.length - 1;
   const low = left < 120;
 
   return (
     <div style={{ minHeight: 'calc(100dvh - var(--devbar-h, 0px))', display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
       <div style={{ position: 'sticky', top: 'var(--devbar-h, 0px)', zIndex: 5, background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 64, padding: '0 var(--test-pad)' }}>
-          <button className="btn btn-round" style={{ width: 40, height: 40 }} onClick={() => setExitAsk(true)} aria-label="Exit"><Icon name="close" /></button>
+          <button className="btn btn-round" style={{ width: 44, height: 44, flexShrink: 0 }} onClick={() => setExitAsk(true)} aria-label="Exit"><Icon name="close" /></button>
           <div style={{ minWidth: 0 }}>
             <div className="disp ellipsis" style={{ fontSize: 17, lineHeight: 1.2, fontWeight: 700 }}>Chapter {pad2(ci + 1)} test</div>
             <div className="ellipsis" style={{ fontSize: 12, color: 'var(--ink-3)' }}>Question {qi + 1}/{qs.length} · {chapter.name}</div>
@@ -84,7 +86,7 @@ export default function ChapterTestPage() {
 
       <div style={{ flex: 1, maxWidth: 760, width: '100%', margin: '0 auto', padding: 'var(--test-pad)', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="card" style={{ borderRadius: 24, padding: 'var(--card-pad)' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px', marginBottom: 12, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 700 }}>Question {pad2(qi + 1)}</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px', marginBottom: 12, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)', fontSize: 13, fontWeight: 700 }}>Question {pad2(qi + 1)}</div>
           <div style={{ fontSize: 18, lineHeight: 1.6, fontWeight: 600, marginBottom: 18 }}>{q.stem}</div>
           <div role="radiogroup" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {q.o.map((label, oi) => {
@@ -101,11 +103,12 @@ export default function ChapterTestPage() {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn" style={{ padding: '0 16px' }} onClick={() => setQ(Math.max(0, qi - 1))}><Icon name="chevron_left" />Prev</button>
-          <button className="btn" style={{ padding: '0 16px' }} onClick={() => setQ(Math.min(qs.length - 1, qi + 1))}>Next<Icon name="chevron_right" /></button>
-          <button className="btn btn-primary" style={{ marginLeft: 'auto', padding: '0 24px' }} onClick={submit}>Submit</button>
+          {/* The main button is the next step: Next until the last question, then Submit. Submit always asks first. */}
+          <button className={'btn' + (last ? '' : ' btn-primary')} style={{ padding: '0 16px' }} disabled={last} onClick={() => setQ(qi + 1)}>Next<Icon name="chevron_right" /></button>
+          <button className={'btn' + (last ? ' btn-primary' : '')} style={{ marginLeft: 'auto', padding: '0 24px' }} onClick={() => setSubmitAsk(true)}>Submit</button>
         </div>
         <div className="card" style={{ padding: '16px 18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 12 }}>প্রশ্ন</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 12 }}>Questions</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {qs.map((_, i) => {
               const has = s.test.ans[i] !== undefined, here = i === qi;
@@ -125,8 +128,35 @@ export default function ChapterTestPage() {
             <div id="exit-title" className="disp" style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>টেস্ট থেকে বের হবে?</div>
             <div style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--ink-2)', marginBottom: 22 }}>সময় চলতেই থাকবে। ফিরে এলে যেখানে ছিলে সেখান থেকেই শুরু হবে।</div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-primary" style={{ flex: 1, height: 48 }} onClick={() => setExitAsk(false)} autoFocus>থাকো</button>
+              <button className="btn btn-primary" style={{ flex: 1, height: 48 }} onClick={() => setExitAsk(false)} autoFocus>Stay</button>
               <button className="btn btn-danger" style={{ flex: 1, height: 48, fontSize: 15 }} onClick={() => router.push(courseHref)}>Exit</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {submitAsk ? (
+        <div className="ov dialog-scrim" data-print="hide">
+          <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="submit-title">
+            <span className="tile" style={{ width: 48, height: 48, marginBottom: 14, borderRadius: 999, background: unanswered ? 'var(--warn-soft)' : 'var(--ok-soft)', color: unanswered ? 'var(--warn)' : 'var(--ok)' }}><Icon name={unanswered ? 'help' : 'task_alt'} size={26} /></span>
+            <div id="submit-title" className="disp" style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>টেস্ট জমা দেবে?</div>
+            <div style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--ink-2)' }}>
+              {unanswered ? n(unanswered) + 'টা প্রশ্নের উত্তর এখনো দাওনি। জমা দিলে সেগুলো ভুল ধরা হবে।' : 'সব প্রশ্নের উত্তর দিয়েছ। জমা দিলে এই চেষ্টা শেষ হবে।'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '10px 0 22px', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)' }}><Icon name="quiz" size={18} />{answered} of {qs.length} answered · {mmss(left)} left</div>
+            {/* The safe choice leads: go back while questions are open, submit once all are answered. */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              {unanswered ? (
+                <>
+                  <button className="btn btn-primary" style={{ flex: 1, height: 48 }} autoFocus onClick={() => { setSubmitAsk(false); setQ(Math.max(0, qs.findIndex((_, i) => s.test.ans[i] === undefined))); }}>Go Back</button>
+                  <button className="btn" style={{ flex: 1, height: 48, fontSize: 15 }} onClick={submit}>Submit Anyway</button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-primary" style={{ flex: 1, height: 48 }} autoFocus onClick={submit}>Submit</button>
+                  <button className="btn" style={{ flex: 1, height: 48, fontSize: 15 }} onClick={() => setSubmitAsk(false)}>Go Back</button>
+                </>
+              )}
             </div>
           </div>
         </div>

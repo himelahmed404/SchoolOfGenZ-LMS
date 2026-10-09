@@ -67,10 +67,11 @@ const NAV: [string | null, Section[]][] = [
   ['Catalog', ['courses', 'batches', 'coupons']], ['Communication', ['announcements']], ['Insights', ['reports', 'activity']], ['System', ['settings', 'roles']],
 ];
 export type Tone = 'brand' | 'blue' | 'warn' | 'danger' | 'muted';
-const TONE: Record<Tone, [string, string]> = { brand: ['var(--brand-soft)', 'var(--brand)'], blue: ['var(--accent-2-soft)', 'var(--accent-2)'], warn: ['var(--warn-soft)', 'var(--warn)'], danger: ['var(--margin)', 'var(--on-brand)'], muted: ['var(--surface-sunk)', 'var(--ink-2)'] };
+const TONE: Record<Tone, [string, string]> = { brand: ['var(--brand-soft)', 'var(--on-brand-soft)'], blue: ['var(--accent-2-soft)', 'var(--accent-2)'], warn: ['var(--warn-soft)', 'var(--warn)'], danger: ['var(--margin)', 'var(--on-brand)'], muted: ['var(--surface-sunk)', 'var(--ink-2)'] };
 const SOFT: Record<Tone, string> = { brand: 'var(--brand-soft)', blue: 'var(--accent-2-soft)', warn: 'var(--warn-soft)', danger: 'var(--margin-soft)', muted: 'var(--surface-sunk)' };
 export const SL: Record<string, string> = { active: 'Active', pending: 'Pending', suspended: 'Suspended', invited: 'Invited', inactive: 'Inactive', published: 'Published', draft: 'Draft', archived: 'Archived', enrolling: 'Enrolling', running: 'Running', finished: 'Finished', closed: 'Closed', expired: 'Expired', disabled: 'Disabled', usedup: 'Used up', open: 'Open', refunded: 'Refunded', denied: 'Denied', valid: 'Valid', revoked: 'Revoked', sent: 'Sent', scheduled: 'Scheduled', eligible: 'Eligible', decide: 'Admin decides' };
-const ST: Record<string, Tone> = { active: 'blue', pending: 'warn', suspended: 'danger', invited: 'warn', inactive: 'muted', published: 'brand', draft: 'muted', archived: 'muted', enrolling: 'brand', running: 'blue', finished: 'muted', closed: 'warn', expired: 'muted', disabled: 'muted', usedup: 'muted', open: 'warn', refunded: 'brand', denied: 'danger', valid: 'brand', revoked: 'danger', sent: 'blue', scheduled: 'warn', eligible: 'brand', decide: 'warn' };
+/** `plain` is a status with no fill: the normal state, so the exceptions are what stand out in a list. */
+const ST: Record<string, Tone | 'plain'> = { active: 'plain', pending: 'warn', suspended: 'danger', invited: 'warn', inactive: 'muted', published: 'brand', draft: 'muted', archived: 'muted', enrolling: 'brand', running: 'blue', finished: 'muted', closed: 'warn', expired: 'muted', disabled: 'muted', usedup: 'muted', open: 'warn', refunded: 'brand', denied: 'danger', valid: 'brand', revoked: 'danger', sent: 'blue', scheduled: 'warn', eligible: 'brand', decide: 'warn' };
 const MONO = 'var(--font-mono)';
 export const OTHER = 'Other reason';
 
@@ -168,7 +169,7 @@ export class AdminConsole {
     return this.F({ label, isSeg: true, hint: o.hint, dir: o.inline ? 'row' : 'column', align: o.inline ? 'center' : 'stretch',
       opts: opts.map(([v, l]) => {
         const on = Array.isArray(cur) ? cur.includes(v) : v === cur;
-        return { label: l, go: () => { if (!dis) onv(v); }, bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--brand)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400, op: dis && !on ? 0.55 : 1 };
+        return { label: l, go: () => { if (!dis) onv(v); }, bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--on-brand-soft)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400, op: dis && !on ? 0.55 : 1 };
       }) });
   }
   onoff(): ['on' | 'off', string][] { return [['on', 'On'], ['off', 'Off']]; }
@@ -195,8 +196,8 @@ export class AdminConsole {
     return { isText: true, isBadge: false, t: String(t), sub: sub || '', hasSub: !!sub, font: o.mono ? MONO : 'inherit', subFont: o.subMono ? MONO : 'inherit', weight: o.bold ? 600 : 400, fg: o.fg || 'var(--ink)', subFg: o.subFg || 'var(--ink-3)', bg: '' };
   }
   B(key: string, label?: string): Cell {
-    const t = TONE[ST[key] || 'muted'];
-    return { isText: false, isBadge: true, t: label || SL[key] || key, bg: t[0], fg: t[1], sub: '', hasSub: false, font: 'inherit', subFont: 'inherit', weight: 600, subFg: '' };
+    const tone = ST[key] || 'muted', t = tone === 'plain' ? ['transparent', 'var(--ink-2)'] : TONE[tone];
+    return { isText: false, isBadge: true, t: label || SL[key] || key, bg: t[0], fg: t[1], sub: '', hasSub: false, font: 'inherit', subFont: 'inherit', weight: 600, subFg: '', plain: tone === 'plain' || undefined };
   }
   /** Stat tile that opens its section. `o.delta` and `o.spark` add the change and the trend. */
   K(label: string, value: string | number, sub: string, sec: Section, tone: Tone, o: { sel?: string | null; filter?: string; delta?: Kpi['delta']; spark?: number[] } = {}): Kpi {
@@ -363,7 +364,7 @@ export class AdminConsole {
         notePh: other ? 'Write the reason (required)' : 'Add a note (optional)',
         reasons: this.reasons(cf.reasons || []).map((r) => {
           const on = S.cReason === r;
-          return { label: r, go: () => this.setState({ cReason: r }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--brand)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400 };
+          return { label: r, go: () => this.setState({ cReason: r }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--on-brand-soft)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400 };
         }),
         okGo: () => {
           if (okDis) return;

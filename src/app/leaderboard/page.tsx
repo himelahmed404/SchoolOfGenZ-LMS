@@ -5,16 +5,16 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
 import { defaultStudent } from '@/lib/data';
-import { ordinal, ordinalEn, plural } from '@/lib/format';
+import { ordinalEn, plural } from '@/lib/format';
 import { boardRows } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 const AVATAR: [string, string][] = [
-  ['var(--brand-soft)', 'var(--brand)'], ['var(--accent-2-soft)', 'var(--accent-2)'], ['var(--ok-soft)', 'var(--ok)'], ['var(--warn-soft)', 'var(--warn)'],
+  ['var(--brand-soft)', 'var(--on-brand-soft)'], ['var(--accent-2-soft)', 'var(--accent-2)'], ['var(--ok-soft)', 'var(--ok)'], ['var(--warn-soft)', 'var(--warn)'],
 ];
 
 export default function LeaderboardPage() {
-  const { s, n, numerals } = useStore();
+  const { s, n } = useStore();
   const [period, setPeriod] = useState<'all' | 'week'>('all');
   const weekly = period === 'week';
 
@@ -42,7 +42,7 @@ export default function LeaderboardPage() {
               <span>{plural(rows.length, 'student')}</span>
             </div>
           </div>
-          <div className="seg" role="group" aria-label="সময়কাল" style={{ marginLeft: 'auto' }}>
+          <div className="seg" role="group" aria-label="Period" style={{ marginLeft: 'auto' }}>
             <button aria-pressed={!weekly} onClick={() => setPeriod('all')}>All time</button>
             <button aria-pressed={weekly} onClick={() => setPeriod('week')}>This week</button>
           </div>
@@ -60,9 +60,11 @@ export default function LeaderboardPage() {
             </span>
           </div>
           <div className="card" style={{ borderRadius: 24, padding: 'var(--hero-pad)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <span className="tile" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="trending_up" /></span>
-            <div className="disp" style={{ fontSize: 19, lineHeight: 1.4, fontWeight: 700 }}>
-              {next ? 'আর ' + n(diff) + ' পয়েন্ট পেলে ' + ordinal(next.rank, numerals) + ' — মোটামুটি ' + n(Math.ceil(diff / 10)) + 'টা লেসন।' : 'তুমি সবার উপরে। ধরে রাখো।'}
+            <span className="tile" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)' }}><Icon name="trending_up" /></span>
+            {/* The gap to the next rank is a figure, like the rank beside it, so it is written the same way. */}
+            <div>
+              <div className="disp" style={{ fontSize: 19, lineHeight: 1.4, fontWeight: 700 }}>{next ? plural(diff, 'point') + ' to ' + ordinalEn(next.rank) : 'Top of the Batch'}</div>
+              <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>{next ? 'About ' + plural(Math.ceil(diff / 10), 'lesson') : 'ধরে রাখো।'}</div>
             </div>
             <Link href={`/learn/${courseId}/${ch}/${li}`} className="btn btn-primary" style={{ marginTop: 'auto', alignSelf: 'flex-start', padding: '0 20px' }}>
               Next Lesson<Icon name="arrow_forward" size={20} />
@@ -83,7 +85,7 @@ export default function LeaderboardPage() {
                   <span className="tile" style={{ width: 36, height: 36, borderRadius: 999, background: av[0], color: av[1], fontSize: 15, fontWeight: 700 }}>{initial(r.name)}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <span className="ellipsis" style={{ fontSize: 15, fontWeight: r.live ? 700 : 500 }}>{r.name}</span>
-                    {r.live ? <span style={{ flexShrink: 0, padding: '0 8px', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 12, fontWeight: 700, lineHeight: '20px' }}>তুমি</span> : null}
+                    {r.live ? <span style={{ flexShrink: 0, padding: '0 8px', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 12, fontWeight: 700, lineHeight: '20px' }}>You</span> : null}
                   </span>
                   <span style={{ fontSize: 14, fontWeight: r.live ? 700 : 500, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{r.pts}</span>
                 </div>
@@ -96,7 +98,7 @@ export default function LeaderboardPage() {
         <div style={{ display: 'flex', gap: 12, padding: '16px 18px', borderRadius: 18, background: 'var(--surface-sunk)', fontSize: 13, lineHeight: 1.7, color: 'var(--ink-2)' }}>
           <Icon name="info" size={20} style={{ color: 'var(--ink-3)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '62ch' }}>
-            <div>পয়েন্ট — প্রতিটা লেসন শেষ করলে ১০, চ্যাপ্টার টেস্টে প্রতিটা সঠিক উত্তরে ৫ (সবচেয়ে ভালো চেষ্টাটা ধরা হয়)।</div>
+            <div>পয়েন্ট — প্রতিটা লেসন শেষ করলে {n(10)}, চ্যাপ্টার টেস্টে প্রতিটা সঠিক উত্তরে {n(5)} (সবচেয়ে ভালো চেষ্টাটা ধরা হয়)।</div>
             <div>{weekly ? 'সাপ্তাহিক বোর্ড প্রতি শনিবার শূন্য থেকে শুরু হয় — পিছিয়ে থাকলেও এই সপ্তাহে সামনে আসা যায়।' : 'সব সময়ের পয়েন্ট ব্যাচ শুরুর দিন থেকে জমছে।'}</div>
             <div>পুরো তালিকা কেউ দেখে না — সবাই শুধু নিজের আশেপাশের জনদের দেখে।</div>
           </div>

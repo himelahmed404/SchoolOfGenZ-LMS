@@ -59,6 +59,11 @@ export function frontier(s: AppState, cid: CourseId): [number, number] {
   return [last, c.chapters[last].lessons.length - 1];
 }
 
+/** Where "Continue" takes a student in a course: the lesson they stopped on if it is this course, else its first unfinished lesson. */
+export function resumePoint(s: AppState, cid: CourseId): [number, number] {
+  return s.last.courseId === cid ? [s.last.ch, s.last.li] : frontier(s, cid);
+}
+
 export function isLocked(s: AppState, cid: CourseId, ci: number, li: number) {
   if (isDone(s, cid, ci, li)) return false;
   const f = frontier(s, cid);

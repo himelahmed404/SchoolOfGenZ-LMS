@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { contentReasons, courses, defaultStudent, queueSeed, rejectReasons } from './data';
 import {
-  allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, frontier,
-  isDone, isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, myPayments, myQuestions, nextOpenTest, reasonText, refundPolicy,
-  returnReason, revisionRef, roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
+  allQueue, batchLabel, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, frontier, isDone, isLocked, issues, item, itemKeys, lessonCount, lessonRef, monthCells, myPayments, myQuestions, nextOpenTest, reasonText, refundPolicy, resumePoint, returnReason, revisionRef, roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
@@ -315,5 +313,15 @@ describe('notifications', () => {
     expect(unreadCount(s0, 'teacher')).toBe(2);
     const s = withState({ notifs: { read: {}, gone: { s1: true } } });
     expect(unreadCount(s, 'student')).toBe(4);
+  });
+});
+
+describe('where Continue goes', () => {
+  it('is the lesson the student stopped on, in the course they were last in', () => {
+    expect(resumePoint(initialState, 'cst')).toEqual([2, 4]);
+  });
+  it('is the first unfinished lesson of any other course', () => {
+    expect(resumePoint(initialState, 'eng')).toEqual(frontier(initialState, 'eng'));
+    expect(isDone(initialState, 'eng', ...resumePoint(initialState, 'eng'))).toBe(false);
   });
 });

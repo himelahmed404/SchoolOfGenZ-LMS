@@ -15,7 +15,7 @@ export function SavedList({ items }: { items: SavedItem[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '28px 20px', border: '2px dashed var(--line-strong)', borderRadius: 20, textAlign: 'center', color: 'var(--ink-2)' }}>
         <Icon name="bookmark_add" size={32} style={{ color: 'var(--ink-3)' }} />
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>এখনো কিছু সেভ করোনি</div>
-        <div style={{ fontSize: 13 }}>লেসনের উপরে বুকমার্ক বাটনে চাপ দিলে, বা “আমার নোট” ট্যাবে কিছু লিখলে এখানে চলে আসবে।</div>
+        <div style={{ fontSize: 13 }}>লেসনের উপরে বুকমার্ক বাটনে চাপ দিলে, বা “My Note” ট্যাবে কিছু লিখলে এখানে চলে আসবে।</div>
       </div>
     );
   }
@@ -24,7 +24,7 @@ export function SavedList({ items }: { items: SavedItem[] }) {
     <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {items.map((b, i) => (
         <div key={b.k} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: i === items.length - 1 ? 'none' : '1px solid var(--line)' }}>
-          <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name={b.bookmarked ? 'bookmark' : 'edit_note'} fill={b.bookmarked} /></span>
+          <span className="tile" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)' }}><Icon name={b.bookmarked ? 'bookmark' : 'edit_note'} fill={b.bookmarked} /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{b.ref}</div>
             <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>{b.title}</div>

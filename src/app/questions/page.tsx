@@ -15,7 +15,7 @@ type Filter = 'all' | 'waiting' | 'answered';
 
 /** Every question the student asked in a lesson's Q&A tab, with the teacher's reply. */
 export default function MyQuestionsPage() {
-  const { s } = useStore();
+  const { s, n } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
   const all = myQuestions(s);
   const waiting = all.filter((d) => !d.reply).length;
@@ -38,8 +38,8 @@ export default function MyQuestionsPage() {
           <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '44px 24px', textAlign: 'center' }}>
             <Penguin size={84} />
             <div className="disp" style={{ fontSize: 19, fontWeight: 700 }}>এখনো কোনো প্রশ্ন করোনি</div>
-            <div style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--ink-2)', maxWidth: '40ch' }}>কোনো লেসন না বুঝলে তার Q&A ট্যাবে লিখে ফেলো। শিক্ষক সাধারণত ২৪ ঘণ্টার মধ্যে উত্তর দেন।</div>
-            <Link href={resume} className="btn btn-primary">প্রশ্ন করো</Link>
+            <div style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--ink-2)', maxWidth: '40ch' }}>কোনো লেসন না বুঝলে তার Q&A ট্যাবে লিখে ফেলো। শিক্ষক সাধারণত {n(24)} ঘণ্টার মধ্যে উত্তর দেন।</div>
+            <Link href={resume} className="btn btn-primary">Ask a Question</Link>
           </div>
         ) : null}
 
@@ -63,7 +63,7 @@ export default function MyQuestionsPage() {
                   <div style={{ fontSize: 15, lineHeight: 1.7 }}>{d.reply}</div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="schedule" size={18} />উত্তরের অপেক্ষায় · সাধারণত ২৪ ঘণ্টার মধ্যে</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="schedule" size={18} />Waiting · usually answered within 24 h</div>
               )}
               <div><Link href={`/learn/${d.course}/${d.ch}/${d.li}?tab=ask`} className="btn btn-sm">Open lesson<Icon name="arrow_forward" size={18} /></Link></div>
             </div>

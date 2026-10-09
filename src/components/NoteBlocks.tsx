@@ -40,7 +40,7 @@ export function NoteBlocks({ blocks }: { blocks: Block[] }) {
                   {lines.map((l, j) => {
                     const at = l.indexOf(SEP);
                     return [
-                      <span key={j + 'k'} className="mono" style={{ justifySelf: 'start', fontSize: 14, fontWeight: 600, padding: '2px 10px', borderRadius: 8, background: 'var(--brand-soft)', color: 'var(--brand)', lineHeight: 1.6 }}>{l.slice(0, at)}</span>,
+                      <span key={j + 'k'} className="mono" style={{ justifySelf: 'start', fontSize: 14, fontWeight: 600, padding: '2px 10px', borderRadius: 8, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)', lineHeight: 1.6 }}>{l.slice(0, at)}</span>,
                       <span key={j + 'v'}>{l.slice(at + SEP.length)}</span>,
                     ];
                   })}

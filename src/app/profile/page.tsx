@@ -27,7 +27,7 @@ export default function ProfilePage() {
   const stats: [string, string, string, string, string][] = [
     ['local_fire_department', String(streakSeed.current), 'Day streak', 'var(--sun)', 'var(--on-sun)'],
     ['task_alt', String(cst.done), 'Lessons done', 'var(--ok-soft)', 'var(--ok)'],
-    ['leaderboard', String(me ? me.rank : 0), 'Batch rank', 'var(--brand-soft)', 'var(--brand)'],
+    ['leaderboard', String(me ? me.rank : 0), 'Batch rank', 'var(--brand-soft)', 'var(--on-brand-soft)'],
   ];
 
   const saved = savedItems(s);
@@ -45,7 +45,7 @@ export default function ProfilePage() {
             <div style={{ fontSize: 14, opacity: 0.9 }}>CST · {semLabel(s.prefs.sem)} · {s.profile.inst}</div>
             <div className="mono" style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>{defaultStudent.masked} · {s.profile.email}</div>
           </div>
-          <Link href="/profile/edit" className="btn btn-white" style={{ height: 42, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
+          <Link href="/profile/edit" className="btn btn-white" style={{ height: 44, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
@@ -61,34 +61,34 @@ export default function ProfilePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 16, alignItems: 'start' }}>
           <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h2 className="sec-h" style={{ fontSize: 18 }}>স্ট্রিক ক্যালেন্ডার</h2>
+              <h2 className="sec-h" style={{ fontSize: 18 }}>Streak Calendar</h2>
               <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{monthEn(today)}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
               {weekDayHead.map((h) => <span key={h} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--ink-3)' }}>{h}</span>)}
               {cells.map((c, i) => (
-                <span key={i} title={c.studied ? 'পড়েছ' : undefined} className="tile"
+                <span key={i} title={c.studied ? 'Studied' : undefined} className="tile"
                   style={{ aspectRatio: '1', borderRadius: 10, background: c.studied ? 'var(--hl)' : 'transparent', border: '2px solid ' + (c.today ? 'var(--brand)' : c.future ? 'var(--line)' : 'transparent'), color: c.future ? 'var(--ink-3)' : 'var(--ink)', opacity: c.other ? 0.45 : 1, fontSize: 13, fontWeight: c.today ? 800 : 600 }}>
                   {c.n}
                 </span>
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--ink-3)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--hl)' }} />পড়েছ</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: '2px solid var(--brand)' }} />আজ</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--hl)' }} />Studied</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, border: '2px solid var(--brand)' }} />Today</span>
               <span style={{ marginLeft: 'auto' }}>Best streak: {plural(streakSeed.best, 'day')}</span>
             </div>
           </section>
 
           <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h2 className="sec-h" style={{ fontSize: 18 }}>ব্যাজ</h2>
+              <h2 className="sec-h" style={{ fontSize: 18 }}>Badges</h2>
               <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{earned}/{badgeSeed.length}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '14px 8px' }}>
               {badgeSeed.map(([icon, label, sub, got], i) => (
                 <div key={label} title={sub} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
-                  <span className="tile" style={{ width: 54, height: 54, borderRadius: 18, background: got ? (i % 2 ? 'var(--brand-soft)' : 'var(--sun)') : 'transparent', color: got ? (i % 2 ? 'var(--brand)' : 'var(--on-sun)') : 'var(--ink-3)', border: '2px dashed ' + (got ? 'transparent' : 'var(--line-strong)'), transform: `rotate(${got ? ((i % 3) - 1) * 4 : 0}deg)` }}>
+                  <span className="tile" style={{ width: 54, height: 54, borderRadius: 18, background: got ? (i % 2 ? 'var(--brand-soft)' : 'var(--sun)') : 'transparent', color: got ? (i % 2 ? 'var(--on-brand-soft)' : 'var(--on-sun)') : 'var(--ink-3)', border: '2px dashed ' + (got ? 'transparent' : 'var(--line-strong)'), transform: `rotate(${got ? ((i % 3) - 1) * 4 : 0}deg)` }}>
                     <Icon name={icon} size={28} fill={got} />
                   </span>
                   <span style={{ fontSize: 12, lineHeight: 1.3, fontWeight: 600, color: got ? 'var(--ink)' : 'var(--ink-3)' }}>{label}</span>
@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 className="sec-h">বুকমার্ক ও নোট</h2>
+            <h2 className="sec-h">Saved &amp; Notes</h2>
             <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{saved.length} saved</span>
             {saved.length > PREVIEW ? <Link href="/saved" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600 }}>See all<Icon name="chevron_right" size={18} /></Link> : null}
           </div>
@@ -109,32 +109,32 @@ export default function ProfilePage() {
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="sec-h">সার্টিফিকেট</h2>
+          <h2 className="sec-h">Certificates</h2>
           <CertificateList />
         </section>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="sec-h">সেটিংস</h2>
+          <h2 className="sec-h">Settings</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <button className="set-row" onClick={toggleTheme} role="switch" aria-checked={theme === 'dark'}>
               <span className="tile set-ico"><Icon name="dark_mode" /></span>
-              <span style={{ flex: 1 }}>ডার্ক মোড</span>
+              <span style={{ flex: 1 }}>Dark mode</span>
               <span style={{ width: 46, height: 28, padding: 3, borderRadius: 999, background: theme === 'dark' ? 'var(--brand)' : 'var(--line-strong)', display: 'flex', justifyContent: theme === 'dark' ? 'flex-end' : 'flex-start', transition: 'background 160ms' }}>
                 <span style={{ width: 22, height: 22, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.25)' }} />
               </span>
             </button>
             <Link href="/profile/edit#password" className="set-row">
               <span className="tile set-ico"><Icon name="key" /></span>
-              <span style={{ flex: 1 }}>পাসওয়ার্ড বদলাও</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
+              <span style={{ flex: 1 }}>Change password</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
             </Link>
             <button className="set-row" onClick={() => setNotifOpen(true)}>
               <span className="tile set-ico"><Icon name="notifications" /></span>
-              <span style={{ flex: 1 }}>নোটিফিকেশন</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
+              <span style={{ flex: 1 }}>Notifications</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
             </button>
             {/* No auth yet: "log out" returns to first-run setup, as in the prototype. */}
             <button className="set-row set-danger" onClick={() => router.push('/setup')}>
               <span className="tile set-ico"><Icon name="logout" /></span>
-              <span style={{ flex: 1 }}>লগ আউট</span>
+              <span style={{ flex: 1 }}>Log out</span>
             </button>
           </div>
         </section>

@@ -40,7 +40,7 @@ export function Celebrations() {
         <div style={{ fontSize: 15, color: 'var(--ink-2)', textAlign: 'center' }}>{courses.cst.title} · all {c.total} lessons done</div>
         <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
           <Link href="/certificate" className="btn btn-primary" style={{ height: 48 }} onClick={() => showToast(null)}><Icon name="workspace_premium" size={20} />View Certificate</Link>
-          <button className="btn" style={{ height: 48, fontSize: 15 }} onClick={() => showToast(null)}>পরে</button>
+          <button className="btn" style={{ height: 48, fontSize: 15 }} onClick={() => showToast(null)}>Later</button>
         </div>
       </div>
     );

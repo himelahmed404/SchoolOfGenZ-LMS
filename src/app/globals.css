@@ -1,13 +1,15 @@
 /* ---------- tokens (v6) ---------- */
 :root, [data-theme="light"] {
   --paper: #F3F5FA; --surface: #FFFFFF; --surface-sunk: #EAEEF6; --line: #E1E6F0; --line-strong: #C9D0DE;
-  --ink: #131A33; --ink-2: #465071; --ink-3: #646D8A;
+  --ink: #131A33; --ink-2: #465071; --ink-3: #616A86;
   /* brand tokens are derived from one hex at runtime (lib/brand.ts); these are the #0F7A55 fallbacks */
-  --brand: #0F7A55; --brand-hover: #0D6949; --brand-press: #0B583D; --brand-soft: #D8E6E6; --on-brand: #FFFFFF; --focus: #0F7A55;
+  --brand: #0F7A55; --brand-hover: #0D6949; --brand-press: #0B583D; --brand-soft: #D8E6E6; --on-brand: #FFFFFF; --on-brand-soft: #0E714F; --focus: #0F7A55;
   --hero: #0F7A55; --on-hero: #FFFFFF; --sun: #FFE45C; --on-sun: #131A33; --hl: #FFE45C;
   --ok: #0F7A55; --ok-soft: #E1F5EC;
-  --accent-2: #C2357A; --accent-2-soft: #FCE8F2;
-  --margin: #D23B45; --margin-soft: #FDECEC; --warn: #946200; --warn-soft: #FFF3D1;
+  --accent-2: #BC3376; --accent-2-soft: #FCE8F2;
+  --margin: #C53741; --margin-soft: #FDECEC; --warn: #946200; --warn-soft: #FFF3D1;
+  /* the edge of a field you type or tick in: 3:1 against every surface it sits on */
+  --field-line: #7C849E;
   --lift: 0 1px 2px rgba(19,26,51,0.05), 0 6px 18px rgba(19,26,51,0.06);
   --overlay: 0 16px 40px rgba(19,26,51,0.16);
   --rule: rgba(45,70,214,0.07);
@@ -17,11 +19,12 @@
 [data-theme="dark"] {
   --paper: #0C1020; --surface: #151A2E; --surface-sunk: #0A0D19; --line: #232A44; --line-strong: #343C5C;
   --ink: #EBEEF9; --ink-2: #B0B7D0; --ink-3: #8D95B2;
-  --brand: #61A78F; --brand-hover: #77B39F; --brand-press: #8DC0AE; --brand-soft: #1B2B34; --on-brand: #101413; --focus: #61A78F;
+  --brand: #61A78F; --brand-hover: #77B39F; --brand-press: #8DC0AE; --brand-soft: #1B2B34; --on-brand: #101413; --on-brand-soft: #61A78F; --focus: #61A78F;
   --hero: #0E6E4D; --on-hero: #FFFFFF; --sun: #FFE45C; --on-sun: #131A33; --hl: rgba(255,228,92,0.32);
   --ok: #4ACB92; --ok-soft: #10291F;
   --accent-2: #F28DBE; --accent-2-soft: #33162A;
   --margin: #FF7076; --margin-soft: #341719; --warn: #F2B84B; --warn-soft: #2E2412;
+  --field-line: #687090;
   --lift: none;
   --overlay: 0 16px 40px rgba(0,0,0,0.5);
   --rule: rgba(140,157,255,0.08);
@@ -179,8 +182,8 @@ a.btn-primary:hover, .btn-primary:hover:not(:disabled) { background: var(--brand
 .btn-primary:disabled { background: var(--line); color: var(--ink-3); }
 .btn-white { border: none; background: #FFFFFF; color: #131A33; font-size: 15px; font-weight: 700; }
 a.btn-white:hover { color: #131A33; }
-.btn-soft { border: none; background: var(--brand-soft); color: var(--brand); font-weight: 700; }
-a.btn-soft:hover { color: var(--brand); }
+.btn-soft { border: none; background: var(--brand-soft); color: var(--on-brand-soft); font-weight: 700; }
+a.btn-soft:hover { color: var(--on-brand-soft); }
 .btn-danger { border: 1px solid var(--margin); background: transparent; color: var(--margin); font-weight: 700; }
 .btn-ghost { border: none; background: transparent; color: var(--ink-2); }
 .btn-link { border: none; background: none; color: var(--brand); padding: 0 4px; height: auto; font-weight: 500; }
@@ -203,21 +206,21 @@ a.btn-soft:hover { color: var(--brand); }
   max-width: 100%; overflow-x: auto; scrollbar-width: none;
 }
 .seg > button {
-  height: 34px; padding: 0 14px; border: none; border-radius: 999px; background: transparent;
+  height: 36px; padding: 0 14px; border: none; border-radius: 999px; background: transparent;
   color: var(--ink-3); font-size: 13px; font-weight: 600; flex-shrink: 0;
 }
 .seg > button:is([aria-pressed="true"], [aria-selected="true"]) { background: var(--surface); color: var(--ink); box-shadow: var(--seg-shadow); }
 
 /* choice pill (semester, numerals…) */
 .pick { border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-weight: 400; }
-.pick:is([aria-pressed="true"], [aria-checked="true"]) { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.pick:is([aria-pressed="true"], [aria-checked="true"]) { border-color: var(--brand); background: var(--brand-soft); color: var(--on-brand-soft); font-weight: 600; }
 
 .field {
-  width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 14px;
+  width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--field-line); border-radius: 14px;
   background: var(--surface); color: var(--ink); font-size: 15px; outline: none;
 }
 .field:focus { border-color: var(--brand); }
-.field-sunk { border-color: var(--line); background: var(--surface-sunk); }
+.field-sunk { background: var(--surface-sunk); }
 textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height: 1.6; }
 
 /* ---------- app shell ---------- */
@@ -245,7 +248,7 @@ textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height
   background: transparent; color: var(--ink-2); font-size: 15px; font-weight: 500; text-align: left; text-decoration: none;
 }
 .nav-item:hover { color: var(--ink-2); text-decoration: none; }
-.nav-item[aria-current="page"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.nav-item[aria-current="page"] { background: var(--brand-soft); color: var(--on-brand-soft); font-weight: 600; }
 .nav-item[aria-current="page"] .ico { font-variation-settings: 'FILL' 1; }
 .side-tools { margin-top: auto; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
 .side-notif {
@@ -260,6 +263,7 @@ textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height
   background: var(--surface-sunk); color: var(--ink); text-decoration: none; text-align: left;
 }
 .side-foot:hover, .side-foot[aria-current="page"] { background: var(--brand-soft); color: var(--ink); text-decoration: none; }
+.side-foot:hover .ink3, .side-foot[aria-current="page"] .ink3 { color: var(--ink-2); }
 
 .main-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; position: relative; }
@@ -401,24 +405,48 @@ a.card { color: var(--ink); text-decoration: none; }
 a.card:hover { text-decoration: none; color: var(--ink); }
 a.card:hover { border-color: var(--line-strong); }
 .video-wrap { background: var(--paper); }
+/* Prev / Next under a lesson on desktop. It sticks to the bottom of the scrolling column and reaches down through the column's own bottom padding. */
+.lesson-foot {
+  position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 12px;
+  margin: 40px 0 -64px; padding: 14px 0 20px; border-top: 1px solid var(--line); background: var(--paper);
+}
+@media (max-width: 1179px) { .lesson-foot { margin-bottom: -48px; } }
 @media (max-width: 767px) { .video-wrap { position: sticky; top: 0; z-index: 5; padding-bottom: 8px; } }
 /* first right-aligned control after the tab strip; sits next to "Chapters" when that shows */
 .push-right { margin-left: auto; }
 @media (min-width: 768px) and (max-width: 1179px) { .push-right { margin-left: 8px; } }
 .ctl {
-  height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface);
+  height: 36px; min-width: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface);
   color: var(--ink); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.ctl-round { width: 40px; height: 40px; padding: 0; }
+.ctl-round { width: 44px; height: 44px; padding: 0; }
+/* a small control on a block of the lesson editor: move up, move down, delete */
+.blk-ctl { width: 36px; height: 32px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 12px; }
+.blk-ctl[data-danger="true"] { margin-left: 12px; color: var(--margin); }
+/* dashed "add" button (a block, a question) */
+.add-btn { height: 36px; padding: 0 12px; border: 1px dashed var(--line-strong); border-radius: 999px; background: none; color: var(--ink-2); font-size: 13px; }
+/* a short message with one way back, above the page's bottom bar */
+.snack {
+  position: fixed; left: 50%; bottom: var(--toast-bottom); transform: translateX(-50%); z-index: 55; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 18px; border-radius: 999px; background: #131A33; color: #FFFFFF;
+  font-size: 14px; white-space: nowrap; box-shadow: var(--overlay);
+}
+.snack > button { height: 36px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,0.14); color: var(--sun); font-size: 14px; font-weight: 700; }
+/* On a touch screen every control is at least 44px, the size a thumb can hit without looking. */
+@media (pointer: coarse), (max-width: 767px) {
+  .btn-sm, .ctl, .seg > button, .add-btn, .snack > button { height: 44px; }
+  .ctl { min-width: 44px; }
+  .blk-ctl { width: 44px; height: 44px; font-size: 14px; }
+}
 /* ruled writing paper (private notes) */
 .ruled {
-  width: 100%; min-height: 220px; padding: 14px 18px; border: 1px solid var(--line-strong); border-radius: 18px;
+  width: 100%; min-height: 220px; padding: 14px 18px; border: 1px solid var(--field-line); border-radius: 18px;
   background: repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px), var(--surface); background-attachment: local;
   color: var(--ink); font-family: var(--font-read); font-size: 17px; line-height: 32px; outline: none; resize: vertical;
 }
 .ruled:focus, .ask-box:focus { border-color: var(--brand); }
 .ask-box {
-  width: 100%; min-height: 88px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px;
+  width: 100%; min-height: 88px; padding: 12px 14px; border: 1px solid var(--field-line); border-radius: 14px;
   background: var(--surface-sunk); color: var(--ink); font-size: 16px; resize: vertical; outline: none;
 }
 .seg-cell { width: 22px; }

@@ -66,7 +66,7 @@ export default function TeacherProfilePage() {
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Pending</div>
                 <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{taka(T.pending)}</div>
               </div>
-              <div style={{ padding: 12, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--brand)' }}>
+              <div style={{ padding: 12, borderRadius: 14, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)' }}>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Next payout</div>
                 <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{T.nextPayout}</div>
               </div>
@@ -75,7 +75,7 @@ export default function TeacherProfilePage() {
         </div>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="sec-h">যে কোর্সগুলো পড়াই</h2>
+          <h2 className="sec-h">Courses I Teach</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {T.courses.map((c, i) => (
               <div key={c.code} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: i === T.courses.length - 1 ? 'none' : '1px solid var(--line)' }}>

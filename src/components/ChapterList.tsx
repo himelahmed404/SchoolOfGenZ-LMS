@@ -63,7 +63,7 @@ export function ChapterList({ courseId, open, onToggle, current, variant, onOpen
               const icon = done ? 'check_circle' : cur ? 'play_circle' : lock ? 'lock' : 'radio_button_unchecked';
               const iconColor = done ? 'var(--ok)' : cur ? 'var(--brand)' : 'var(--ink-3)';
               return (
-                <button key={li} className="ch-row" onClick={() => go(ci, li)} disabled={lock} aria-label={lock ? l.t + ' — লক' : l.t}
+                <button key={li} className="ch-row" onClick={() => go(ci, li)} disabled={lock} aria-label={lock ? l.t + ' — locked' : l.t}
                   aria-current={cur ? 'true' : undefined}
                   style={{ ['--row-bg' as string]: cur ? 'var(--brand-soft)' : 'transparent', minHeight: rowH }}>
                   <Icon name={icon} fill={done || cur} style={{ color: iconColor }} />

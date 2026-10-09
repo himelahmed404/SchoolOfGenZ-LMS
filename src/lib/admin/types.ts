@@ -43,7 +43,8 @@ export interface AdminData {
 
 /* ---------- view model the console renderer draws ---------- */
 
-export interface Cell { isText: boolean; isBadge: boolean; t: string; sub: string; hasSub: boolean; font: string; subFont: string; weight: number; fg: string; subFg: string; bg: string }
+/** `plain` marks a badge with no fill (the normal state of a status), so it lines up with plain text. */
+export interface Cell { isText: boolean; isBadge: boolean; t: string; sub: string; hasSub: boolean; font: string; subFont: string; weight: number; fg: string; subFg: string; bg: string; plain?: boolean }
 export interface Action { label: string; go: () => void; bg: string; fg: string; bd: string; op: number }
 /** A label and its value. With `go` the row is a shortcut (e.g. to a filter); `on` marks the one in use. */
 export interface KV { k: string; v: string; font: string; fg: string; weight: number; go?: () => void; on?: boolean }

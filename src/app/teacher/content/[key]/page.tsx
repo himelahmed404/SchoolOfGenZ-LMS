@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Tex } from '@/components/Tex';
 import { patchItem, startUpload, submitForReview, withdraw } from '@/lib/actions';
@@ -13,7 +13,7 @@ import { useStore } from '@/lib/store';
 import type { Block, BlockType, LessonRevision, QuizQ } from '@/lib/types';
 
 type EdTab = 'video' | 'notes' | 'quiz';
-const ADD: [BlockType, string][] = [['p', 'অনুচ্ছেদ'], ['h', 'শিরোনাম'], ['list', 'তালিকা'], ['img', 'ছবি'], ['fx', 'সূত্র'], ['code', 'কোড']];
+const ADD: [BlockType, string][] = [['p', 'Paragraph'], ['h', 'Heading'], ['list', 'List'], ['img', 'Image'], ['fx', 'Formula'], ['code', 'Code']];
 
 function safeItem(s: Parameters<typeof item>[0], k: string): LessonRevision | null {
   try {
@@ -33,6 +33,13 @@ export default function EditorPage() {
   const [tab, setTab] = useState<EdTab>('notes');
   const [active, setActive] = useState(0);
   const [errs, setErrs] = useState<string[]>([]);
+  // The block deleted last, kept for a few seconds so one tap brings it back. `sole` = it was the only block.
+  const [undo, setUndo] = useState<{ i: number; b: Block; sole: boolean } | null>(null);
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), 6000);
+    return () => clearTimeout(t);
+  }, [undo]);
 
   const it = safeItem(s, k);
   if (!it) notFound();
@@ -68,7 +75,7 @@ export default function EditorPage() {
       <div className="row wrap" style={{ marginBottom: 12 }}>
         <Link href="/teacher/content" className="t13 w500 only-desktop" style={{ height: 32, display: 'inline-flex', alignItems: 'center', color: 'var(--brand)' }}>← Content</Link>
         <span className="kicker">{revisionRef(it)}</span>
-        <span className="ml-auto t13 w500" style={{ color: statusColor }}>{it.status === 'published' ? 'Published · বদলালে আবার Review লাগবে' : statusLabel}</span>
+        <span className="ml-auto t13 w500" style={{ color: statusColor }}>{it.status === 'published' ? 'Published · an edit goes back to review' : statusLabel}</span>
       </div>
       {isTest ? (
         <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
@@ -76,7 +83,7 @@ export default function EditorPage() {
           <div className="t15 ink2">{courses[keyCourse(k)].chapters[it.ch].name}</div>
         </div>
       ) : (
-        <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="লেসনের নাম"
+        <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="Lesson title"
           className="title-input" />
       )}
 
@@ -100,7 +107,7 @@ export default function EditorPage() {
         <div className="seg" role="tablist" style={{ display: 'inline-flex', margin: '20px 0 24px' }}>
           {tabs.map(([label, id, badge]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label}{badge ? ' · ' + badge : ''}</button>
+              style={{ padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label}{badge ? ' · ' + badge : ''}</button>
           ))}
         </div>
       )}
@@ -129,11 +136,11 @@ export default function EditorPage() {
               </div>
               <div className="row wrap" style={{ marginTop: 10 }}>
                 <span className="mono t13 ink2">{it.video.name}</span>
-                {!locked ? <button className="btn btn-sm ml-auto" style={{ padding: '0 12px', fontWeight: 500 }} disabled={!!s.upload} onClick={() => set((x) => startUpload(x, k))}>বদলাও</button> : null}
+                {!locked ? <button className="btn btn-sm ml-auto" style={{ padding: '0 12px', fontWeight: 500 }} disabled={!!s.upload} onClick={() => set((x) => startUpload(x, k))}>Replace</button> : null}
               </div>
             </div>
           )}
-          <div className="fine" style={{ marginTop: 14, maxWidth: '60ch' }}>আপলোডের পর ৩৬০p, ৪৮০p আর ৭২০p নিজে থেকেই তৈরি হবে — কম ডেটায় ছাত্ররা ছোটটা বেছে নিতে পারবে।</div>
+          <div className="fine" style={{ marginTop: 14, maxWidth: '60ch' }}>আপলোডের পর 360p, 480p আর 720p নিজে থেকেই তৈরি হবে — কম ডেটায় ছাত্ররা ছোটটা বেছে নিতে পারবে।</div>
         </div>
       ) : null}
 
@@ -150,7 +157,11 @@ export default function EditorPage() {
                   editBlocks((bs) => { const t = bs[j]; bs[j] = bs[i]; bs[i] = t; return bs; });
                   setActive(j);
                 }}
-                onDelete={() => { editBlocks((bs) => { bs.splice(i, 1); return bs.length ? bs : [{ t: 'p', x: '' }]; }); setActive(Math.max(0, i - 1)); }}
+                onDelete={() => {
+                  setUndo({ i, b, sole: it.blocks.length === 1 });
+                  editBlocks((bs) => { bs.splice(i, 1); return bs.length ? bs : [{ t: 'p', x: '' }]; });
+                  setActive(Math.max(0, i - 1));
+                }}
                 onPickImage={() => { setBlock(i, { file: 'IMG_20260923_' + pad2(i + 10) + '.png' }); setActive(i); }}
               />
             ))}
@@ -158,7 +169,7 @@ export default function EditorPage() {
           {!locked ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
               {ADD.map(([t, label]) => (
-                <button key={t} className="t13 ink2" style={{ height: 36, padding: '0 12px', border: '1px dashed var(--line-strong)', borderRadius: 999, background: 'none' }}
+                <button key={t} className="add-btn"
                   onClick={() => {
                     const at = Math.min(active + 1, it.blocks.length);
                     editBlocks((bs) => { bs.splice(at, 0, t === 'img' ? { t: 'img', file: '', cap: '' } : { t, x: '' }); return bs; });
@@ -187,18 +198,18 @@ export default function EditorPage() {
                 <div className="row" style={{ gap: 10, marginBottom: 10 }}>
                   <span className="mono t13 ink3">{pad2(qi + 1)}</span>
                   <span className="t12 w500" style={{ color: 'var(--warn)' }}>{noA ? 'সঠিক উত্তর বাছা হয়নি' : ''}</span>
-                  {!locked ? <button className="t13 ink3 ml-auto" style={{ height: 32, padding: '0 10px', border: 'none', background: 'none' }} onClick={() => patch({ quiz: it.quiz.filter((_, j) => j !== qi) })}>Delete</button> : null}
+                  {!locked ? <button className="t13 ink3 ml-auto" style={{ minWidth: 44, height: 44, padding: '0 10px', border: 'none', background: 'none' }} onClick={() => patch({ quiz: it.quiz.filter((_, j) => j !== qi) })}>Delete</button> : null}
                 </div>
-                <textarea value={q.stem} onChange={(e) => { const v = e.target.value; setQ(qi, () => ({ stem: v })); }} readOnly={locked} placeholder="প্রশ্ন লেখো" rows={1} aria-label="প্রশ্ন"
-                  style={{ display: 'block', width: '100%', minHeight: 48, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 15, lineHeight: 1.7, resize: 'none' }} />
+                <textarea value={q.stem} onChange={(e) => { const v = e.target.value; setQ(qi, () => ({ stem: v })); }} readOnly={locked} placeholder="প্রশ্ন লেখো" rows={1} aria-label="Question"
+                  style={{ display: 'block', width: '100%', minHeight: 48, padding: '10px 12px', border: '1px solid var(--field-line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 15, lineHeight: 1.7, resize: 'none' }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   {q.o.map((o, oi) => {
                     const right = q.a === oi;
-                    const border = right ? 'var(--brand)' : 'var(--line)';
+                    const border = right ? 'var(--brand)' : 'var(--field-line)';
                     return (
                       <div key={oi} className="row" style={{ gap: 8 }}>
-                        <button onClick={() => { if (!locked) setQ(qi, () => ({ a: oi })); }} aria-label={'সঠিক উত্তর — অপশন ' + 'কখগঘ'[oi]} aria-pressed={right}
-                          style={{ width: 44, height: 44, flexShrink: 0, border: '1px solid ' + border, borderRadius: 999, background: right ? 'var(--brand-soft)' : 'var(--surface)', color: 'var(--brand)', fontSize: 14 }}>{right ? '✓' : ''}</button>
+                        <button onClick={() => { if (!locked) setQ(qi, () => ({ a: oi })); }} aria-label={'Correct answer: option ' + 'কখগঘ'[oi]} aria-pressed={right}
+                          style={{ width: 44, height: 44, flexShrink: 0, border: '1px solid ' + border, borderRadius: 999, background: right ? 'var(--brand-soft)' : 'var(--surface)', color: 'var(--on-brand-soft)', fontSize: 14 }}>{right ? '✓' : ''}</button>
                         <input value={o} readOnly={locked} placeholder={'অপশন ' + 'কখগঘ'[oi]}
                           onChange={(e) => { const v = e.target.value; setQ(qi, (x) => ({ o: x.o.map((y, j) => (j === oi ? v : y)) })); }}
                           style={{ flex: 1, minWidth: 0, height: 44, padding: '0 12px', border: '1px solid ' + border, borderRadius: 12, background: 'var(--surface)', fontSize: 15 }} />
@@ -206,9 +217,9 @@ export default function EditorPage() {
                     );
                   })}
                 </div>
-                <input value={q.why || ''} readOnly={locked} placeholder={isTest ? 'ব্যাখ্যা — ভুল করলে ফলাফলের পাতায় ছাত্ররা দেখবে' : 'ব্যাখ্যা — উত্তর দেওয়ার পর ছাত্ররা দেখবে'} aria-label="ব্যাখ্যা"
+                <input value={q.why || ''} readOnly={locked} placeholder={isTest ? 'ব্যাখ্যা — ভুল করলে ফলাফলের পাতায় ছাত্ররা দেখবে' : 'ব্যাখ্যা — উত্তর দেওয়ার পর ছাত্ররা দেখবে'} aria-label="Explanation"
                   onChange={(e) => { const v = e.target.value; setQ(qi, () => ({ why: v })); }}
-                  style={{ width: '100%', height: 44, marginTop: 10, padding: '0 12px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 14 }} />
+                  style={{ width: '100%', height: 44, marginTop: 10, padding: '0 12px', border: '1px solid var(--field-line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 14 }} />
               </div>
             );
           })}
@@ -222,7 +233,7 @@ export default function EditorPage() {
 
       {errs.length ? (
         <div role="alert" style={{ marginTop: 24, border: '1px solid var(--margin)', borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div className="t13 w500" style={{ color: 'var(--margin)' }}>জমা দেওয়ার আগে ঠিক করো</div>
+          <div className="t13 w500" style={{ color: 'var(--margin)' }}>Fix Before Submitting</div>
           {errs.map((e) => <div key={e} className="t13" style={{ lineHeight: 1.7 }}>– {e}</div>)}
         </div>
       ) : null}
@@ -234,6 +245,18 @@ export default function EditorPage() {
           <button className="btn btn-primary ml-auto" style={{ padding: '0 20px', fontWeight: 500 }} onClick={submit}>{it.status === 'returned' ? 'Resubmit' : 'Submit for Review'}</button>
         ) : null}
       </div>
+
+      {undo ? (
+        <div className="snack" role="status" data-print="hide">
+          Block deleted
+          <button onClick={() => {
+            const u = undo;
+            editBlocks((bs) => { if (u.sole) return [u.b]; bs.splice(Math.min(u.i, bs.length), 0, u.b); return bs; });
+            setActive(u.sole ? 0 : Math.min(u.i, it.blocks.length));
+            setUndo(null);
+          }}>Undo</button>
+        </div>
+      ) : null}
     </Shell>
   );
 }
@@ -244,9 +267,9 @@ interface BlockEditorProps {
 }
 
 function BlockEditor({ b, i, count, active, locked, onFocus, onChange, onMove, onDelete, onPickImage }: BlockEditorProps) {
+  const { n } = useStore();
   const ti = blockTypes[b.t];
   const isText = b.t === 'h' || b.t === 'p' || b.t === 'list' || b.t === 'code';
-  const ctl: React.CSSProperties = { width: 32, height: 28, border: '1px solid var(--line)', borderRadius: 999, background: 'var(--surface)', fontSize: 12, color: 'var(--ink-2)' };
 
   return (
     <div onClick={onFocus} style={{ padding: '6px 16px 6px 14px', borderLeft: '2px solid ' + (active ? 'var(--brand)' : 'transparent') }}>
@@ -255,9 +278,10 @@ function BlockEditor({ b, i, count, active, locked, onFocus, onChange, onMove, o
           <span className="mono ink3" style={{ fontSize: 11 }}>{ti[0]}</span>
           {!locked ? (
             <span className="ml-auto" style={{ display: 'flex', gap: 4 }}>
-              <button style={ctl} aria-label="উপরে" disabled={i === 0} onClick={(e) => { e.stopPropagation(); onMove(-1); }}>↑</button>
-              <button style={ctl} aria-label="নিচে" disabled={i >= count - 1} onClick={(e) => { e.stopPropagation(); onMove(1); }}>↓</button>
-              <button style={{ ...ctl, color: 'var(--margin)' }} aria-label="মুছে দাও" onClick={(e) => { e.stopPropagation(); onDelete(); }}>✕</button>
+              <button className="blk-ctl" aria-label="Move up" disabled={i === 0} onClick={(e) => { e.stopPropagation(); onMove(-1); }}>↑</button>
+              <button className="blk-ctl" aria-label="Move down" disabled={i >= count - 1} onClick={(e) => { e.stopPropagation(); onMove(1); }}>↓</button>
+              {/* Set apart from the move buttons; a delete can be undone for a few seconds. */}
+              <button className="blk-ctl" data-danger="true" aria-label="Delete block" onClick={(e) => { e.stopPropagation(); onDelete(); }}>✕</button>
             </span>
           ) : null}
         </div>
@@ -280,23 +304,23 @@ function BlockEditor({ b, i, count, active, locked, onFocus, onChange, onMove, o
             <button onClick={(e) => { e.stopPropagation(); onPickImage(); }} disabled={locked}
               style={{ width: '100%', height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: '1px dashed var(--line-strong)', borderRadius: 999, background: 'var(--surface-sunk)', color: 'var(--ink)', whiteSpace: 'normal' }}>
               <span className="t15 w500">Choose Image</span>
-              <span className="t12 ink3">২০০ KB-র মধ্যে ছোট করে নেওয়া হবে</span>
+              <span className="t12 ink3">{n(200)} KB-র মধ্যে ছোট করে নেওয়া হবে</span>
             </button>
           )}
-          <input value={b.cap || ''} onChange={(e) => onChange({ cap: e.target.value })} onFocus={onFocus} readOnly={locked} placeholder="ছবির নিচের লেখা" aria-label="ছবির নিচের লেখা"
-            style={{ width: '100%', height: 36, padding: '0 10px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface)', fontSize: 13 }} />
+          <input value={b.cap || ''} onChange={(e) => onChange({ cap: e.target.value })} onFocus={onFocus} readOnly={locked} placeholder="ছবির নিচের লেখা" aria-label="Caption"
+            style={{ width: '100%', height: 44, padding: '0 12px', border: '1px solid var(--field-line)', borderRadius: 12, background: 'var(--surface)', fontSize: 14 }} />
         </div>
       ) : null}
 
       {b.t === 'fx' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <input value={b.x || ''} onChange={(e) => onChange({ x: e.target.value })} onFocus={onFocus} readOnly={locked} placeholder="LaTeX — যেমন: V = I \times R" aria-label="LaTeX"
-            className="mono" style={{ width: '100%', height: 40, padding: '0 10px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 14 }} />
+            className="mono" style={{ width: '100%', height: 44, padding: '0 12px', border: '1px solid var(--field-line)', borderRadius: 12, background: 'var(--surface-sunk)', fontSize: 14 }} />
           {active && !locked ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {fxKeys.map(([label, ins]) => (
-                <button key={label} onClick={(e) => { e.stopPropagation(); onChange({ x: (b.x || '') + ins }); }}
-                  style={{ minWidth: 36, height: 32, padding: '0 8px', border: '1px solid var(--line)', borderRadius: 999, background: 'var(--surface)', fontFamily: 'Georgia,serif', fontSize: 14 }}>{label}</button>
+                <button key={label} className="ctl" onClick={(e) => { e.stopPropagation(); onChange({ x: (b.x || '') + ins }); }}
+                  style={{ fontFamily: 'Georgia,serif', fontWeight: 400 }}>{label}</button>
               ))}
             </div>
           ) : null}

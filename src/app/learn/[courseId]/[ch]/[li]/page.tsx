@@ -16,7 +16,7 @@ import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
 type Tab = 'notes' | 'stuck' | 'quiz' | 'ask' | 'mine';
-const TABS: [string, Tab][] = [['Notes', 'notes'], ['আটকে গেছি', 'stuck'], ['Quiz', 'quiz'], ['Q&A', 'ask'], ['আমার নোট', 'mine']];
+const TABS: [string, Tab][] = [['Notes', 'notes'], ['Stuck?', 'stuck'], ['Quiz', 'quiz'], ['Q&A', 'ask'], ['My Note', 'mine']];
 const isTab = (v: string | null): v is Tab => !!v && TABS.some((x) => x[1] === v);
 const SPEEDS = [0.75, 1, 1.25, 1.5];
 const QUALITIES = ['auto', '720p', '480p', '360p'];
@@ -55,7 +55,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
 
   const [tab, setTab] = useState<Tab>(() => { const q = query.get('tab'); return isTab(q) ? q : 'notes'; });
   const [playing, setPlaying] = useState(false);
-  // Resume where "চালিয়ে যাও" left off.
+  // Resume where "Continue" left off.
   const [t, setT] = useState(() => { const l = s.last; return l.courseId === cid && l.ch === ci && l.li === li ? Math.min(l.t, dur) : 0; });
   const tRef = useRef(t);
   const [speed, setSpeed] = useState(1);
@@ -163,15 +163,15 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '12px 0 0' }}>
           <button className="tile" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}
-            style={{ width: 40, height: 40, border: 'none', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)' }}>
+            style={{ width: 44, height: 44, border: 'none', borderRadius: 999, background: 'var(--brand)', color: 'var(--on-brand)' }}>
             <Icon name={playing ? 'pause' : 'play_arrow'} size={24} fill />
           </button>
-          <button className="ctl ctl-round" onClick={() => setT(Math.max(0, t - 10))} aria-label="১০ সেকেন্ড পিছনে"><Icon name="replay_10" /></button>
-          <button className="ctl ctl-round" onClick={() => setT(Math.min(dur, t + 10))} aria-label="১০ সেকেন্ড সামনে"><Icon name="forward_10" /></button>
-          <div role="slider" aria-label="ভিডিওর অবস্থান" aria-valuemin={0} aria-valuemax={dur} aria-valuenow={Math.round(t)} tabIndex={0}
+          <button className="ctl ctl-round" onClick={() => setT(Math.max(0, t - 10))} aria-label="Back 10 seconds"><Icon name="replay_10" /></button>
+          <button className="ctl ctl-round" onClick={() => setT(Math.min(dur, t + 10))} aria-label="Forward 10 seconds"><Icon name="forward_10" /></button>
+          <div role="slider" aria-label="Video position" aria-valuemin={0} aria-valuemax={dur} aria-valuenow={Math.round(t)} tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'ArrowRight') setT(Math.min(dur, t + 5)); if (e.key === 'ArrowLeft') setT(Math.max(0, t - 5)); }}
             onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setT(Math.max(0, Math.min(dur, Math.round(((e.clientX - r.left) / r.width) * dur)))); }}
-            style={{ flex: 1, minWidth: 120, height: 24, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            style={{ flex: 1, minWidth: 120, height: 44, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
             <div style={{ position: 'relative', width: '100%', height: 6, borderRadius: 999, background: 'var(--surface-sunk)' }}>
               <div style={{ height: 6, borderRadius: 999, width: pct + '%', background: 'var(--brand)' }} />
               <div style={{ position: 'absolute', top: '50%', left: pct + '%', width: 16, height: 16, margin: '-8px 0 0 -8px', borderRadius: 999, background: 'var(--surface)', border: '3px solid var(--brand)' }} />
@@ -180,7 +180,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
           <span className="mono" style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--ink-2)' }}>{mmss(t)} / {mmss(dur)}</span>
           <button className="ctl mono" style={{ fontSize: 12 }} onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed}x</button>
           <button className="ctl mono" style={{ fontSize: 12 }} onClick={() => setQuality(QUALITIES[(QUALITIES.indexOf(quality) + 1) % QUALITIES.length])}>{quality}</button>
-          <button className="ctl" style={{ width: 32, padding: 0 }} aria-label="Fullscreen"><Icon name="fullscreen" size={20} /></button>
+          <button className="ctl" style={{ padding: 0 }} aria-label="Fullscreen"><Icon name="fullscreen" size={20} /></button>
         </div>
       </div>
 
@@ -191,7 +191,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
         <div className="seg" role="tablist">
           {TABS.map(([label, id]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              style={{ height: 36, fontSize: 14, fontWeight: tab === id ? 600 : 400 }}>{label}</button>
+              style={{ fontSize: 14, fontWeight: tab === id ? 600 : 400 }}>{label}</button>
           ))}
         </div>
         <button className="btn btn-sm only-tight" style={{ marginLeft: 'auto' }} onClick={() => setSheet(true)}><Icon name="list" size={18} />Chapters</button>
@@ -207,10 +207,10 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
       {tab === 'mine' ? (
         <div style={{ maxWidth: '68ch', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="lock" size={16} />শুধু তুমি দেখতে পাবে · অটো-সেভ হয়</div>
-          <textarea className="ruled" value={note} onChange={(e) => set((x) => setMyNote(x, lk, e.target.value))} placeholder="এই লেসনে যা মনে রাখতে চাও লিখে রাখো…" aria-label="আমার নোট" />
+          <textarea className="ruled" value={note} onChange={(e) => set((x) => setMyNote(x, lk, e.target.value))} placeholder="এই লেসনে যা মনে রাখতে চাও লিখে রাখো…" aria-label="My note" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{words ? plural(words, 'word') + ' · saved' : 'এখনো কিছু লেখোনি'}</span>
-            <Link href="/profile" className="btn btn-sm" style={{ marginLeft: 'auto' }}><Icon name="bookmarks" size={18} />সব নোট দেখো</Link>
+            <Link href="/profile" className="btn btn-sm" style={{ marginLeft: 'auto' }}><Icon name="bookmarks" size={18} />All Notes</Link>
           </div>
         </div>
       ) : null}
@@ -243,7 +243,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
             </>
           ) : (
             <EmptyCard title="এই লেসনে এখনো কিছু জমা হয়নি" body="যেখানে বেশি ছাত্র আটকায়, সেটা এখানে যোগ হয়। এখন পর্যন্ত এই লেসনে কেউ আটকায়নি।"
-              action={<button className="btn" onClick={() => setTab('ask')}>প্রশ্ন করে দেখো</button>} />
+              action={<button className="btn" onClick={() => setTab('ask')}>Ask a Question</button>} />
           )}
         </div>
       ) : null}
@@ -253,8 +253,8 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-2)' }}>Practice · {Object.keys(answers).length}/{content.quiz.length} answered</div>
-              <button className="btn btn-sm" style={{ marginLeft: 'auto', height: 34 }} onClick={() => set((x) => ({ ...x, practiceAns: { ...x.practiceAns, [lk]: {} } }))}>
-                <Icon name="restart_alt" size={18} />আবার
+              <button className="btn btn-sm" style={{ marginLeft: 'auto' }} onClick={() => set((x) => ({ ...x, practiceAns: { ...x.practiceAns, [lk]: {} } }))}>
+                <Icon name="restart_alt" size={18} />Retry
               </button>
             </div>
             {content.quiz.map((q, qi) => {
@@ -278,7 +278,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
                           <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
                           {show ? (
                             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, color: tone[0] }}>
-                              <Icon name={right ? 'check_circle' : 'cancel'} fill />{right ? 'ঠিক' : chosen ? 'ভুল' : ''}
+                              <Icon name={right ? 'check_circle' : 'cancel'} fill />{right ? 'Correct' : chosen ? 'Wrong' : ''}
                             </span>
                           ) : null}
                         </button>
@@ -302,11 +302,11 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
       {tab === 'ask' ? (
         <div style={{ maxWidth: '68ch', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {asks.map((d) => {
-            const who = d.mine ? 'তুমি' : d.who.split(' ')[0];
+            const who = d.mine ? 'You' : d.who.split(' ')[0];
             return (
               <div key={d.id} className="card" style={{ padding: '16px 18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span className="tile" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--accent-2-soft)', color: 'var(--accent-2)', fontSize: 13, fontWeight: 700 }}>{initial(d.mine ? 'তুমি' : d.who)}</span>
+                  <span className="tile" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--accent-2-soft)', color: 'var(--accent-2)', fontSize: 13, fontWeight: 700 }}>{initial(d.mine ? 'You' : d.who)}</span>
                   <span style={{ fontSize: 14, fontWeight: 600 }}>{who}</span>
                   <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ago(d.agoMin)}</span>
                 </div>
@@ -317,24 +317,26 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
                     <div style={{ fontSize: 15, lineHeight: 1.7 }}>{d.reply}</div>
                   </div>
                 ) : d.mine ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="schedule" size={18} />উত্তরের অপেক্ষায় · সাধারণত ২৪ ঘণ্টার মধ্যে</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, fontSize: 13, color: 'var(--ink-3)' }}><Icon name="schedule" size={18} />Waiting · usually answered within 24 h</div>
                 ) : null}
               </div>
             );
           })}
           <div className="card" style={{ padding: 14 }}>
-            <label htmlFor="ask" style={{ display: 'block', margin: '0 4px 8px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>তোমার প্রশ্ন</label>
+            <label htmlFor="ask" style={{ display: 'block', margin: '0 4px 8px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>Your question</label>
             <textarea id="ask" className="ask-box" value={askText} onChange={(e) => setAskText(e.target.value)} placeholder="যেটা বুঝোনি, লিখে ফেলো" />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-              <button className="btn btn-primary" disabled={!askText.trim()} onClick={sendAsk} style={{ padding: '0 20px' }}>পাঠাও<Icon name="send" size={18} /></button>
+              <button className="btn btn-primary" disabled={!askText.trim()} onClick={sendAsk} style={{ padding: '0 20px' }}>Send<Icon name="send" size={18} /></button>
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="only-desktop" data-print="hide" style={{ display: 'flex', gap: 12, marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+      {/* Stays at the bottom of the reading area, so the next step is in reach however long the notes are. */}
+      <div className="only-desktop lesson-foot" data-print="hide">
         <button className="btn" onClick={prev}><Icon name="arrow_back" size={20} />Prev</button>
-        <button className="btn btn-primary" style={{ marginLeft: 'auto', padding: '0 24px' }} onClick={next}>{nextLabel}</button>
+        <span className="ellipsis" style={{ flex: 1, minWidth: 0, textAlign: 'right', fontSize: 13, color: 'var(--ink-3)' }}>{lessonRef(ci, li)}</span>
+        <button className="btn btn-primary" style={{ padding: '0 24px' }} onClick={next}>{nextLabel}</button>
       </div>
 
       {sheet ? <Sheet title="Chapters" onClose={() => setSheet(false)}><div style={{ padding: '0 12px' }}>{spine('sheet')}</div></Sheet> : null}

@@ -46,7 +46,7 @@ export default function DoubtsPage() {
       <div className="seg" role="tablist" style={{ display: 'inline-flex', marginBottom: 20 }}>
         {([['Open', 'open', openL.length], ['Answered', 'done', doneL.length]] as const).map(([label, id, count]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setOpenId(null); }}
-            style={{ height: 36, padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {count}</button>
+            style={{ padding: '0 16px', fontSize: 14, fontWeight: tab === id ? 600 : 500 }}>{label} {count}</button>
         ))}
       </div>
 
@@ -75,13 +75,13 @@ export default function DoubtsPage() {
                       </div>
                     ) : (
                       <div>
-                        <textarea value={draft} placeholder="উত্তর লেখো" aria-label="উত্তর" onChange={(e) => setDrafts({ ...drafts, [d.id]: e.target.value })}
-                          style={{ width: '100%', minHeight: 96, padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
+                        <textarea value={draft} placeholder="উত্তর লেখো" aria-label="Reply" onChange={(e) => setDrafts({ ...drafts, [d.id]: e.target.value })}
+                          style={{ width: '100%', minHeight: 96, padding: '12px 14px', border: '1px solid var(--field-line)', borderRadius: 12, background: 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 16, resize: 'vertical' }} />
                         <div className="row wrap" style={{ gap: '8px 12px', marginTop: 10 }}>
                           <button onClick={() => router.push(editorHref(d.course + '|lesson:' + d.ch + ':' + d.li))}
-                            style={{ height: 36, padding: 0, border: 'none', background: 'none', color: 'var(--brand)', fontSize: 13, fontWeight: 500 }}>লেসনটা খোলো</button>
-                          <span className="t12 ink3">লেসনের প্রশ্ন ট্যাবে ব্যাচের সবাই দেখবে</span>
-                          <button className="btn btn-primary ml-auto" style={{ padding: '0 18px', fontWeight: 500 }} disabled={!draft.trim()} onClick={() => send(d.id)}>উত্তর পাঠাও</button>
+                            style={{ height: 36, padding: 0, border: 'none', background: 'none', color: 'var(--brand)', fontSize: 13, fontWeight: 500 }}>Open Lesson</button>
+                          <span className="t12 ink3">লেসনের Q&A ট্যাবে ব্যাচের সবাই দেখবে</span>
+                          <button className="btn btn-primary ml-auto" style={{ padding: '0 18px', fontWeight: 500 }} disabled={!draft.trim()} onClick={() => send(d.id)}>Send Reply</button>
                         </div>
                       </div>
                     )}

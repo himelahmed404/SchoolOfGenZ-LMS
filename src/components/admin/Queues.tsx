@@ -41,7 +41,7 @@ function useKeys(onKey: (e: KeyboardEvent) => void) {
 }
 
 function Badge({ c }: { c: Cell }) {
-  return <span className="adm-badge" style={{ background: c.bg, color: c.fg }}>{c.t}</span>;
+  return <span className="adm-badge" data-plain={c.plain} style={{ background: c.bg, color: c.fg }}>{c.t}</span>;
 }
 
 function Tabs<T extends string>({ tabs, cur, pick }: { tabs: [string, T, number][]; cur: T; pick: (id: T) => void }) {
