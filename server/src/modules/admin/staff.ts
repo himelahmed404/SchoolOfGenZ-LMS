@@ -3,7 +3,7 @@ import { and, eq, ne, sql } from 'drizzle-orm';
 import type { InviteStaffBody, OneTimeLink, Role, RoleBody, RolesAndStaff, StaffPatchBody } from '../../contract/index.js';
 import type { Db, Tx } from '../../db/index.js';
 import { roles, staff, users } from '../../db/schema.js';
-import { badRequest, conflict, notFound } from '../../http/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../../http/errors.js';
 import { endSessions, linkFor, type User } from '../auth/service.js';
 import { logActivity } from './activity.js';
 
@@ -38,6 +38,8 @@ export async function saveRole(db: Db, actor: User, id: string, body: RoleBody):
     const [cur] = await tx.select().from(roles).where(eq(roles.id, id));
     if (!cur) throw notFound('no_role');
     if (cur.locked) throw conflict('role_locked', 'This role cannot be changed');
+    // Nobody widens the role they hold themselves.
+    if ((await staffMember(tx, actor.id)).roleId === cur.id) throw conflict('own_role', 'Ask another admin to change your own role');
     const [saved] = await tx.update(roles).set({ name: body.name, description: body.description, perms: body.perms }).where(eq(roles.id, id)).returning(roleRow);
     await logActivity(tx, actor, 'roles', 'Changed role permissions', body.name, body.reason);
     return saved!;
@@ -62,6 +64,7 @@ export async function inviteStaff(db: Db, actor: User, body: InviteStaffBody): P
   return db.transaction(async (tx) => {
     const [role] = await tx.select().from(roles).where(eq(roles.id, body.role));
     if (!role) throw badRequest('no_role', 'That role does not exist', { role: 'unknown' });
+    if (role.locked) await superOnly(tx, actor);
     const made = await tx.insert(users).values({ kind: 'staff', name: body.name, email: body.email, status: 'invited' }).onConflictDoNothing().returning({ id: users.id });
     if (!made.length) throw conflict('email_taken', 'Someone already uses this email');
     await tx.insert(staff).values({ userId: made[0]!.id, roleId: role.id });
@@ -78,6 +81,14 @@ async function staffMember(tx: Tx, id: string) {
   return row;
 }
 
+/**
+ * The locked role is above the Roles & staff permission: only someone who holds it may give it, take it
+ * away, or make a sign-in link for someone who has it. Otherwise editing staff would be a way to become one.
+ */
+async function superOnly(tx: Tx, actor: User): Promise<void> {
+  if (!(await staffMember(tx, actor.id)).locked) throw forbidden('super_only', 'Only a super admin can do this');
+}
+
 /** Whether anyone else who is active holds the locked role. Without one, nobody could manage roles again. */
 async function anotherSuper(tx: Tx, except: string): Promise<boolean> {
   const [row] = await tx.select({ n: sql<number>`count(*)::int` }).from(staff).innerJoin(users, eq(users.id, staff.userId)).innerJoin(roles, eq(roles.id, staff.roleId))
@@ -90,11 +101,13 @@ export async function patchStaff(db: Db, actor: User, id: string, body: StaffPat
   if (id === actor.id) throw conflict('not_yourself', 'Ask another admin to change your own access');
   await db.transaction(async (tx) => {
     const cur = await staffMember(tx, id);
+    if (cur.locked) await superOnly(tx, actor);
     const losesSuper = cur.locked && ((body.role !== undefined && body.role !== cur.roleId) || body.active === false);
     if (losesSuper && !(await anotherSuper(tx, id))) throw conflict('last_super', 'At least one super admin must remain');
     if (body.role !== undefined && body.role !== cur.roleId) {
       const [next] = await tx.select().from(roles).where(eq(roles.id, body.role));
       if (!next) throw badRequest('no_role', 'That role does not exist', { role: 'unknown' });
+      if (next.locked) await superOnly(tx, actor);
       await tx.update(staff).set({ roleId: next.id }).where(eq(staff.userId, id));
       await logActivity(tx, actor, 'roles', 'Changed staff role', cur.user.name + ' · ' + cur.roleName + ' → ' + next.name, body.reason);
     }
@@ -115,6 +128,7 @@ export async function patchStaff(db: Db, actor: User, id: string, body: StaffPat
 export async function staffLink(db: Db, actor: User, id: string): Promise<OneTimeLink> {
   return db.transaction(async (tx) => {
     const cur = await staffMember(tx, id);
+    if (cur.locked) await superOnly(tx, actor);
     if (cur.user.status === 'inactive') throw conflict('inactive', 'Restore their access first');
     const link = await linkFor(tx, id);
     await logActivity(tx, actor, 'roles', cur.user.status === 'invited' ? 'Made a new invitation link' : 'Made a password reset link', cur.user.name);

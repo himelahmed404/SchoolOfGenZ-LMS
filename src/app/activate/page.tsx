@@ -2,15 +2,18 @@
 
 import type { SignedIn } from '@contract';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, AuthForm, AuthFrame, FootLink, PasswordField, PasswordRules, Submit, TextField } from '@/components/AuthFrame';
 import { api } from '@/lib/api/client';
 import { sayError } from '@/lib/api/messages';
 import { deviceId, homeOf, passwordOk } from '@/lib/api/session';
 import { useStore } from '@/lib/store';
 
-/** What the SMS link put in the address. Read once; the server render has no address to read. */
-const fromLink = (key: string) => () => (typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get(key) || '');
+/**
+ * What the SMS link put in the address. It comes after the `#`, which a browser never sends to a server,
+ * so the code is in no request log. Read once; the server render has no address to read.
+ */
+const fromLink = (key: string) => () => (typeof window === 'undefined' ? '' : new URLSearchParams(window.location.hash.slice(1)).get(key) || '');
 
 /** A new student sets their first password here, with the code from the SMS sent when their payment was approved. */
 export default function ActivatePage() {
@@ -21,6 +24,11 @@ export default function ActivatePage() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The code is in the form now. Take it out of the address, so it is not left in the history or copied with the link.
+  useEffect(() => {
+    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   if (!ready) return null;
 

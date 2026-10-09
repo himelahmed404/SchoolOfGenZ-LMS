@@ -415,6 +415,28 @@ describe('roles and staff', () => {
     const supers = await o.db.select().from(staff).innerJoin(users, eq(users.id, staff.userId)).where(and(eq(staff.roleId, 'super'), eq(users.status, 'active')));
     expect(supers).toHaveLength(1);
   });
+  it('keeps the super admin role out of reach of someone who may only edit roles and staff', async () => {
+    const admin = await sessionOf(SUPER);
+    const put = (id: string, cookie: string, perms: object) => request(app).put('/v1/admin/roles/' + id).set('Origin', ORIGIN).set('Cookie', cookie).send({ name: id === 'support' ? 'Support' : 'Finance', perms, reason: 'Helping with staff changes' });
+    expect((await put('support', admin, { roles: 'edit' })).status).toBe(200);
+    const helper = await sessionOf(SUPPORT);
+    const rifat = await byLogin(SUPER), nabila = await byLogin(FINANCE);
+    const patch = (id: string, body: object) => request(app).patch('/v1/admin/staff/' + id).set('Origin', ORIGIN).set('Cookie', helper).send(body);
+
+    // Not by inviting one, promoting one, demoting one, or taking over one's account with a link.
+    expect((await post('/admin/staff', { name: 'Friend', email: 'friend@schoolofgenz.com', role: 'super' }, helper)).body.error.code).toBe('super_only');
+    expect((await patch(nabila.id, { role: 'super', reason: 'Promoting a friend' })).body.error.code).toBe('super_only');
+    expect((await patch(rifat.id, { active: false, reason: 'Taking over' })).body.error.code).toBe('super_only');
+    expect((await post('/admin/staff/' + rifat.id + '/link', {}, helper)).body.error.code).toBe('super_only');
+    // Nor by widening the role they hold.
+    expect((await put('support', helper, { roles: 'edit', payments: 'edit' })).body.error.code).toBe('own_role');
+
+    // What the permission is for still works.
+    expect((await put('finance', helper, { payments: 'edit' })).status).toBe(200);
+    expect((await post('/admin/staff', { name: 'New Hand', email: 'newhand@schoolofgenz.com', role: 'finance' }, helper)).status).toBe(201);
+    expect((await post('/admin/staff/' + nabila.id + '/link', {}, helper)).status).toBe(200);
+    expect((await byLogin(SUPER)).status).toBe('active');
+  });
 });
 
 describe('every admin route', () => {

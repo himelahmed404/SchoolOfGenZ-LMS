@@ -13,6 +13,8 @@ const SAY: Record<string, string> = {
   no_staff: 'That staff member no longer exists. Reload and try again.',
   not_yourself: 'You cannot change your own access. Ask another admin.',
   last_super: 'At least one Super admin must remain.',
+  super_only: 'Only a Super admin can do this.',
+  own_role: 'You cannot change the role you hold. Ask another admin.',
   inactive: 'Restore their access first.',
   no_permission: 'Your role does not allow this.',
   unauthorized: 'You have been signed out. Sign in again.',

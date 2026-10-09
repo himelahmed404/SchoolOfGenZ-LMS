@@ -180,7 +180,7 @@ unanswered. The best score counts 5 leaderboard points per correct answer. Keys:
 ## Not real yet
 
 Only accounts are on the server. The rest of the state lives in `localStorage`, so the cross-role
-flows work within one browser, including across tabs (each tab signed in through the dev bar):
+flows work within one browser (switch account with the dev bar; a browser holds one session):
 - Student pays → admin approves → the student sees it.
 - Teacher submits → admin publishes → students see the new version.
 - Teacher replies → the student's Ask tab shows it.
@@ -198,6 +198,9 @@ Before production:
   still runs on seed data, with permissions enforced only in the UI.
 - An SMS gateway. Until then nobody outside development receives a code, and `/activate` has nothing
   to accept: the code is sent when an admin approves a payment, which is not on the server yet.
+- What `localStorage` holds (progress, notes, the payment in hand) is not tied to an account: on a
+  shared browser the next person to sign in sees it. That is what lets one browser play every role
+  today, and each slice leaves `localStorage` as its area moves to the API.
 - A screen for the devices a person is signed in on. The API can list and end them
   (`/auth/sessions`); no screen uses it.
 - API and persistence for Progress, TestAttempt, Payment, LessonRevision, Doubt and the admin data.
