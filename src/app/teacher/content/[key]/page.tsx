@@ -60,7 +60,7 @@ export default function EditorPage() {
   const submit = () => {
     const e = issues(it, numerals);
     if (e.length) { setErrs(e); return; }
-    set((x) => submitForReview(x, k, teacher.name));
+    set((x) => submitForReview(x, k, x.me?.name || teacher.name));
     setErrs([]);
   };
 

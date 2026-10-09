@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test';
-
-/** Skip first-run setup, as a returning student would. */
-const returning = () => {
-  localStorage.setItem('sgz-lms-v1', JSON.stringify({ version: 4, prefs: { numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: true } }));
-};
+import { signedInAs } from './session';
 
 test('the LMS reaches the API through its own /api path', async ({ request }) => {
   const res = await request.get('/api/v1/health');
@@ -19,7 +15,7 @@ test('an unknown API path comes back as an error with a code', async ({ request 
 });
 
 test('My Courses shows the semester with its subjects, then the single course', async ({ page }) => {
-  await page.addInitScript(returning);
+  await signedInAs(page, 'student');
   await page.goto('/courses');
   await expect(page.getByRole('heading', { name: 'CST · 4th Semester' })).toBeVisible();
   await expect(page.getByText('BTEB 25942')).toBeVisible();
@@ -27,7 +23,7 @@ test('My Courses shows the semester with its subjects, then the single course', 
 });
 
 test('a single course has no Quiz tab and a diploma subject does', async ({ page }) => {
-  await page.addInitScript(returning);
+  await signedInAs(page, 'student');
   await page.goto('/learn/eng/0/0');
   await expect(page.getByRole('tab', { name: 'Notes' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Quiz' })).toHaveCount(0);

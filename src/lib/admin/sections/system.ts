@@ -1,6 +1,6 @@
 import { AREAS } from '../seed';
 import { SL, type AdminConsole, type Rec } from '../console';
-import type { Area, Perm, Role, SectionView, Settings } from '../types';
+import type { Area, Block, Perm, SectionView, Settings } from '../types';
 import { periodTabs, revenueOver } from './revenue';
 
 /** Eight steps from `from` to `to` with a steady wobble, for a tile's trend line. Seeded like the rest of the report. */
@@ -118,32 +118,48 @@ export function settings(c: AdminConsole): SectionView {
   };
 }
 
-/** Roles & staff: custom roles with None / View / Edit per area, staff invites, role changes, View as. */
+/** One time a link stops working, as "16 Oct". */
+const untilDay = (c: AdminConsole, iso: string) => c.fd(iso.slice(0, 10));
+
+/**
+ * Roles & staff: custom roles with None / View / Edit per area, staff invited by a link the admin sends, role changes,
+ * access switched off and on. Everything here is read from the API and saved through it; the server checks each change
+ * and writes its own activity log. The console's log gets a copy so the change shows at once (it moves to the API later).
+ */
 export function roles(c: AdminConsole): SectionView {
-  const S = c.S, nf = c.nf, me = c.me();
+  const S = c.S, nf = c.nf, me = c.env.me, api = c.env.api, isSuper = !!me.role.locked;
+  const reload = () => c.env.refresh('roles');
+  const title = 'Roles & staff';
+  if (S.rolesState !== 'ready') {
+    return S.rolesState === 'loading'
+      ? { title, sub: 'Loading roles and staff…', head: [] }
+      : { title, sub: 'Roles and staff could not be loaded.', head: [c.A('Try again', reload, 'primary', false, true)] };
+  }
+
+  /** Everyone holding a role, whatever their status: a role cannot be deleted while anyone holds it. */
   const members = (rid: string) => S.staff.filter((s) => s.role === rid);
+  const noPerms = () => { const p = {} as Record<Area, Perm>; AREAS.forEach(([k]) => { p[k] = 'none'; }); return p; };
+  const roleOpts = S.roles.map((r) => [r.id, r.name] as [string, string]);
   const tabs: [string, string, number, () => void][] = [
     ['roles', 'Roles', S.roles.length, () => c.setState({ rtab: 'roles', sel: null, draft: null, form: null })],
     ['staff', 'Staff', S.staff.length, () => c.setState({ rtab: 'staff', sel: null, draft: null, form: null })],
   ];
   const staffTab = S.rtab === 'staff';
   const v: SectionView = {
-    title: 'Roles & staff', sub: 'Build custom roles: None, View or Edit for each area.',
+    title, sub: 'Build custom roles: None, View or Edit for each area.',
     head: [staffTab
-      ? c.A('Invite staff', () => c.setState({ sel: 'new', form: { name: '', email: '', role: 'support' } }), 'primary')
-      : c.A('New role', () => {
-        const id = 'r' + Date.now(), p = {} as Record<Area, Perm>;
-        AREAS.forEach(([k]) => { p[k] = 'none'; });
-        c.setState((s) => ({ roles: s.roles.concat([{ id, name: 'New role', desc: '', perms: p }]), sel: id, draft: null }));
-        c.log('roles', 'Created role', 'New role');
-      }, 'primary')],
+      ? c.A('Invite staff', () => c.setState({ sel: 'new', form: { name: '', email: '', role: S.roles.find((r) => !r.locked)?.id || '' } }), 'primary')
+      : c.A('New role', () => c.setState({ sel: 'new', draft: null, form: { name: '', desc: '', perms: noPerms() } }), 'primary')],
     list: staffTab
-      ? c.mkList(tabs, 'Search name or email', ['Name', 'Role', 'Last active'], 'minmax(0,1.8fr) minmax(0,1fr) minmax(0,0.8fr)',
+      ? c.mkList(tabs, 'Search name or email', ['Name', 'Role', 'Status', 'Last active'], 'minmax(0,1.8fr) minmax(0,1fr) minmax(0,0.7fr) minmax(0,0.8fr)',
         S.staff.filter((s) => c.match(s.name + s.email)).map((s) => ({ id: s.id, cells: [
-          c.T(s.name + (s.id === me.id ? ' (you)' : ''), s.email, { bold: true }), c.B(c.roleOf(s).locked ? 'published' : 'x', c.roleOf(s).name), c.T(s.last),
+          c.T(s.name + (s.id === me.id ? ' (you)' : ''), s.email, { bold: true }), c.B(c.roleOf(s).locked ? 'published' : 'x', c.roleOf(s).name), c.B(s.status), c.T(s.last),
         ] })), 'Nobody here.')
       : undefined,
-    summary: staffTab ? [c.kv('Staff', nf(S.staff.length)), c.kv('Roles in use', nf(new Set(S.staff.map((s) => s.role)).size)), c.kv('Super admins', nf(S.staff.filter((s) => c.roleOf(s).locked).length))] : undefined,
+    summary: staffTab ? [
+      c.kv('Staff', nf(S.staff.length)), c.kv('Waiting to accept', nf(S.staff.filter((s) => s.status === 'invited').length)),
+      c.kv('Roles in use', nf(new Set(S.staff.map((s) => s.role)).size)), c.kv('Super admins', nf(S.staff.filter((s) => c.roleOf(s).locked && s.status === 'active').length)),
+    ] : undefined,
     // Every role against every area, so a gap or an overlap in access is visible at a glance. A column header opens that role.
     matrix: staffTab ? undefined : {
       filters: c.tabs(tabs),
@@ -162,20 +178,22 @@ export function roles(c: AdminConsole): SectionView {
   };
 
   if (staffTab && S.sel === 'new') {
-    const f: Rec = S.form || {}, ok = (f.name || '').trim().length > 2 && /.+@.+\..+/.test(f.email || '');
+    const f: Rec = S.form || {}, name = String(f.name || '').trim(), email = String(f.email || '').trim();
+    const ok = name.length >= 2 && /^\S+@\S+\.\S+$/.test(email) && !!f.role;
     v.detail = {
-      title: 'Invite staff', sub: 'A sign-in link goes to their email.', closable: true,
+      title: 'Invite staff', sub: 'You get a link to send them. It works once.', closable: true,
       blocks: [c.blk({ fields: [
         c.inp('Name', f.name, (x) => c.setF('name', x)),
-        c.inp('Email', f.email, (x) => c.setF('email', x), { type: 'email' }),
-        c.seg('Role', S.roles.map((r) => [r.id, r.name] as [string, string]), f.role, (x) => c.setF('role', x)),
+        c.inp('Email', f.email, (x) => c.setF('email', x), { type: 'email', hint: 'They sign in with this.' }),
+        c.seg('Role', roleOpts, f.role, (x) => c.setF('role', x)),
       ] })],
       actions: [
-        c.A('Send invite', () => {
-          const id = 's' + Date.now(), roleName = (S.roles.find((r) => r.id === f.role) || S.roles[0]).name;
-          c.setState((s) => ({ staff: s.staff.concat([{ id, name: f.name.trim(), email: f.email.trim(), role: f.role, last: 'Invite sent' }]), sel: id, form: null }));
-          c.log('roles', 'Invited staff', f.name.trim() + ' · ' + roleName); c.flash('Invite sent');
-        }, 'primary', !ok),
+        c.A('Create invitation', () => c.send(() => api<{ id: string; link: string; expiresAt: string }>('/admin/staff', { body: { name, email, role: f.role } }), (r) => {
+          c.setState({ sel: r.id, form: null, link: { for: r.id, url: r.link, until: r.expiresAt } });
+          c.log('roles', 'Invited staff', name + ' · ' + (S.roles.find((x) => x.id === f.role)?.name || f.role));
+          reload();
+          c.flash('Invitation created. Copy the link and send it.');
+        }), 'primary', !ok),
         c.A('Cancel', () => c.setState({ sel: null, form: null }), 'ghost', false, true),
       ],
     };
@@ -183,54 +201,107 @@ export function roles(c: AdminConsole): SectionView {
 
   const st = staffTab ? S.staff.find((x) => x.id === S.sel) : undefined;
   if (st) {
-    // Guardrails: never remove yourself or the last Super admin.
-    const supers = S.staff.filter((s) => c.roleOf(s).locked).length, lastSuper = !!c.roleOf(st).locked && supers <= 1;
+    // Guardrails the server also keeps: nobody changes their own access, and one Super admin always remains.
+    const role = c.roleOf(st), isMe = st.id === me.id, off = st.status === 'inactive';
+    const supers = S.staff.filter((s) => c.roleOf(s).locked && s.status === 'active').length;
+    const lastSuper = !!role.locked && st.status === 'active' && supers <= 1;
+    const patch = (body: Rec, done: string, logged: [string, string, string]) =>
+      c.send(() => api('/admin/staff/' + st.id, { method: 'PATCH', body }), () => { c.log('roles', ...logged); reload(); c.flash(done); });
+    const makeLink = () => c.send(() => api<{ link: string; expiresAt: string }>('/admin/staff/' + st.id + '/link', { method: 'POST' }), (r) => {
+      c.setState({ link: { for: st.id, url: r.link, until: r.expiresAt } });
+      c.log('roles', st.status === 'invited' ? 'Made a new invitation link' : 'Made a password reset link', st.name);
+      c.flash('Link ready. Copy it and send it.');
+    });
+    const link = S.link && S.link.for === st.id ? S.link : null;
     v.detail = {
-      title: st.name, sub: st.email, badge: c.B('x', c.roleOf(st).name), closable: true,
+      title: st.name, sub: st.email, badge: c.B(st.status), closable: true,
       blocks: [
-        c.blk({ kv: [c.kv('Last active', st.last)] }),
-        c.blk({ title: 'Role', fields: [c.seg('', S.roles.map((r) => [r.id, r.name] as [string, string]), st.role, (x) => {
+        c.blk({ kv: [c.kv('Role', role.name), c.kv('Last active', st.last)] }),
+        link ? c.blk({
+          title: st.status === 'invited' ? 'Invitation link' : 'Password reset link', tone: 'brand',
+          note: 'Send this to ' + st.name.split(' ')[0] + ' yourself. It works once, until ' + untilDay(c, link.until) + ', and is not shown again.',
+          items: [c.it(link.url, '', '', 'Copy', () => { c.env.copy(link.url); c.flash('Link copied'); })],
+        }) : null,
+        c.blk({ title: 'Role', fields: [c.seg('', roleOpts, st.role, (x) => {
           if (x === st.role) return;
           const to = S.roles.find((r) => r.id === x)!;
-          c.ask({ title: 'Move ' + st.name + ' to the ' + to.name + ' role?', body: 'The new permissions apply from the next page load.', needReason: true, reasons: ['Responsibilities changed', 'Temporary cover', 'Was in the wrong role'], ok: 'Change role',
-            run: (r) => { c.upd('staff', st.id, { role: x }); c.log('roles', 'Changed staff role', st.name + ' → ' + to.name, r); c.flash('Role changed'); } });
-        }, { dis: lastSuper, hint: lastSuper ? 'The only Super admin. At least one must remain.' : '' })] }),
-      ],
-      actions: [
-        c.A('View as ' + st.name.split(' ')[0], () => c.viewAs(st.id), 'ghost', false, true),
+          c.ask({ title: 'Move ' + st.name + ' to the ' + to.name + ' role?', body: 'The new permissions apply from their next request.', needReason: true, reasons: ['Responsibilities changed', 'Temporary cover', 'Was in the wrong role'], ok: 'Change role',
+            run: (r) => patch({ role: x, reason: r }, 'Role changed', ['Changed staff role', st.name + ' → ' + to.name, r]) });
+        }, { dis: lastSuper || isMe || off, hint: isMe ? 'Ask another admin to change your own role.' : lastSuper ? 'The only Super admin. At least one must remain.' : off ? 'Restore their access to change the role.' : '' })] }),
+      ].filter((b): b is Block => !!b),
+      actions: off ? [
+        c.A('Restore access', () => c.ask({ title: 'Restore access for ' + st.name + '?', body: 'They can sign in again with the role shown.', needReason: true,
+          reasons: ['Back at work', 'Removed by mistake'], ok: 'Restore',
+          run: (r) => patch({ active: true, reason: r }, 'Access restored', ['Restored staff access', st.name, r]) }), 'primary'),
+      ] : [
+        c.A(st.status === 'invited' ? 'New invitation link' : 'Password reset link', makeLink),
+        c.A('Preview as ' + st.name.split(' ')[0], () => c.viewAs(st.id), 'ghost', !isSuper || isMe || st.status !== 'active', true),
         c.A('Remove access', () => c.ask({ title: 'Remove access for ' + st.name + '?', body: 'They are signed out at once. Their past actions stay in the activity log.', needReason: true, danger: true,
           reasons: ['Left the job', 'Security risk', 'No longer needed'], ok: 'Remove',
-          run: (r) => { c.setState((s) => ({ staff: s.staff.filter((x) => x.id !== st.id), sel: null })); c.log('roles', 'Removed staff', st.name, r); c.flash('Access removed'); } }),
-        'danger', lastSuper || st.id === me.id),
+          run: (r) => patch({ active: false, reason: r }, 'Access removed', ['Removed staff access', st.name, r]) }),
+        'danger', lastSuper || isMe),
+      ],
+    };
+  }
+
+  /** The permission switches of a role being made or edited. */
+  const permFields = (d: Rec, set: (k: string, v: unknown) => void, locked: boolean) =>
+    AREAS.map(([k, l]) => c.seg(l, [['none', 'None'], ['view', 'View'], ['edit', 'Edit']], locked ? 'edit' : d.perms[k], (x) => set('perms', { ...d.perms, [k]: x }), { inline: true, dis: locked }));
+  /** Create a role and open it. */
+  const create = (name: string, desc: string, perms: Record<Area, Perm>, logged: string) =>
+    c.send(() => api<{ id: string }>('/admin/roles', { body: { name, description: desc, perms } }), (r) => {
+      c.setState({ sel: r.id, form: null, draft: null });
+      c.log('roles', logged, name);
+      reload();
+      c.flash('Role created');
+    });
+
+  if (!staffTab && S.sel === 'new') {
+    const f: Rec = S.form || { name: '', desc: '', perms: noPerms() }, name = String(f.name || '').trim();
+    v.detail = {
+      title: name || 'New role', sub: 'Name it, then choose what it may see and change.', closable: true,
+      blocks: [
+        c.blk({ fields: [c.inp('Role name', f.name, (x) => c.setF('name', x)), c.inp('Description', f.desc, (x) => c.setF('desc', x), { ph: 'What this role does' })] }),
+        c.blk({ title: 'Permissions', fields: permFields(f, (k, val) => c.setF(k, val), false) }),
+      ],
+      actions: [
+        c.A('Create role', () => create(name, String(f.desc || '').trim(), f.perms, 'Created role'), 'primary', name.length < 2),
+        c.A('Cancel', () => c.setState({ sel: null, form: null }), 'ghost', false, true),
       ],
     };
   }
 
   const r0 = !staffTab ? S.roles.find((x) => x.id === S.sel) : undefined;
   if (r0) {
-    const e = c.edit(r0, 'role:' + r0.id), d = e.d, set = e.set, mem = members(r0.id);
-    const fields = AREAS.map(([k, l]) => c.seg(l, [['none', 'None'], ['view', 'View'], ['edit', 'Edit']], d.locked ? 'edit' : d.perms[k], (x) => set('perms', { ...d.perms, [k]: x }), { inline: true, dis: !!d.locked }));
+    const e = c.edit(r0, 'role:' + r0.id), d = e.d, set = e.set, mem = members(r0.id), name = String(d.name || '').trim();
     v.detail = {
       title: d.name || 'Untitled role', sub: d.desc, closable: true, badge: r0.locked ? c.B('published', 'Locked') : null,
       blocks: [
         r0.locked ? c.blk({ note: 'Super admin can do everything. This cannot be changed.', tone: 'muted' })
           : c.blk({ fields: [c.inp('Role name', d.name, (x) => set('name', x)), c.inp('Description', d.desc, (x) => set('desc', x), { ph: 'What this role does' })] }),
-        c.blk({ title: 'Permissions', fields }),
-        c.blk({ title: 'Members · ' + nf(mem.length), items: mem.map((s) => c.it(s.name, s.email, '', 'View as', () => c.viewAs(s.id))), note: mem.length ? '' : 'Nobody has this role.' }),
+        c.blk({ title: 'Permissions', fields: permFields(d, set, !!r0.locked) }),
+        c.blk({ title: 'Members · ' + nf(mem.length), note: mem.length ? '' : 'Nobody has this role.',
+          items: mem.map((s) => (isSuper && s.status === 'active' && s.id !== me.id ? c.it(s.name, s.email, '', 'Preview as', () => c.viewAs(s.id)) : c.it(s.name, s.email, s.status === 'active' ? '' : SL[s.status]))) }),
       ],
       actions: r0.locked ? [] : [
-        c.A('Save role', () => c.ask({ title: 'Change permissions of the ' + d.name + ' role?', body: 'Access changes at once for ' + nf(mem.length) + ' staff.', needReason: true,
+        c.A('Save role', () => c.ask({ title: 'Change permissions of the ' + name + ' role?', body: 'Access changes at once for ' + nf(mem.length) + ' staff.', needReason: true,
           reasons: ['Responsibilities changed', 'New feature', 'Had too much access'], ok: 'Save role',
-          run: (r) => { c.upd('roles', r0.id, c.strip(d)); c.setState({ draft: null }); c.log('roles', 'Changed role permissions', d.name, r); c.flash('Role saved'); } }),
-          'primary', !e.dirty || !String(d.name).trim()),
-        c.A('Duplicate', () => {
-          const id = 'r' + Date.now();
-          c.setState((s) => ({ roles: s.roles.concat([{ ...(c.strip(d) as Role), id, name: d.name + ' (copy)', locked: false }]), sel: id, draft: null }));
-          c.log('roles', 'Duplicated role', d.name);
-        }),
+          run: (r) => c.send(() => api('/admin/roles/' + r0.id, { method: 'PUT', body: { name, description: String(d.desc || '').trim(), perms: d.perms, reason: r } }), () => {
+            c.setState({ draft: null });
+            c.log('roles', 'Changed role permissions', name, r);
+            reload();
+            c.flash('Role saved');
+          }) }),
+          'primary', !e.dirty || name.length < 2),
+        c.A('Duplicate', () => create(name + ' (copy)', String(d.desc || '').trim(), d.perms, 'Duplicated role')),
         // A role can't be deleted while it has members.
-        c.A('Delete', () => c.ask({ title: 'Delete the ' + d.name + ' role?', body: 'This role can no longer be used.', needReason: true, danger: true, reasons: ['No longer needed', 'Merged into another role'], ok: 'Delete role',
-          run: (r) => { c.setState((s) => ({ roles: s.roles.filter((x) => x.id !== r0.id), sel: null, draft: null })); c.log('roles', 'Deleted role', d.name, r); } }), 'danger', mem.length > 0),
+        c.A('Delete', () => c.ask({ title: 'Delete the ' + r0.name + ' role?', body: 'This role can no longer be used.', needReason: true, danger: true, reasons: ['No longer needed', 'Merged into another role'], ok: 'Delete role',
+          run: (r) => c.send(() => api('/admin/roles/' + r0.id + '/delete', { body: { reason: r } }), () => {
+            c.setState({ sel: null, draft: null });
+            c.log('roles', 'Deleted role', r0.name, r);
+            reload();
+            c.flash('Role deleted');
+          }) }), 'danger', mem.length > 0),
       ],
     };
     if (mem.length && !r0.locked) v.detail.blocks.push(c.blk({ note: 'It has members, so it cannot be deleted. Move them to another role first.' }));

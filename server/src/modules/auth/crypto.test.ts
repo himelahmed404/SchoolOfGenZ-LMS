@@ -42,6 +42,7 @@ describe('tokens and codes', () => {
 
   it('reads a typed code whatever its spacing or case', () => {
     expect(tidyCode(' k7qm-2xdp ')).toBe('K7QM2XDP');
+    expect(tidyCode('k৭qm-২xdp')).toBe('K7QM2XDP');
   });
 
   it('keeps only a keyed hash, the same for the same value', () => {

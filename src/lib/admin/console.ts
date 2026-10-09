@@ -2,12 +2,15 @@
  * Admin console logic, ported from Admin Console v5 (`Component` class).
  * The console is data-driven: each section builder returns a SectionView (list / dashboard / detail
  * pane) and the renderer draws it. Builders live in ./sections/* and register in BUILDERS.
- * Permissions are mirrored here for the UI only; the server must enforce them.
+ * Permissions are mirrored here so the console shows only what a role may use; the API enforces them on every request.
  */
+import type { ApiInit } from '../api/client';
 import { ago, dateEn } from '../format';
+import { noRole } from './api';
+import { sayAdmin } from './errors';
 import { AREAS } from './seed';
 import type {
-  Action, AdminData, Area, Bar, Block, Cell, ConfirmSpec, Detail, Field, Item, Kpi, KV, ListView, Meter, Perm, Role, Section, SectionView, Staff, Tab,
+  Action, AdminData, Area, Bar, Block, Cell, ConfirmSpec, Detail, Fetched, Field, Item, Kpi, KV, ListView, Meter, Perm, Role, Section, SectionView, Staff, Tab,
   AdminCourse, AdminTeacher, Coupon, Refund, Subject,
 } from './types';
 
@@ -22,13 +25,17 @@ export interface ConsoleUi {
   srOpen: boolean; srQ: string; srIdx: number;
   /** Page of the current list, zero-based. */
   page: number;
+  /** A staff member whose view a super admin is previewing, by id. Changes are still made as the signed-in person. */
+  viewAs: string | null;
+  /** The one-time link just made for a staff member, kept on screen until the admin has copied it. */
+  link: { for: string; url: string; until: string } | null;
 }
-export type ConsoleState = AdminData & ConsoleUi;
+export type ConsoleState = AdminData & Fetched & ConsoleUi;
 export type SetState = (p: Partial<ConsoleState> | ((s: ConsoleState) => Partial<ConsoleState>)) => void;
 
 export const initialUi: ConsoleUi = {
   sel: null, filter: 'all', q: '', form: null, draft: null, confirm: null, cReason: null, cNote: '', toast: null,
-  viewOpen: false, period: 'month', rtab: 'roles', srOpen: false, srQ: '', srIdx: 0, page: 0,
+  viewOpen: false, period: 'month', rtab: 'roles', srOpen: false, srQ: '', srIdx: 0, page: 0, viewAs: null, link: null,
 };
 
 /** Rows per list page. */
@@ -46,6 +53,15 @@ export interface ConsoleEnv {
   navigate: (sec: Section) => void;
   toggleTheme: () => void;
   today: Date;
+  /** The signed-in staff member. Their role is the one the API enforces. */
+  me: { id: string; name: string; email: string; role: Role };
+  /** Call the API (`api` in src/lib/api/client.ts). A refusal rejects with its code. */
+  api: <T>(path: string, init?: ApiInit) => Promise<T>;
+  /** Fetch again what a change has made out of date. */
+  refresh: (what: 'roles') => void;
+  /** Put text on the clipboard. */
+  copy: (text: string) => void;
+  signOut: () => void;
 }
 
 export const ICON: Record<string, string> = {
@@ -121,30 +137,43 @@ export class AdminConsole {
   }
   /** What someone is enrolled in, in one word: the batch, or the code of a single course. */
   inWhat(x: { course: string; batch?: string }) { return x.batch || this.course(x.course).code; }
-  me(): Staff { return this.S.staff.find((s) => s.id === this.S.viewAs) || this.S.staff[0]; }
-  roleOf(s: Staff): Role { return this.S.roles.find((r) => r.id === s.role) || this.S.roles[0]; }
-  perm(a: Section, staffId?: string): Perm {
+  roleOf(s: Staff): Role { return this.S.roles.find((r) => r.id === s.role) || noRole(s.role); }
+  /**
+   * Whose view the console is drawn for: the signed-in person, or the staff member a super admin is previewing.
+   * A preview changes what is shown, never what is allowed: every request is still made, and checked, as the signed-in person.
+   */
+  acting(): { name: string; role: Role; preview: boolean } {
+    const me = this.env.me, other = me.role.locked && this.S.viewAs ? this.S.staff.find((s) => s.id === this.S.viewAs && s.id !== me.id) : undefined;
+    return other ? { name: other.name, role: this.roleOf(other), preview: true } : { name: me.name, role: me.role, preview: false };
+  }
+  perm(a: Section): Perm {
     if (a === 'overview') return 'view';
-    const s = staffId ? this.S.staff.find((x) => x.id === staffId) : this.me();
-    const r = this.roleOf(s || this.S.staff[0]);
+    const r = this.acting().role;
     return r.locked ? 'edit' : (r.perms[a as Area] || 'none');
   }
 
   /* ---------- effects ---------- */
-  /** Append-only activity log entry (actor = the staff member being viewed as). */
+  /** Append-only activity log entry, in the name of the signed-in person. */
   log(area: string, action: string, target: string, reason?: string) {
-    const actor = this.me().name;
+    const actor = this.env.me.name;
     this.setState((s) => ({ activity: [{ id: 'l' + Date.now() + Math.random(), at: Date.now(), actor, area, action, target, reason: reason || '' }].concat(s.activity) }));
   }
   flash(t: string) { this.setState({ toast: t }); }
+  /**
+   * Send a change to the API. Once it is saved `then` runs with the answer; a refusal is said in words and nothing else happens.
+   * The server is what decides and what writes its activity log.
+   */
+  send<T>(work: () => Promise<T>, then?: (r: T) => void) {
+    work().then((r) => { if (then) then(r); }, (e: unknown) => this.flash(sayAdmin(e)));
+  }
   ask(c: ConfirmSpec) { this.setState({ confirm: c, cReason: null, cNote: '' }); }
-  upd<K extends 'students' | 'teachers' | 'courses' | 'batches' | 'coupons' | 'refunds' | 'certs' | 'ann' | 'staff' | 'roles'>(list: K, id: string, patch: Rec | ((x: Rec) => Rec)) {
+  upd<K extends 'students' | 'teachers' | 'courses' | 'batches' | 'coupons' | 'refunds' | 'certs' | 'ann'>(list: K, id: string, patch: Rec | ((x: Rec) => Rec)) {
     this.setState((s) => ({ [list]: (s[list] as Rec[]).map((x) => (x.id === id ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x)) } as Partial<ConsoleState>));
   }
   setF(k: string, v: unknown) { this.setState((s) => ({ form: { ...(s.form || {}), [k]: v } })); }
   tog<T>(arr: T[], x: T) { return arr.includes(x) ? arr.filter((y) => y !== x) : arr.concat([x]); }
   go(sec: Section, sel?: string | null, filter?: string) {
-    this.setState({ sel: sel || null, filter: filter || (sec === 'refunds' ? 'open' : 'all'), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles' });
+    this.setState({ sel: sel || null, filter: filter || (sec === 'refunds' ? 'open' : 'all'), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles', link: null });
     this.env.navigate(sec);
   }
   nav(sec: Section, sel?: string | null, filter?: string) {
@@ -158,13 +187,14 @@ export class AdminConsole {
     return { d, dirty, set: (k: string, v: unknown) => this.setState((s) => ({ draft: { ...(s.draft && s.draft._id === id ? s.draft : d), [k]: v } })) };
   }
   strip(d: Rec) { const o = { ...d }; delete o._id; return o; }
-  viewAs(id: string) {
-    const s = this.S.staff.find((x) => x.id === id);
-    if (!s) return;
-    this.setState({ viewAs: id, viewOpen: false });
+  /** A super admin previews the console as another staff member sees it; null goes back to their own view. */
+  viewAs(id: string | null) {
+    const s = id ? this.S.staff.find((x) => x.id === id) : undefined;
+    if (!s || !this.env.me.role.locked || s.id === this.env.me.id) { this.setState({ viewAs: null, viewOpen: false }); return; }
+    this.setState({ viewAs: s.id, viewOpen: false });
     const r = this.roleOf(s), p = (a: Section) => (a === 'overview' ? 'view' : r.locked ? 'edit' : r.perms[a as Area] || 'none');
     if (p(this.env.sec) === 'none') this.go('overview');
-    this.flash('Now viewing as ' + s.name + ' (' + r.name + ')');
+    this.flash('Previewing as ' + s.name + ' (' + r.name + '). Anything you change is still changed as you.');
   }
 
   /* ---------- view-model constructors ---------- */
@@ -288,7 +318,7 @@ export class AdminConsole {
       .map((k) => ({ title: k === 'overview' ? 'Overview' : this.areaLabel(k), sub: '', icon: ICON[k], run: close(() => this.go(k)) })).filter((p) => !q || has(p.title));
     const acts = ([
       ['New announcement', 'Send a notice, SMS or push', 'announcements', () => { this.go('announcements'); this.setState({ sel: 'new', form: { title: '', body: '', aud: 'all', target: '', ch: ['app', 'push'], when: 'now', date: '' } }); }],
-      ['Invite staff', 'Add an admin or support member', 'roles', () => { this.go('roles'); this.setState({ rtab: 'staff', sel: 'new', form: { name: '', email: '', role: 'support' } }); }],
+      ['Invite staff', 'Add an admin or support member', 'roles', () => { this.go('roles'); this.setState({ rtab: 'staff', sel: 'new', form: { name: '', email: '', role: this.S.roles.find((r) => !r.locked)?.id || '' } }); }],
       ['Edit roles & permissions', 'Who can view and change what', 'roles', () => this.go('roles')],
     ] as [string, string, Section, () => void][])
       .filter((a) => this.perm(a[2]) === 'edit' && (!q || has(a[0]) || has(a[1]))).map((a) => ({ title: a[0], sub: a[1], icon: ICON.plus, run: close(a[3]) }));
@@ -344,7 +374,7 @@ export class AdminConsole {
       })),
     })).filter((g) => g.items.length);
 
-    const me = this.me(), role = this.roleOf(me);
+    const me = this.env.me, acting = this.acting();
     const build = BUILDERS[sec];
     const v: SectionView = !isQueue && build ? build(this)
       : isQueue ? { title: this.areaLabel(sec), sub: sec === 'payments' ? this.pl(E.payCount, 'payment') + ' waiting for approval' : this.pl(E.contentCount, 'item') + ' waiting for review', head: [] }
@@ -396,8 +426,12 @@ export class AdminConsole {
       sec, isQueue, mini, navGroups, ro: this.ro,
       readOnly: this.ro && !['overview', 'reports', 'activity'].includes(sec),
       headIcon: ICON[sec] || ICON.overview,
-      staffOpts: S.staff.map((s) => ({ id: s.id, name: s.name, role: this.roleOf(s).name, on: s.id === me.id, go: () => this.viewAs(s.id) })),
-      meName: me.name, meRole: role.name + (me.id !== S.staff[0]?.id ? ' · view as' : ''),
+      /** Staff a super admin can preview the console as. Empty for everyone else. */
+      staffOpts: me.role.locked ? S.staff.filter((s) => s.status === 'active' && s.id !== me.id).map((s) => ({ id: s.id, name: s.name, role: this.roleOf(s).name, on: s.id === S.viewAs, go: () => this.viewAs(s.id) })) : [],
+      meName: me.name, meRole: me.role.name, meEmail: me.email,
+      /** Set while a super admin is looking at the console as someone else. */
+      preview: acting.preview ? { name: acting.name, role: acting.role.name, stop: () => this.viewAs(null) } : null,
+      signOut: this.env.signOut,
       v, dt, confirm,
       /** Width the admin dragged the detail pane to; 0 = the default, which follows the screen width. */
       paneW: S.paneW || 0,

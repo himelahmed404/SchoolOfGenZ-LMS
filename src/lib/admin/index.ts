@@ -22,5 +22,7 @@ BUILDERS.settings = settings;
 BUILDERS.roles = roles;
 
 export * from './console';
+export { noFetched, noRole, roleFromApi, rolesFromApi } from './api';
+export { ADMIN_CODES, sayAdmin } from './errors';
 export { AREAS, adminSeed } from './seed';
 export type * from './types';

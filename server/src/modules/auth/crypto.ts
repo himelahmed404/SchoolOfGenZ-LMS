@@ -3,6 +3,7 @@
  * a password becomes an argon2id hash, a token or code becomes a keyed hash.
  */
 import { argon2, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import { latinDigits } from '../../contract/index.js';
 import { secret } from '../../env.js';
 
 /** argon2id at the cost OWASP gives as its minimum: 19 MiB, 2 passes, 1 lane. About 30 ms on a server. */
@@ -56,8 +57,8 @@ export function newCode(): string {
   return out;
 }
 
-/** What a person types as their code, tidied: no spaces or dashes, upper case. */
-export const tidyCode = (typed: string) => typed.replace(/[\s-]/g, '').toUpperCase();
+/** What a person types as their code, tidied: no spaces or dashes, upper case, and Bangla digits read as digits. */
+export const tidyCode = (typed: string) => latinDigits(typed).replace(/[\s-]/g, '').toUpperCase();
 
 /** The keyed hash kept in place of a token or code. Without the server's secret, a copy of the database verifies nothing. */
 export const keyed = (value: string) => createHmac('sha256', secret()).update(value).digest('hex');

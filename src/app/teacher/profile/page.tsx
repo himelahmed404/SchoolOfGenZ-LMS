@@ -1,27 +1,43 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { Alert } from '@/components/AuthFrame';
 import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
-import { teacher, teacherStats as T } from '@/lib/data';
+import { sayError } from '@/lib/api/messages';
+import { teacherStats as T } from '@/lib/data';
 import { plural, taka } from '@/lib/format';
 import { useStore } from '@/lib/store';
 
 export default function TeacherProfilePage() {
-  const { s } = useStore();
-  const p = s.tProfile;
+  const { me, signOut, n } = useStore();
+  const router = useRouter();
+  const [outError, setOutError] = useState<string | null>(null);
+  // The shell shows nothing until a teacher is signed in, so these are only ever empty for a moment.
+  const name = me?.name || '', subjects = me?.subjects || [];
+  const logOut = async () => {
+    setOutError(null);
+    try {
+      await signOut();
+      router.replace('/signin');
+    } catch (e) {
+      setOutError(sayError(e, n));
+    }
+  };
 
   return (
     <Shell role="teacher" title="Profile">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div className="hero" style={{ display: 'flex', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
-          <Avatar name={teacher.name} size={84} fontSize={40} />
+          <Avatar name={name || '?'} size={84} fontSize={40} />
           <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.25, fontWeight: 800 }}>{teacher.name}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>{teacher.title}</div>
-            <p style={{ margin: '4px 0 0', maxWidth: '60ch', fontSize: 14, lineHeight: 1.7, opacity: 0.92 }}>{p.bio}</p>
+            <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.25, fontWeight: 800 }}>{name}</div>
+            <div className="mono" style={{ fontSize: 13, opacity: 0.9 }}>{me?.email}</div>
+            {me?.bio ? <p style={{ margin: '4px 0 0', maxWidth: '60ch', fontSize: 14, lineHeight: 1.7, opacity: 0.92 }}>{me.bio}</p> : null}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-              {p.subjects.map((sub) => <span key={sub} style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', fontSize: 12, fontWeight: 600 }}>{sub}</span>)}
+              {subjects.map((sub) => <span key={sub} style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', fontSize: 12, fontWeight: 600 }}>{sub}</span>)}
             </div>
           </div>
           <Link href="/teacher/profile/edit" className="btn btn-white" style={{ height: 42, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
@@ -105,6 +121,21 @@ export default function TeacherProfilePage() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <h2 className="sec-h">Account</h2>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Link href="/teacher/profile/edit#password" className="set-row">
+              <span className="tile set-ico"><Icon name="key" /></span>
+              <span style={{ flex: 1 }}>Change password</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
+            </Link>
+            <button className="set-row set-danger" onClick={logOut}>
+              <span className="tile set-ico"><Icon name="logout" /></span>
+              <span style={{ flex: 1 }}>Log out</span>
+            </button>
+          </div>
+          {outError ? <Alert>{outError}</Alert> : null}
         </section>
       </div>
     </Shell>

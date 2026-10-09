@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ago, dateEn, dateRangeEn, daysTo, digits, mmss, monthEn, ordinal, ordinalEn, pad2, plural, secs, semLabel, taka } from './format';
+import { ago, dateEn, dateRangeEn, daysTo, digits, maskPhone, mmss, monthEn, ordinal, ordinalEn, pad2, phoneEn, plural, secs, semLabel, taka } from './format';
 
 afterEach(() => { vi.useRealTimers(); });
 
@@ -60,6 +60,21 @@ describe('facts are English with 123 digits', () => {
     expect(daysTo('2026-10-09')).toBe(1);
     expect(daysTo('2026-12-14')).toBe(67);
     expect(daysTo('2026-10-01')).toBe(-7);
+  });
+});
+
+describe('phone numbers', () => {
+  it('splits a number for reading', () => {
+    expect(phoneEn('01712445589')).toBe('01712-445589');
+    expect(phoneEn('01712445589', ' ')).toBe('01712 445589');
+  });
+  it('hides the middle of a number', () => {
+    expect(maskPhone('01712445589')).toBe('01712-••••89');
+  });
+  it('leaves anything that is not an 11-digit number as it is', () => {
+    expect(phoneEn('')).toBe('');
+    expect(phoneEn('01712 445589')).toBe('01712 445589');
+    expect(maskPhone('n/a')).toBe('n/a');
   });
 });
 

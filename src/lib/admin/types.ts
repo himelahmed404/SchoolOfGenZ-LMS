@@ -7,7 +7,8 @@ export type Perm = 'none' | 'view' | 'edit';
 export type Num = number | '';
 
 export interface Role { id: string; name: string; desc: string; locked?: boolean; perms: Record<Area, Perm> }
-export interface Staff { id: string; name: string; email: string; role: string; last: string }
+/** `last` is when they were last seen, in words. Invited until they set a password; inactive once their access is removed. */
+export interface Staff { id: string; name: string; email: string; role: string; last: string; status: 'active' | 'invited' | 'inactive' }
 /** What is studied inside a course: a subject of a diploma semester, or the single course itself. */
 export interface Subject { id: string; code: string; title: string; lessons: number }
 /**
@@ -43,14 +44,20 @@ export interface Announcement { id: string; title: string; body: string; aud: 'a
 export interface ActivityEntry { id: string; at: number; actor: string; area: string; action: string; target: string; reason: string }
 export interface Settings { bkash: string; nagad: string; watermark: 'on' | 'off'; devices: number; refundDays: Num; refundWatch: Num; autoClose: 'on' | 'off'; sms: 'on' | 'off' }
 
+/** Console data still kept in the browser. Each list leaves here when its section moves to the API. */
 export interface AdminData {
-  roles: Role[]; staff: Staff[]; courses: AdminCourse[]; batches: Batch[]; teachers: AdminTeacher[]; students: AdminStudent[];
+  courses: AdminCourse[]; batches: Batch[]; teachers: AdminTeacher[]; students: AdminStudent[];
   coupons: Coupon[]; refunds: Refund[]; certs: Cert[]; ann: Announcement[]; activity: ActivityEntry[]; settings: Settings;
-  /** Staff member the console is being viewed as (no auth yet). */
-  viewAs: string;
   navMini: boolean;
   /** Width of the detail pane in px, as last dragged. */
   paneW?: number;
+}
+
+/** What the console has fetched from the API. Never saved in the browser. */
+export interface Fetched {
+  roles: Role[]; staff: Staff[];
+  /** Roles and staff: waiting for the API, here, or it could not be reached. */
+  rolesState: 'loading' | 'ready' | 'failed';
 }
 
 /* ---------- view model the console renderer draws ---------- */

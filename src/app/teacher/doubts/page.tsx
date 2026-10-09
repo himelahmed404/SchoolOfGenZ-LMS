@@ -27,7 +27,7 @@ export default function DoubtsPage() {
   const send = (id: string) => {
     const text = (drafts[id] || '').trim();
     if (!text) return;
-    set((x) => ({ ...x, replies: { ...x.replies, [id]: { text, by: teacher.name } } }));
+    set((x) => ({ ...x, replies: { ...x.replies, [id]: { text, by: x.me?.name || teacher.name } } }));
     const d = { ...drafts }; delete d[id]; setDrafts(d);
     setOpenId(null);
   };

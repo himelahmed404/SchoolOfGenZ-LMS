@@ -51,8 +51,11 @@ export type Perm = z.infer<typeof Perm>;
 
 /* ---------- accounts ---------- */
 
-/** A Bangladeshi mobile number, kept as 11 digits: 01XXXXXXXXX. Spaces, dashes and a leading +88 are dropped. */
-export const Phone = z.string().max(30).transform((v) => v.replace(/[\s-]/g, '').replace(/^\+?88(?=01)/, '')).pipe(z.string().regex(/^01[3-9]\d{8}$/));
+/** Digits typed on a Bangla keyboard (০–৯), as 0–9. */
+export const latinDigits = (v: string) => v.replace(/[০-৯]/g, (d) => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+
+/** A Bangladeshi mobile number, kept as 11 digits: 01XXXXXXXXX. Spaces, dashes and a leading +88 are dropped, and Bangla digits are read. */
+export const Phone = z.string().max(30).transform((v) => latinDigits(v).replace(/[\s-]/g, '').replace(/^\+?88(?=01)/, '')).pipe(z.string().regex(/^01[3-9]\d{8}$/));
 export const Email = z.string().trim().toLowerCase().pipe(z.email().max(200));
 /** Any password as typed. The rules for a new one (8 characters, a digit) are checked by the server and answered with a code. */
 export const Password = z.string().min(1).max(200);
@@ -146,6 +149,9 @@ export const InviteStaffBody = z.object({ name: z.string().trim().min(2).max(80)
 export type InviteStaffBody = z.infer<typeof InviteStaffBody>;
 export const StaffPatchBody = z.object({ role: z.string().min(1).max(40).optional(), active: z.boolean().optional(), reason: Reason });
 export type StaffPatchBody = z.infer<typeof StaffPatchBody>;
+/** Removing something for good says why. */
+export const DeleteBody = z.object({ reason: Reason });
+export type DeleteBody = z.infer<typeof DeleteBody>;
 /** A link that works once. The admin copies it and sends it however they like. */
 export const OneTimeLink = z.object({ link: z.string(), expiresAt: z.string() });
 export type OneTimeLink = z.infer<typeof OneTimeLink>;

@@ -1,21 +1,25 @@
 'use client';
 
+import type { Me, Role as ApiRole, RolesAndStaff } from '@contract';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
-  AREAS, AdminConsole, adminSeed, ICON, initialUi,
-  type Action, type AdminData, type Block, type Cell, type ConsoleState, type ConsoleVals, type Field, type Item, type Kpi, type Panel, type Section, type SetState, type Tab,
+  AREAS, AdminConsole, adminSeed, ICON, initialUi, noFetched, roleFromApi, rolesFromApi, sayAdmin,
+  type Action, type AdminData, type Block, type Cell, type ConsoleEnv, type ConsoleState, type ConsoleVals, type Fetched, type Field, type Item, type Kpi, type Panel, type Section, type SetState, type Tab,
 } from '@/lib/admin';
+import { api } from '@/lib/api/client';
 import { ago, taka } from '@/lib/format';
 import { allQueue, item, itemKeys } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { figure } from '@/lib/admin/chart-math';
+import { useGuard } from '../useGuard';
 import { BarList, Donut, Meters, Sparkline, TrendChart } from './charts';
 
 const SECTIONS = new Set<string>(AREAS.map((a) => a[0]));
 export const isSection = (s: string): s is Section => s === 'overview' || SECTIONS.has(s);
 const sectionOf = (path: string): Section => { const seg = path.split('/')[2] || 'overview'; return isSection(seg) ? seg : 'overview'; };
-const DATA_KEYS: (keyof AdminData)[] = ['roles', 'staff', 'courses', 'batches', 'teachers', 'students', 'coupons', 'refunds', 'certs', 'ann', 'activity', 'settings', 'viewAs', 'navMini', 'paneW'];
+const DATA_KEYS: (keyof AdminData)[] = ['courses', 'batches', 'teachers', 'students', 'coupons', 'refunds', 'certs', 'ann', 'activity', 'settings', 'navMini', 'paneW'];
 const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
 
 const Ctx = createContext<{ vals: ConsoleVals; logic: AdminConsole; setState: SetState; st: ConsoleState } | null>(null);
@@ -38,19 +42,26 @@ function useMedia(query: string) {
 
 /** Console frame for every /admin route: sidebar, top bar, overlays and the console state. */
 export function AdminShell({ children }: { children: ReactNode }) {
-  const { ready } = useStore();
-  // Console state starts from the saved admin data, so the frame waits for the store.
-  return ready ? <AdminFrame>{children}</AdminFrame> : <div className="adm-root" />;
+  const { me } = useStore();
+  // Staff only: anyone else is sent to sign in or to their own start. Console state starts from the saved
+  // admin data and the signed-in person, so the frame waits for both.
+  const allowed = useGuard();
+  return allowed && me && me.role ? <AdminFrame me={me} role={me.role}>{children}</AdminFrame> : <div className="adm-root" />;
 }
 
-function AdminFrame({ children }: { children: ReactNode }) {
-  const { s, set, theme, toggleTheme } = useStore();
+function AdminFrame({ me, role, children }: { me: Me; role: ApiRole; children: ReactNode }) {
+  const { s, set, theme, toggleTheme, signOut } = useStore();
+  const qc = useQueryClient();
   const path = usePathname();
   const router = useRouter();
   const srRef = useRef<HTMLInputElement>(null);
   const sec = sectionOf(path);
-  // Console data lives in the store (persisted); view state stays here.
-  const [st, setSt] = useState<ConsoleState>(() => ({ ...(s.admin || adminSeed()), ...initialUi, filter: defaultFilter(sec) }));
+  // Console data lives in the store (persisted) or comes from the API; view state stays here.
+  const [st, setSt] = useState<ConsoleState>(() => ({ ...(s.admin || adminSeed()), ...noFetched, ...initialUi, filter: defaultFilter(sec) }));
+  // Roles and staff are read from the API, by those whose own role may see them.
+  const myRole = useMemo(() => roleFromApi(role), [role]);
+  const seesRoles = !!myRole.locked || myRole.perms.roles !== 'none';
+  const rolesQ = useQuery({ queryKey: ['admin', 'roles'], queryFn: () => api<RolesAndStaff>('/admin/roles'), enabled: seesRoles });
   // Below 1280px the sidebar is always icons only; below 768px it is a drawer opened from the top bar.
   const narrow = useMedia('(max-width: 1279px)'), phone = useMedia('(max-width: 767px)');
   const [navOpen, setNavOpen] = useState(false);
@@ -61,7 +72,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
   const lastSec = useRef<Section | null>(null);
   useEffect(() => {
     if (lastSec.current && lastSec.current !== sec && !consoleNav.current)
-      setSt((c) => ({ ...c, sel: null, filter: defaultFilter(sec), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles' }));
+      setSt((c) => ({ ...c, sel: null, filter: defaultFilter(sec), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles', link: null }));
     consoleNav.current = false;
     lastSec.current = sec;
   }, [sec]);
@@ -102,8 +113,14 @@ function AdminFrame({ children }: { children: ReactNode }) {
   }, [st.srOpen]);
 
   const queue = allQueue(s).filter((r) => r.status === 'pending');
-  const env = {
-    sec, theme, today: new Date(),
+  const today = new Date();
+  const env: ConsoleEnv = {
+    sec, theme, today,
+    me: { id: me.id, name: me.name, email: me.email || '', role: myRole },
+    api,
+    refresh: (what) => { void qc.invalidateQueries({ queryKey: ['admin', what] }); },
+    copy: (text) => { void navigator.clipboard?.writeText(text).catch(() => { /* the link stays on screen to copy by hand */ }); },
+    signOut: () => { signOut().then(() => router.replace('/signin'), (e: unknown) => setSt((c) => ({ ...c, toast: sayAdmin(e) }))); },
     payCount: queue.length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
     pending: queue.slice().sort((a, b) => b.agoMin - a.agoMin).slice(0, 5)
@@ -111,9 +128,11 @@ function AdminFrame({ children }: { children: ReactNode }) {
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
     toggleTheme,
   };
+  const fetched: Fetched = rolesQ.data ? { ...rolesFromApi(rolesQ.data, today), rolesState: 'ready' } : { ...noFetched, rolesState: rolesQ.isError ? 'failed' : 'loading' };
+  const full: ConsoleState = { ...st, ...fetched };
   // The env callbacks touch refs only when a click or key press calls them, never while rendering.
   // eslint-disable-next-line react-hooks/refs
-  const logic = new AdminConsole(st, setState, env);
+  const logic = new AdminConsole(full, setState, env);
   useEffect(() => { logicRef.current = logic; });
   const vals = logic.renderVals();
   const { v } = vals;
@@ -121,7 +140,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
   const openSearch = () => setState({ srOpen: true, srQ: '', srIdx: 0 });
 
   return (
-    <Ctx.Provider value={{ vals, logic, setState, st }}>
+    <Ctx.Provider value={{ vals, logic, setState, st: full }}>
       <div className="adm-root" lang="en" style={vals.paneW ? { ['--pane-w' as string]: vals.paneW + 'px' } : undefined}>
         {phone && navOpen ? <div className="adm-scrim" onClick={() => setNavOpen(false)} /> : null}
 
@@ -178,13 +197,19 @@ function AdminFrame({ children }: { children: ReactNode }) {
               <button className="adm-search" onClick={openSearch} title="Search (Ctrl K)" aria-label="Search">
                 <Svg d={ICON.search} /><span>Search…</span><span className="adm-kbd">Ctrl K</span>
               </button>
+              {vals.preview ? (
+                <>
+                  <span className="adm-readonly">Previewing {vals.preview.name} · {vals.preview.role}</span>
+                  <button className="adm-btn adm-btn-sm" onClick={vals.preview.stop}>Stop preview</button>
+                </>
+              ) : null}
               {vals.readOnly ? <span className="adm-readonly">Read-only</span> : null}
               {v.head.map((a) => <ActionButton key={a.label} a={a} />)}
               <button className="adm-icon-btn adm-bordered" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label="Dark mode" aria-pressed={theme === 'dark'}>
                 <Svg d={theme === 'dark' ? ICON.sun : ICON.moon} />
               </button>
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <button className="adm-me" onClick={() => setState({ viewOpen: !st.viewOpen })} aria-expanded={st.viewOpen} aria-haspopup="menu" title="View as another role">
+                <button className="adm-me" onClick={() => setState({ viewOpen: !st.viewOpen })} aria-expanded={st.viewOpen} aria-haspopup="menu" title="Account">
                   <span className="tile adm-avatar">{Array.from(vals.meName)[0]}</span>
                   <span className="adm-me-text">
                     <span className="ellipsis" style={{ fontSize: 13, fontWeight: 600 }}>{vals.meName}</span>
@@ -193,15 +218,26 @@ function AdminFrame({ children }: { children: ReactNode }) {
                 </button>
                 {st.viewOpen ? (
                   <div className="adm-pop" role="menu">
-                    <div style={{ padding: '4px 8px', fontSize: 12, color: 'var(--ink-3)' }}>View as — check what each role sees</div>
-                    {vals.staffOpts.map((o) => (
-                      <button key={o.id} role="menuitemradio" aria-checked={o.on} onClick={o.go}>
-                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
-                          <span style={{ fontSize: 13, fontWeight: 500 }}>{o.name}</span><span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.role}</span>
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--brand)' }}>{o.on ? '✓' : ''}</span>
-                      </button>
-                    ))}
+                    <div style={{ padding: '4px 8px 6px', display: 'flex', flexDirection: 'column', lineHeight: 1.4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{vals.meName}</span>
+                      <span className="ellipsis" style={{ fontSize: 12, color: 'var(--ink-3)' }}>{vals.meEmail} · {vals.meRole}</span>
+                    </div>
+                    {vals.staffOpts.length ? (
+                      <>
+                        <div style={{ padding: '6px 8px 4px', borderTop: '1px solid var(--line)', fontSize: 12, color: 'var(--ink-3)' }}>Preview as — check what each role sees</div>
+                        {vals.staffOpts.map((o) => (
+                          <button key={o.id} role="menuitemradio" aria-checked={o.on} onClick={o.go}>
+                            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
+                              <span style={{ fontSize: 13, fontWeight: 500 }}>{o.name}</span><span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.role}</span>
+                            </span>
+                            <span style={{ fontSize: 12, color: 'var(--brand)' }}>{o.on ? '✓' : ''}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+                    <div style={{ margin: '4px 0 0', paddingTop: 4, borderTop: '1px solid var(--line)' }}>
+                      <button role="menuitem" onClick={vals.signOut} style={{ minHeight: 36, fontSize: 13, fontWeight: 500, color: 'var(--margin)' }}>Sign out</button>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -632,7 +668,7 @@ function ItemRow({ it, pad }: { it: Item; pad: string }) {
   return (
     <div className="adm-item" style={{ padding: pad }}>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.45 }}>
-        <span style={{ fontSize: 13 }}>{it.t}</span>
+        <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{it.t}</span>
         {it.hasSub ? <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{it.sub}</span> : null}
       </div>
       {it.hasRight ? <span className="mono" style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{it.right}</span> : null}

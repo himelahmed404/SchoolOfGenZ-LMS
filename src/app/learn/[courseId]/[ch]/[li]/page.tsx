@@ -9,9 +9,9 @@ import { Penguin } from '@/components/Penguin';
 import { Sheet, Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
 import { askDoubt, completeLesson, savePosition, setMyNote, toggleBookmark } from '@/lib/actions';
-import { confusions, defaultStudent } from '@/lib/data';
-import { ago, mmss, pad2, plural, secs } from '@/lib/format';
-import { batchOf, chapterTest, doubtsFor, isLocked, isSingle, lessonKey, lessonRef, step, studentLesson, testFacts, testStatus, watermarkOn } from '@/lib/selectors';
+import { confusions } from '@/lib/data';
+import { ago, maskPhone, mmss, pad2, plural, secs } from '@/lib/format';
+import { batchOf, chapterTest, doubtsFor, isLocked, isSingle, lessonKey, lessonRef, step, studentLesson, studentPhone, testFacts, testStatus, watermarkOn } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -155,7 +155,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
       }>
       <div className="video-wrap" data-print="hide">
         <div style={{ position: 'relative', aspectRatio: '16/9', background: '#0C1020', borderRadius: 'var(--video-r)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {watermarkOn(s) ? <span className="mono" style={{ position: 'absolute', ...WM_SPOTS[wm], fontSize: 12, whiteSpace: 'nowrap', color: '#FFFFFF', opacity: 0.35 }}>{defaultStudent.masked}</span> : null}
+          {watermarkOn(s) ? <span className="mono" style={{ position: 'absolute', ...WM_SPOTS[wm], fontSize: 12, whiteSpace: 'nowrap', color: '#FFFFFF', opacity: 0.35 }}>{maskPhone(studentPhone(s))}</span> : null}
           <button onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} className="tile"
             style={{ width: 68, height: 68, border: 'none', borderRadius: 999, background: '#FFFFFF', color: 'var(--hero)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
             <Icon name={playing ? 'pause' : 'play_arrow'} size={38} fill />

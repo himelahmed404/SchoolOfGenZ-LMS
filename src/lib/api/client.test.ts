@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiFailure } from './client';
+import { api, ApiFailure, watchSignedOut } from './client';
 
 /** Make `fetch` answer once with this status and body, and remember what it was called with. */
 function answer(status: number, body: unknown) {
@@ -35,9 +35,31 @@ describe('calling the API', () => {
     expect((e as ApiFailure).fields).toEqual({ phone: 'too_small' });
   });
 
-  it('reports a server that answered with something else as an internal error', async () => {
+  it('reports a server error with no code as an internal error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Oops</html>', { status: 500 })));
+    await expect(api('/x')).rejects.toMatchObject({ status: 500, code: 'internal' });
+  });
+
+  it('says offline when the answer came from in front of the API, not from it', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Bad gateway</html>', { status: 502 })));
-    await expect(api('/x')).rejects.toMatchObject({ status: 502, code: 'internal' });
+    await expect(api('/x')).rejects.toMatchObject({ status: 502, code: 'offline' });
+    // No API is set up at all: Next answers /api/* itself with its own 404 page.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Not found</html>', { status: 404 })));
+    await expect(api('/x')).rejects.toMatchObject({ status: 404, code: 'offline' });
+    answer(404, { error: { code: 'no_route', message: '', requestId: 'r-3' } });
+    await expect(api('/x')).rejects.toMatchObject({ status: 404, code: 'no_route' });
+  });
+
+  it('tells the app when the session has ended, and not when a password was wrong', async () => {
+    const ended = vi.fn();
+    watchSignedOut(ended);
+    answer(401, { error: { code: 'bad_credentials', message: '', requestId: 'r-4' } });
+    await expect(api('/auth/signin', { body: {} })).rejects.toMatchObject({ code: 'bad_credentials' });
+    expect(ended).not.toHaveBeenCalled();
+    answer(401, { error: { code: 'unauthorized', message: '', requestId: 'r-5' } });
+    await expect(api('/me/profile')).rejects.toMatchObject({ code: 'unauthorized' });
+    expect(ended).toHaveBeenCalledTimes(1);
+    watchSignedOut(null);
   });
 
   it('says offline when the request never arrived', async () => {

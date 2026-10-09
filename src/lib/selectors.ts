@@ -2,13 +2,18 @@ import {
   boardExam, contentReasons, DEFAULT_TEST_SECONDS, defaultStudent, doubtSeed, firstNames, itemSeeds, lastNames,
   merchants, MIN_TEST_QUESTIONS, notifSeed, paymentHistory, practiceQs, queueSeed, rosterSeed, stackBlocks, streakSeed, teacher, weekDayShort,
 } from './data';
-import { dateEn, dateRangeEn, digits, pad2, plural, semLabel, taka, type Numerals } from './format';
+import { dateEn, dateRangeEn, digits, pad2, phoneEn, plural, semLabel, taka, type Numerals } from './format';
 import type { AppState } from './state';
 import type { Batch, Block, ChapterTest, Course, CourseId, Doubt, LessonRevision, PayMethod, PayStatus, Payment, Program, PublishedLesson, Reason } from './types';
 
-export const studentName = (s: AppState) => s.prefs.name.trim() || defaultStudent.name;
+/** The student whose progress this browser holds: the signed-in student, or the seeded one while a teacher or an admin is looking. */
+export const studentName = (s: AppState) => (s.me?.kind === 'student' && s.me.name.trim()) || defaultStudent.name;
+/** Their phone number, as 11 digits. */
+export const studentPhone = (s: AppState) => (s.me?.kind === 'student' && s.me.phone) || defaultStudent.phone;
+/** The semester the student is in: what they chose, otherwise the semester of the diploma program they bought. */
+export const semesterOf = (s: AppState) => s.me?.semester ?? myDiploma(s)?.sem ?? 1;
 export const suggestedExam = (sem: number) => (sem % 2 === 0 ? boardExam.even : boardExam.odd);
-export const examISO = (s: AppState) => s.prefs.examDate || suggestedExam(s.prefs.sem);
+export const examISO = (s: AppState) => s.me?.examDate || suggestedExam(semesterOf(s));
 
 /* ---------- catalog ---------- */
 
@@ -42,6 +47,9 @@ export function myPrograms(s: AppState): MyProgram[] {
 }
 
 export const myCourses = (s: AppState): Course[] => myPrograms(s).flatMap((x) => x.courses);
+
+/** The diploma program the student is in, if any. Its code is their department. */
+export const myDiploma = (s: AppState): Program | undefined => myPrograms(s).find((x) => x.program.kind === 'diploma')?.program;
 
 /** The diploma batch the student is in. The leaderboard and the rank belong to it; a student with only single courses has neither. */
 export const myBatch = (s: AppState): Batch | undefined => myPrograms(s).find((x) => x.batch)?.batch;
@@ -483,10 +491,10 @@ export function liveRow(s: AppState): Payment {
   const p = s.payment, prog = p.program ? s.catalog.programs[p.program] : undefined;
   const batch = prog && prog.kind === 'diploma' ? enrollingBatch(s, prog.id) : undefined, price = prog ? prog.price : 0;
   return {
-    id: 'live', live: true, name: studentName(s), phone: defaultStudent.phone,
+    id: 'live', live: true, name: studentName(s), phone: phoneEn(studentPhone(s), ' '),
     course: prog ? programName(s, prog) : '—', ...(batch ? { batch: batch.id } : {}), method: p.method || 'bKash',
     amount: price, due: price, trx: p.trxId || '—',
-    sender: p.sender || defaultStudent.phone, agoMin: 0,
+    sender: p.sender || phoneEn(studentPhone(s), ' '), agoMin: 0,
     status: p.status === 'none' ? 'pending' : p.status, rejectReason: p.reason,
   };
 }

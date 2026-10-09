@@ -2,22 +2,38 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { Alert } from '@/components/AuthFrame';
 import { CertificateList } from '@/components/Certificates';
 import { SavedList } from '@/components/SavedList';
 import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
-import { badgeSeed, defaultStudent, streakSeed, weekDayHead } from '@/lib/data';
-import { monthEn, plural, semLabel } from '@/lib/format';
-import { boardRows, counts, monthCells, myBatch, myCourses, savedItems, studentName } from '@/lib/selectors';
+import { sayError } from '@/lib/api/messages';
+import { badgeSeed, streakSeed, weekDayHead } from '@/lib/data';
+import { maskPhone, monthEn, plural, semLabel } from '@/lib/format';
+import { boardRows, counts, monthCells, myBatch, myCourses, myDiploma, savedItems, semesterOf, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 /** How many saved lessons the profile shows before linking to the full list. */
 const PREVIEW = 3;
 
 export default function ProfilePage() {
-  const { s, theme, toggleTheme, setNotifOpen } = useStore();
+  const { s, me: account, theme, toggleTheme, setNotifOpen, signOut, n } = useStore();
   const router = useRouter();
+  const [outError, setOutError] = useState<string | null>(null);
   const name = studentName(s);
+  // Department, semester and institute, as far as the account has them.
+  const about = [myDiploma(s)?.code, semLabel(semesterOf(s)), account?.institute].filter(Boolean).join(' · ');
+  const contact = [maskPhone(account?.phone || ''), account?.email].filter(Boolean).join(' · ');
+  const logOut = async () => {
+    setOutError(null);
+    try {
+      await signOut();
+      router.replace('/signin');
+    } catch (e) {
+      setOutError(sayError(e, n));
+    }
+  };
   const lessonsDone = myCourses(s).reduce((a, c) => a + counts(s, c.id).done, 0);
   // Only a diploma batch has a rank.
   const batch = myBatch(s);
@@ -44,8 +60,8 @@ export default function ProfilePage() {
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.25, fontWeight: 800 }}>{name}</div>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>CST · {semLabel(s.prefs.sem)} · {s.profile.inst}</div>
-            <div className="mono" style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>{defaultStudent.masked} · {s.profile.email}</div>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>{about}</div>
+            <div className="mono" style={{ marginTop: 4, fontSize: 12, opacity: 0.8 }}>{contact}</div>
           </div>
           <Link href="/profile/edit" className="btn btn-white" style={{ height: 44, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
         </div>
@@ -133,12 +149,12 @@ export default function ProfilePage() {
               <span className="tile set-ico"><Icon name="notifications" /></span>
               <span style={{ flex: 1 }}>Notifications</span><Icon name="chevron_right" style={{ color: 'var(--ink-3)' }} />
             </button>
-            {/* No auth yet: "log out" returns to first-run setup, as in the prototype. */}
-            <button className="set-row set-danger" onClick={() => router.push('/setup')}>
+            <button className="set-row set-danger" onClick={logOut}>
               <span className="tile set-ico"><Icon name="logout" /></span>
               <span style={{ flex: 1 }}>Log out</span>
             </button>
           </div>
+          {outError ? <Alert>{outError}</Alert> : null}
         </section>
       </div>
     </Shell>

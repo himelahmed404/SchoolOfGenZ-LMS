@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { resetPayment } from '@/lib/actions';
-import { defaultStudent, rejectReasons, supportPhone } from '@/lib/data';
-import { taka } from '@/lib/format';
-import { offerView, payingOffer, reasonText } from '@/lib/selectors';
+import { rejectReasons, supportPhone } from '@/lib/data';
+import { phoneEn, taka } from '@/lib/format';
+import { offerView, payingOffer, reasonText, studentPhone } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 const BOX: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 24px 32px', borderRadius: 20, background: 'var(--surface)', textAlign: 'center' };
@@ -62,7 +62,7 @@ export default function PendingPage() {
         <Row k={o.program.kind === 'diploma' ? 'Batch' : 'Course'} v={v.title + (o.batch ? ' · ' + o.batch.id : '')} />
         <Row k="Method" v={(p.method || '') + ' · ' + taka(v.price)} />
         <Row k="TrxID" v={p.trxId || '—'} mono />
-        <Row k="Sent from" v={p.sender || defaultStudent.phone} mono />
+        <Row k="Sent from" v={p.sender || phoneEn(studentPhone(s), ' ')} mono />
       </div>
     </Shell>
   );

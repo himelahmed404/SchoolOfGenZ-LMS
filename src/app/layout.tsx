@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
-/** Role/screen switcher shown until auth exists. Set NEXT_PUBLIC_DEV_BAR=0 to hide it. */
-const DEV_BAR = process.env.NEXT_PUBLIC_DEV_BAR !== '0';
+/** The demo sign-in and screen switcher. Development only; NEXT_PUBLIC_DEV_BAR=0 hides it there too. */
+const DEV_BAR = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEV_BAR !== '0';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

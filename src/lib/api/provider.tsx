@@ -1,8 +1,9 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
-import { ApiFailure } from './client';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ApiFailure, watchSignedOut } from './client';
+import { ME_KEY } from './session';
 
 /**
  * Holds what was fetched from the API, so two screens asking for the same thing share one request,
@@ -20,5 +21,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       mutations: { retry: false },
     },
   }));
+  useEffect(() => {
+    // The API said the session has ended (signed out somewhere else, suspended, expired): forget the person here too,
+    // and the screen they are on sends them to sign in.
+    watchSignedOut(() => client.setQueryData(ME_KEY, null));
+    return () => watchSignedOut(null);
+  }, [client]);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

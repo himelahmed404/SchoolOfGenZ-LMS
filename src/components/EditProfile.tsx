@@ -1,33 +1,42 @@
 'use client';
 
+import type { Me } from '@contract';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { saveStudentProfile, saveTeacherProfile, type StudentProfileDraft, type TeacherProfileDraft } from '@/lib/actions';
-import { defaultStudent, SEMESTERS, subjectOptions, teacher } from '@/lib/data';
-import { ordinalEn } from '@/lib/format';
-import { studentName } from '@/lib/selectors';
+import { api, ApiFailure } from '@/lib/api/client';
+import { sayError } from '@/lib/api/messages';
+import { passwordRules } from '@/lib/api/session';
+import { SEMESTERS, subjectOptions } from '@/lib/data';
+import { ordinalEn, phoneEn } from '@/lib/format';
+import { semesterOf } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
+import { Alert } from './AuthFrame';
 import { Shell } from './Shell';
 import { Avatar, Icon } from './ui';
+
+interface StudentDraft { name: string; email: string; inst: string; sem: number }
+interface TeacherDraft { bio: string; subjects: string[] }
 
 const LABEL: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' };
 
 /** Edit profile + change password, shared by student and teacher (fields differ by role). */
 export function EditProfile({ role }: { role: 'student' | 'teacher' }) {
-  const { ready } = useStore();
-  // The drafts start from the saved profile, so the form waits for the store.
-  return ready ? <EditProfileForm role={role} /> : <Shell role={role} title="Edit Profile">{null}</Shell>;
+  const { s, me, ready } = useStore();
+  // The drafts start from the account, so the form waits for it. The shell sends on anyone who is not signed in.
+  return ready && me ? <EditProfileForm role={role} me={me} sem={semesterOf(s)} /> : <Shell role={role} title="Edit Profile">{null}</Shell>;
 }
 
-function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
-  const { s, set } = useStore();
+function EditProfileForm({ role, me, sem }: { role: 'student' | 'teacher'; me: Me; sem: number }) {
+  const { saveProfile, n } = useStore();
   const router = useRouter();
   const isT = role === 'teacher';
   const back = isT ? '/teacher/profile' : '/profile';
 
-  const [stu, setStu] = useState<StudentProfileDraft>(() => ({ name: studentName(s), email: s.profile.email, inst: s.profile.inst, sem: s.prefs.sem }));
-  const [tch, setTch] = useState<TeacherProfileDraft>(() => ({ email: s.tProfile.email, bio: s.tProfile.bio, subjects: s.tProfile.subjects }));
+  const [stu, setStu] = useState<StudentDraft>(() => ({ name: me.name, email: me.email || '', inst: me.institute || '', sem }));
+  const [tch, setTch] = useState<TeacherDraft>(() => ({ bio: me.bio || '', subjects: me.subjects }));
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (window.location.hash !== '#password') return;
@@ -35,16 +44,28 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
     return () => clearTimeout(t);
   }, []);
 
-  const editS = (patch: Partial<StudentProfileDraft>) => { setStu((d) => ({ ...d, ...patch })); setSaved(false); };
-  const editT = (patch: Partial<TeacherProfileDraft>) => { setTch((d) => ({ ...d, ...patch })); setSaved(false); };
-  const save = () => {
-    if (isT) set((x) => saveTeacherProfile(x, tch));
-    else set((x) => saveStudentProfile(x, { ...stu, name: stu.name.trim() }));
-    setSaved(true);
+  const editS = (patch: Partial<StudentDraft>) => { setStu((d) => ({ ...d, ...patch })); setSaved(false); };
+  const editT = (patch: Partial<TeacherDraft>) => { setTch((d) => ({ ...d, ...patch })); setSaved(false); };
+  const save = async () => {
+    if (busy) return;
+    if (!isT && !stu.name.trim()) { setError('নামটা লেখো।'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await saveProfile(isT
+        ? { bio: tch.bio, subjects: tch.subjects }
+        : { name: stu.name.trim(), email: stu.email.trim() || null, institute: stu.inst, semester: stu.sem });
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof ApiFailure && e.fields?.email ? 'ইমেইলটা ঠিকমতো লেখা হয়নি।' : sayError(e, n));
+    }
+    setBusy(false);
   };
 
-  const name = isT ? teacher.name : stu.name || studentName(s);
-  const phone = isT ? teacher.phone : defaultStudent.phone.replace(' ', '-');
+  const name = isT ? me.name : stu.name || me.name;
+  // What the person signs in with. It is not theirs to change: an admin does that.
+  const signIn = isT ? me.email || '' : phoneEn(me.phone || '');
+  const subjects = Array.from(new Set(subjectOptions.concat(tch.subjects)));
 
   return (
     <Shell role={role} title="Edit Profile" back={back}>
@@ -61,21 +82,24 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 14 }}>
             <label style={LABEL}>Name
-              <input className="field" value={isT ? teacher.name : stu.name} readOnly={isT} onChange={(e) => editS({ name: e.target.value })} />
+              <input className="field" value={isT ? me.name : stu.name} readOnly={isT} maxLength={80} onChange={(e) => editS({ name: e.target.value })}
+                style={isT ? { background: 'var(--surface-sunk)', color: 'var(--ink-3)' } : undefined} />
             </label>
-            <label style={LABEL}>Phone number
+            <label style={LABEL}>{isT ? 'Email' : 'Phone number'}
               <span style={{ position: 'relative', display: 'flex' }}>
-                <input className="field" value={phone} readOnly style={{ background: 'var(--surface-sunk)', color: 'var(--ink-3)', paddingRight: 40 }} />
+                <input className="field" value={signIn} readOnly style={{ background: 'var(--surface-sunk)', color: 'var(--ink-3)', paddingRight: 40 }} />
                 <span style={{ position: 'absolute', right: 12, top: 13, color: 'var(--ink-3)' }}><Icon name="lock" size={18} /></span>
               </span>
             </label>
-            <label style={LABEL}>Email
-              <input className="field" type="email" value={isT ? tch.email : stu.email} onChange={(e) => (isT ? editT({ email: e.target.value }) : editS({ email: e.target.value }))} />
-            </label>
             {!isT ? (
-              <label style={LABEL}>Institute
-                <input className="field" value={stu.inst} onChange={(e) => editS({ inst: e.target.value })} />
-              </label>
+              <>
+                <label style={LABEL}>Email
+                  <input className="field" type="email" value={stu.email} maxLength={200} onChange={(e) => editS({ email: e.target.value })} />
+                </label>
+                <label style={LABEL}>Institute
+                  <input className="field" value={stu.inst} maxLength={120} onChange={(e) => editS({ inst: e.target.value })} />
+                </label>
+              </>
             ) : null}
           </div>
 
@@ -94,11 +118,11 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
           ) : (
             <>
               <label style={LABEL}>Bio
-                <textarea className="field" value={tch.bio} onChange={(e) => editT({ bio: e.target.value })} style={{ minHeight: 96 }} />
+                <textarea className="field" value={tch.bio} maxLength={600} onChange={(e) => editT({ bio: e.target.value })} style={{ minHeight: 96 }} />
               </label>
               <div style={LABEL}>Subjects you teach
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {subjectOptions.map((sub) => {
+                  {subjects.map((sub) => {
                     const on = tch.subjects.includes(sub);
                     return (
                       <button key={sub} aria-pressed={on} onClick={() => editT({ subjects: on ? tch.subjects.filter((x) => x !== sub) : tch.subjects.concat([sub]) })}
@@ -112,8 +136,9 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
             </>
           )}
 
+          {error ? <Alert>{error}</Alert> : null}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
-            <button className="btn btn-primary" style={{ height: 46 }} onClick={save}>Save</button>
+            <button className="btn btn-primary" style={{ height: 46 }} disabled={busy} onClick={save}>Save</button>
             <button className="btn" style={{ height: 46 }} onClick={() => router.push(back)}>Cancel</button>
             {saved ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--ok)' }}><Icon name="check_circle" size={20} fill />Saved</span> : null}
           </div>
@@ -125,19 +150,39 @@ function EditProfileForm({ role }: { role: 'student' | 'teacher' }) {
   );
 }
 
-/** UI only until auth exists: validates and confirms, nothing is sent anywhere. */
+/** Changing the password signs every other device out; this one stays signed in. */
 function PasswordCard() {
+  const { n } = useStore();
   const [pw, setPw] = useState({ cur: '', nw: '', cf: '' });
   const [show, setShow] = useState(false);
   const [tried, setTried] = useState(false);
   const [ok, setOk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  /** What the server said, when it refused. */
+  const [refused, setRefused] = useState<string | null>(null);
 
-  const r1 = pw.nw.length >= 8, r2 = /[0-9]/.test(pw.nw), r3 = pw.nw.length > 0 && pw.nw === pw.cf;
+  const rule = passwordRules(pw.nw);
+  const r1 = rule.long, r2 = rule.digit, r3 = pw.nw.length > 0 && pw.nw === pw.cf;
   const strength = (pw.nw.length ? 1 : 0) + (r1 ? 1 : 0) + (r2 ? 1 : 0) + (/[^A-Za-z0-9]/.test(pw.nw) || /[A-Z]/.test(pw.nw) ? 1 : 0);
   const sCol = ['var(--line)', 'var(--margin)', 'var(--warn)', 'var(--brand)', 'var(--ok)'][strength];
   const valid = r1 && r2 && r3 && pw.cur.length > 0;
   const err = !pw.cur ? 'বর্তমান পাসওয়ার্ড লেখো' : !r1 || !r2 ? 'নতুন পাসওয়ার্ড নিয়ম মানছে না' : 'দুটো পাসওয়ার্ড মিলছে না';
-  const edit = (k: keyof typeof pw) => (e: React.ChangeEvent<HTMLInputElement>) => { setPw({ ...pw, [k]: e.target.value }); setOk(false); };
+  const edit = (k: keyof typeof pw) => (e: React.ChangeEvent<HTMLInputElement>) => { setPw({ ...pw, [k]: e.target.value }); setOk(false); setRefused(null); };
+  const submit = async () => {
+    if (busy) return;
+    if (!valid) { setTried(true); return; }
+    setBusy(true);
+    setRefused(null);
+    try {
+      await api('/auth/password', { body: { current: pw.cur, next: pw.nw } });
+      setOk(true);
+      setTried(false);
+      setPw({ cur: '', nw: '', cf: '' });
+    } catch (e) {
+      setRefused(sayError(e, n));
+    }
+    setBusy(false);
+  };
   const type = show ? 'text' : 'password';
   const rules: [boolean, string][] = [[r1, '8+ characters'], [r2, 'At least one digit'], [r3, 'Both match']];
 
@@ -166,14 +211,12 @@ function PasswordCard() {
           </span>
         ))}
       </div>
-      {tried && !valid && !ok ? (
-        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'var(--margin-soft)', color: 'var(--margin)', fontSize: 14, fontWeight: 600 }}><Icon name="error" size={20} />{err}</div>
-      ) : null}
+      {refused ? <Alert>{refused}</Alert> : tried && !valid && !ok ? <Alert>{err}</Alert> : null}
       {ok ? (
         <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'var(--ok-soft)', color: 'var(--ok)', fontSize: 14, fontWeight: 600 }}><Icon name="check_circle" size={20} fill />পাসওয়ার্ড বদলানো হয়েছে। অন্য সব ডিভাইস থেকে লগ আউট করা হয়েছে।</div>
       ) : null}
       <div>
-        <button className="btn" onClick={() => { if (valid) { setOk(true); setTried(false); setPw({ cur: '', nw: '', cf: '' }); } else setTried(true); }}
+        <button className="btn" onClick={submit} disabled={busy}
           style={{ height: 46, padding: '0 22px', border: 'none', background: valid ? 'var(--brand)' : 'var(--surface-sunk)', color: valid ? 'var(--on-brand)' : 'var(--ink-3)', fontSize: 15, fontWeight: 700 }}>
           Update Password
         </button>

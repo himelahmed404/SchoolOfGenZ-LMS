@@ -44,6 +44,19 @@ export async function saveRole(db: Db, actor: User, id: string, body: RoleBody):
   });
 }
 
+/** Remove a role nobody holds. The locked role stays, and so does any role that still has members. */
+export async function deleteRole(db: Db, actor: User, id: string, reason: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [cur] = await tx.select().from(roles).where(eq(roles.id, id));
+    if (!cur) throw notFound('no_role');
+    if (cur.locked) throw conflict('role_locked', 'This role cannot be removed');
+    const [held] = await tx.select({ n: sql<number>`count(*)::int` }).from(staff).where(eq(staff.roleId, id));
+    if (held && held.n > 0) throw conflict('role_in_use', 'Move its members to another role first');
+    await tx.delete(roles).where(eq(roles.id, id));
+    await logActivity(tx, actor, 'roles', 'Deleted role', cur.name, reason);
+  });
+}
+
 /** Add a staff member. They get no email from here: the admin copies the link and sends it. */
 export async function inviteStaff(db: Db, actor: User, body: InviteStaffBody): Promise<OneTimeLink & { id: string }> {
   return db.transaction(async (tx) => {

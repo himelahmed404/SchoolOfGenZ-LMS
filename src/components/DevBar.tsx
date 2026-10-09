@@ -1,16 +1,19 @@
 'use client';
 
-import type { Health } from '@contract';
+import type { Health, SignedIn } from '@contract';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { api } from '@/lib/api/client';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { api, ApiFailure } from '@/lib/api/client';
+import { deviceId, homeOf } from '@/lib/api/session';
 import { editorHref } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 /*
- * There is no auth yet, so this strip (styled after the prototype's top bar) is how you reach
- * every role and screen. Hide it with NEXT_PUBLIC_DEV_BAR=0; remove it once real sign-in exists.
+ * A strip for development only (styled after the prototype's top bar): sign in as one of the demo accounts
+ * without typing its password, and jump to any screen. The API has the matching route only outside production.
+ * Hide it with NEXT_PUBLIC_DEV_BAR=0.
  */
 
 type Role = 'student' | 'teacher' | 'admin';
@@ -58,10 +61,26 @@ function screenOf(p: string): string {
 
 export function DevBar() {
   const path = usePathname();
-  const { set, numerals } = useStore();
-  const role: Role = path.startsWith('/teacher') ? 'teacher' : path.startsWith('/admin') ? 'admin' : 'student';
+  const router = useRouter();
+  const { me, signedIn, numerals, setNumerals } = useStore();
+  const [note, setNote] = useState('');
+  // Who is signed in, in the bar's words. Nobody while signed out.
+  const role: Role | null = !me ? null : me.kind === 'staff' ? 'admin' : me.kind;
   const here = screenOf(path);
-  const setNumerals = (v: 'bn' | 'latin') => set((x) => ({ ...x, prefs: { ...x.prefs, numerals: v } }));
+  const jumps = role ? JUMPS[role] : [];
+
+  /** Become a demo account. The password is skipped; everything after that is the real thing. */
+  const become = async (as: Role) => {
+    setNote('');
+    try {
+      const { user } = await api<SignedIn>('/auth/dev', { body: { as, device: deviceId() } });
+      signedIn(user);
+      router.push(homeOf(user.kind));
+    } catch (e) {
+      const code = e instanceof ApiFailure ? e.code : '';
+      setNote(code === 'no_demo_account' ? 'no demo data · npm --prefix server run db:reset' : code === 'no_route' ? 'this API has no demo sign-in' : 'demo sign-in failed · is the API running?');
+    }
+  };
   // Whether the API answers and can reach its database. Screens move to it one by one; until then they run on seed data.
   const health = useQuery({ queryKey: ['health'], queryFn: () => api<Health>('/health'), retry: false, refetchInterval: 30_000 });
   const apiUp = !!health.data && health.data.db;
@@ -72,18 +91,19 @@ export function DevBar() {
       <div className="devbar-api" title={apiUp ? 'The API answers and its database is connected' : health.isPending ? 'Checking the API' : 'The API is not answering. Start it with npm run dev.'} data-state={apiUp ? 'up' : health.isPending ? 'wait' : 'down'}>
         api {apiUp ? 'up' : health.isPending ? '…' : 'down'}
       </div>
+      {note ? <div className="devbar-api" data-state="down">{note}</div> : null}
       <div className="dseg" style={{ marginLeft: 'auto' }}>
-        {([['student', '/'], ['teacher', '/teacher'], ['admin', '/admin']] as [Role, string][]).map(([r, href]) => (
-          <Link key={r} href={href} aria-current={role === r ? 'true' : undefined}>{r}</Link>
+        {(['student', 'teacher', 'admin'] as Role[]).map((r) => (
+          <button key={r} aria-pressed={role === r} onClick={() => become(r)} title={'Sign in as the demo ' + r + (role === r && me ? ' (now: ' + me.name + ')' : '')}>{r}</button>
         ))}
       </div>
       <div className="dseg">
         <button aria-pressed={numerals === 'bn'} onClick={() => setNumerals('bn')} title="বাংলা সংখ্যা">১২৩</button>
         <button aria-pressed={numerals === 'latin'} onClick={() => setNumerals('latin')} title="Latin numerals">123</button>
       </div>
-      {JUMPS[role].length ? (
+      {jumps.length ? (
         <div className="djumps">
-          {JUMPS[role].map(([label, href]) => (
+          {jumps.map(([label, href]) => (
             <Link key={label} href={href} aria-current={here === label ? 'page' : undefined}>{label}</Link>
           ))}
         </div>

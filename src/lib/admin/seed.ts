@@ -1,6 +1,7 @@
-// Admin console seed data, ported from Admin Console v5. Replace with API data once a server exists.
+// Admin console seed data, ported from Admin Console v5. A list is deleted from here when its section moves to the API
+// (roles and staff already have).
 // The console is English only, so every seeded name, title and reason is English.
-import type { AdminData, Area, Perm } from './types';
+import type { AdminData, Area } from './types';
 
 export const AREAS: [Area, string][] = [
   ['payments', 'Payments'], ['content', 'Content review'], ['refunds', 'Refunds'], ['students', 'Students'], ['teachers', 'Teachers'],
@@ -8,30 +9,12 @@ export const AREAS: [Area, string][] = [
   ['announcements', 'Announcements'], ['reports', 'Reports'], ['activity', 'Activity log'], ['settings', 'Settings'], ['roles', 'Roles & staff'],
 ];
 
-const perms = (edit: Area[], view: Area[]): Record<Area, Perm> => {
-  const p = {} as Record<Area, Perm>;
-  AREAS.forEach(([k]) => { p[k] = edit.includes(k) ? 'edit' : view.includes(k) ? 'view' : 'none'; });
-  return p;
-};
-
 export function adminSeed(): AdminData {
   const now = Date.now();
   /** Timestamp of something that happened `min` minutes ago. */
   const minsAgo = (min: number) => now - min * 60000;
 
   return {
-    roles: [
-      { id: 'super', name: 'Super admin', desc: 'Everything: money, settings, roles', locked: true, perms: perms(AREAS.map((a) => a[0]), []) },
-      { id: 'finance', name: 'Finance', desc: 'Payments, refunds, coupons', perms: perms(['payments', 'refunds', 'coupons'], ['students', 'reports', 'activity']) },
-      { id: 'content', name: 'Content', desc: 'Courses, lesson review, batches', perms: perms(['content', 'courses'], ['batches', 'teachers', 'certificates']) },
-      { id: 'support', name: 'Support', desc: 'Students, notices, certificates', perms: perms(['students', 'announcements', 'certificates'], ['payments', 'batches', 'teachers']) },
-    ],
-    staff: [
-      { id: 's1', name: 'Rifat Ahmed', email: 'rifat@schoolofgenz.com', role: 'super', last: 'now' },
-      { id: 's2', name: 'Nabila Chowdhury', email: 'nabila@schoolofgenz.com', role: 'finance', last: '1 h ago' },
-      { id: 's3', name: 'Sakib Rahman', email: 'sakib@schoolofgenz.com', role: 'content', last: 'yesterday' },
-      { id: 's4', name: 'Tasnim Jahan', email: 'tasnim@schoolofgenz.com', role: 'support', last: '3 days ago' },
-    ],
     courses: [
       { id: 'cst4', kind: 'diploma', code: 'CST', title: 'CST · 4th Semester', status: 'published', model: 'one', price: 3000, inst: 2, early: 'off', earlyPrice: 2500, earlyEnd: '2026-08-01', perBatch: 'on', bp: { 'CST-04-B01': 3000, 'CST-04-B02': 2800 }, enrolled: 0,
         subjects: [
@@ -120,7 +103,6 @@ export function adminSeed(): AdminData {
     ],
     // Merchant numbers are the ones students see on the payment page.
     settings: { bkash: '01777 090909', nagad: '01888 070707', watermark: 'on', devices: 2, refundDays: 7, refundWatch: 20, autoClose: 'on', sms: 'on' },
-    viewAs: 's1',
     navMini: false,
   };
 }

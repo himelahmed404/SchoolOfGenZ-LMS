@@ -1,14 +1,65 @@
+import type { RolesAndStaff } from '@contract';
 import { describe, expect, it } from 'vitest';
-import { AdminConsole, adminSeed, BUILDERS, initialUi, type ConsoleState, type Section } from '.';
+import { ADMIN_CODES, AdminConsole, adminSeed, BUILDERS, initialUi, rolesFromApi, sayAdmin, type ConsoleEnv, type ConsoleState, type Section } from '.';
+import type { ApiInit } from '../api/client';
 import { figure, niceScale, ringArcs, thin } from './chart-math';
 
-/** A console on the seed data, at a fixed date, with `ui` on top of the starting view state. */
-function consoleAt(sec: Section, ui: Partial<ConsoleState> = {}) {
-  const state: ConsoleState = { ...adminSeed(), ...initialUi, ...ui };
-  return new AdminConsole(state, () => {}, {
-    sec, theme: 'light', payCount: 10, contentCount: 4, pending: [], navigate: () => {}, toggleTheme: () => {}, today: new Date(2026, 9, 9),
-  });
+const TODAY = new Date(2026, 9, 9, 12);
+const before = (min: number) => new Date(TODAY.getTime() - min * 60000).toISOString();
+
+/** Roles and staff as the API sends them: a role lists only the areas it can see. */
+const TEAM: RolesAndStaff = {
+  roles: [
+    { id: 'super', name: 'Super admin', description: 'Everything: money, settings, roles', locked: true, perms: {} },
+    { id: 'finance', name: 'Finance', description: 'Payments, refunds, coupons', locked: false, perms: { payments: 'edit', refunds: 'edit', coupons: 'edit', students: 'view', reports: 'view', activity: 'view' } },
+    { id: 'content', name: 'Content', description: 'Courses, lesson review, batches', locked: false, perms: { content: 'edit', courses: 'edit', batches: 'view', teachers: 'view', certificates: 'view' } },
+    { id: 'support', name: 'Support', description: 'Students, notices, certificates', locked: false, perms: { students: 'edit', announcements: 'edit', certificates: 'edit', payments: 'view', batches: 'view', teachers: 'view' } },
+    { id: 'intern', name: 'Intern', description: '', locked: false, perms: { reports: 'view' } },
+  ],
+  staff: [
+    { id: 's1', name: 'Rifat Ahmed', email: 'rifat@schoolofgenz.com', role: 'super', status: 'active', lastSeenAt: before(0) },
+    { id: 's2', name: 'Nabila Chowdhury', email: 'nabila@schoolofgenz.com', role: 'finance', status: 'active', lastSeenAt: before(60) },
+    { id: 's3', name: 'Sakib Rahman', email: 'sakib@schoolofgenz.com', role: 'content', status: 'active', lastSeenAt: before(26 * 60) },
+    { id: 's4', name: 'Tasnim Jahan', email: 'tasnim@schoolofgenz.com', role: 'support', status: 'inactive', lastSeenAt: before(3 * 24 * 60) },
+    { id: 's5', name: 'Imran Kabir', email: 'imran@schoolofgenz.com', role: 'support', status: 'invited', lastSeenAt: null },
+  ],
+};
+const team = rolesFromApi(TEAM, TODAY);
+
+/** What the console is given, with `as` signed in. */
+function envFor(sec: Section, as = 's1', o: Partial<ConsoleEnv> = {}): ConsoleEnv {
+  const who = team.staff.find((x) => x.id === as)!;
+  return {
+    sec, theme: 'light', payCount: 10, contentCount: 4, pending: [], navigate: () => {}, toggleTheme: () => {}, today: TODAY,
+    me: { id: who.id, name: who.name, email: who.email, role: team.roles.find((r) => r.id === who.role)! },
+    api: async () => { throw new Error('this test does not call the API'); }, refresh: () => {}, copy: () => {}, signOut: () => {}, ...o,
+  };
 }
+const stateWith = (ui: Partial<ConsoleState>): ConsoleState => ({ ...adminSeed(), ...team, rolesState: 'ready', ...initialUi, ...ui });
+
+/** A console on the seed data, at a fixed date, with `ui` on top of the starting view state and `as` signed in. */
+function consoleAt(sec: Section, ui: Partial<ConsoleState> = {}, as = 's1') {
+  return new AdminConsole(stateWith(ui), () => {}, envFor(sec, as));
+}
+
+/**
+ * A console whose changes are kept, so an action can be run and its result read.
+ * `answer` stands in for the API; every call it gets is remembered.
+ */
+function live(sec: Section, ui: Partial<ConsoleState> = {}, o: { as?: string; answer?: (path: string, init?: ApiInit) => unknown } = {}) {
+  let state = stateWith(ui);
+  const calls: { path: string; method?: string; body?: unknown }[] = [];
+  const done = { refreshed: 0, copied: [] as string[] };
+  const api: ConsoleEnv['api'] = async <T,>(path: string, init?: ApiInit) => {
+    calls.push({ path, method: init?.method, body: init?.body });
+    return (o.answer ? o.answer(path, init) : {}) as T;
+  };
+  const make = () => new AdminConsole(state, (p) => { state = { ...state, ...(typeof p === 'function' ? p(state) : p) }; },
+    envFor(sec, o.as, { api, refresh: () => { done.refreshed++; }, copy: (t) => { done.copied.push(t); } }));
+  return { make, calls, done, get state() { return state; } };
+}
+/** Let a call to the stand-in API finish. */
+const settle = () => new Promise((r) => setTimeout(r, 0));
 
 describe('chart numbers', () => {
   it('ends the axis on the first round step above the largest value', () => {
@@ -148,15 +199,6 @@ describe('dashboards', () => {
 });
 
 describe('two kinds of course', () => {
-  /** A console whose changes are kept, so an action can be run and its result read. */
-  function live(sec: Section, ui: Partial<ConsoleState> = {}) {
-    let state: ConsoleState = { ...adminSeed(), ...initialUi, ...ui };
-    const make = () => new AdminConsole(state, (p) => { state = { ...state, ...(typeof p === 'function' ? p(state) : p) }; }, {
-      sec, theme: 'light', payCount: 0, contentCount: 0, pending: [], navigate: () => {}, toggleTheme: () => {}, today: new Date(2026, 9, 9),
-    });
-    return { make, get state() { return state; } };
-  }
-
   it('counts a diploma course through its open and running batches, and a single course on itself', () => {
     const c = consoleAt('courses');
     expect(c.studentsOf('cst4')).toBe(28 + 23);
@@ -225,3 +267,172 @@ describe('two kinds of course', () => {
   });
 });
 
+
+describe('who is signed in', () => {
+  const nav = (c: AdminConsole) => c.renderVals().navGroups.flatMap((g) => g.items.map((i) => i.key));
+
+  it('draws the console for the signed-in person\'s role', () => {
+    const finance = consoleAt('payments', {}, 's2');
+    expect(finance.perm('payments')).toBe('edit');
+    expect(finance.perm('students')).toBe('view');
+    expect(finance.perm('roles')).toBe('none');
+    expect(nav(finance)).toEqual(['overview', 'payments', 'refunds', 'students', 'coupons', 'reports', 'activity']);
+    expect(consoleAt('students', {}, 's2').renderVals().readOnly).toBe(true);
+    expect(nav(consoleAt('overview'))).toContain('roles');
+  });
+
+  it('shows the overview instead of a section the role cannot see', () => {
+    expect(consoleAt('settings', {}, 's2').renderVals().sec).toBe('overview');
+    expect(consoleAt('settings').renderVals().sec).toBe('settings');
+  });
+
+  it('lets a super admin preview another staff member\'s view, and nobody else', () => {
+    const asFinance = consoleAt('payments', { viewAs: 's2' }).renderVals();
+    expect(asFinance.preview).toMatchObject({ name: 'Nabila Chowdhury', role: 'Finance' });
+    expect(asFinance.navGroups.flatMap((g) => g.items.map((i) => i.key))).not.toContain('roles');
+    expect(asFinance.meName).toBe('Rifat Ahmed');
+    // Someone who is not a super admin cannot widen their view by naming one.
+    const sneaky = consoleAt('payments', { viewAs: 's1' }, 's2');
+    expect(sneaky.renderVals().preview).toBeNull();
+    expect(sneaky.perm('roles')).toBe('none');
+    expect(sneaky.renderVals().staffOpts).toEqual([]);
+  });
+
+  it('offers only active colleagues to preview as', () => {
+    expect(consoleAt('overview').renderVals().staffOpts.map((o) => o.name)).toEqual(['Nabila Chowdhury', 'Sakib Rahman']);
+  });
+
+  it('logs a change in the name of the signed-in person, even while previewing', () => {
+    const x = live('coupons', { viewAs: 's2' });
+    x.make().log('coupons', 'Disabled coupon', 'EID25', 'Expired campaign');
+    expect(x.state.activity[0]).toMatchObject({ actor: 'Rifat Ahmed', action: 'Disabled coupon', reason: 'Expired campaign' });
+  });
+});
+
+describe('roles and staff, from the API', () => {
+  const action = (c: AdminConsole, label: string) => BUILDERS.roles!(c).detail!.actions!.find((a) => a.label === label)!;
+
+  it('turns what the API sends into what the console draws', () => {
+    const finance = team.roles.find((r) => r.id === 'finance')!;
+    expect(finance.perms.payments).toBe('edit');
+    expect(finance.perms.settings).toBe('none');
+    expect(Object.keys(finance.perms)).toHaveLength(14);
+    expect(finance.desc).toBe('Payments, refunds, coupons');
+    expect(team.roles[0].locked).toBe(true);
+    expect(team.staff.map((x) => x.last)).toEqual(['just now', '1 h ago', 'yesterday', '3 days ago', 'Never']);
+  });
+
+  it('waits for the API, and says so when it cannot be reached', () => {
+    const waiting = BUILDERS.roles!(consoleAt('roles', { rolesState: 'loading', roles: [], staff: [] }));
+    expect(waiting.sub).toBe('Loading roles and staff…');
+    expect(waiting.matrix).toBeUndefined();
+    const failed = BUILDERS.roles!(consoleAt('roles', { rolesState: 'failed', roles: [], staff: [] }));
+    expect(failed.sub).toBe('Roles and staff could not be loaded.');
+    expect(failed.head.map((a) => a.label)).toEqual(['Try again']);
+  });
+
+  it('lists staff with their status', () => {
+    const list = BUILDERS.roles!(consoleAt('roles', { rtab: 'staff' })).list!;
+    expect(list.cols).toEqual(['Name', 'Role', 'Status', 'Last active']);
+    expect(list.rows.map((r) => r.cells[2].t)).toEqual(['Active', 'Active', 'Active', 'Inactive', 'Invited']);
+    expect(list.rows[0].cells[0].t).toBe('Rifat Ahmed (you)');
+  });
+
+  it('invites a staff member and shows the link to send them', async () => {
+    const x = live('roles', { rtab: 'staff', sel: 'new', form: { name: ' Farhan Islam ', email: 'farhan@schoolofgenz.com', role: 'support' } },
+      { answer: () => ({ id: 'new-1', link: 'http://localhost:3000/invite/abc', expiresAt: '2026-10-16T06:00:00.000Z' }) });
+    action(x.make(), 'Create invitation').go();
+    await settle();
+    expect(x.calls).toEqual([{ path: '/admin/staff', method: undefined, body: { name: 'Farhan Islam', email: 'farhan@schoolofgenz.com', role: 'support' } }]);
+    expect(x.state).toMatchObject({ sel: 'new-1', form: null, link: { for: 'new-1', url: 'http://localhost:3000/invite/abc' } });
+    expect(x.done.refreshed).toBe(1);
+    expect(x.state.activity[0]).toMatchObject({ action: 'Invited staff', target: 'Farhan Islam · Support' });
+  });
+
+  it('does not send an invitation with a name or an email missing', () => {
+    const off = (form: object) => action(consoleAt('roles', { rtab: 'staff', sel: 'new', form }), 'Create invitation').op;
+    expect(off({ name: 'F', email: 'farhan@schoolofgenz.com', role: 'support' })).toBe(0.45);
+    expect(off({ name: 'Farhan Islam', email: 'farhan', role: 'support' })).toBe(0.45);
+    expect(off({ name: 'Farhan Islam', email: 'farhan@schoolofgenz.com', role: '' })).toBe(0.45);
+    expect(off({ name: 'Farhan Islam', email: 'farhan@schoolofgenz.com', role: 'support' })).toBe(1);
+  });
+
+  it('keeps a fresh link on screen with a way to copy it', async () => {
+    const x = live('roles', { rtab: 'staff', sel: 's5' }, { answer: () => ({ link: 'http://localhost:3000/invite/xyz', expiresAt: '2026-10-16T06:00:00.000Z' }) });
+    action(x.make(), 'New invitation link').go();
+    await settle();
+    expect(x.calls[0]).toMatchObject({ path: '/admin/staff/s5/link', method: 'POST' });
+    const block = BUILDERS.roles!(x.make()).detail!.blocks.find((b) => b.title === 'Invitation link')!;
+    expect(block.note).toContain('until 16 Oct');
+    block.items[0].actGo();
+    expect(x.done.copied).toEqual(['http://localhost:3000/invite/xyz']);
+    // The link belongs to that person: it is not shown beside anyone else.
+    expect(BUILDERS.roles!(consoleAt('roles', { rtab: 'staff', sel: 's2', link: x.state.link })).detail!.blocks.some((b) => b.title.endsWith('link'))).toBe(false);
+  });
+
+  it('asks why before removing access, then sends the reason', async () => {
+    const x = live('roles', { rtab: 'staff', sel: 's2' });
+    action(x.make(), 'Remove access').go();
+    expect(x.state.confirm).toMatchObject({ needReason: true, danger: true });
+    expect(x.calls).toEqual([]);
+    x.state.confirm!.run('Left the job');
+    await settle();
+    expect(x.calls).toEqual([{ path: '/admin/staff/s2', method: 'PATCH', body: { active: false, reason: 'Left the job' } }]);
+    expect(x.done.refreshed).toBe(1);
+  });
+
+  it('does not offer to remove yourself or the only super admin, and offers to restore someone removed', () => {
+    const own = BUILDERS.roles!(consoleAt('roles', { rtab: 'staff', sel: 's1' })).detail!;
+    expect(own.actions!.find((a) => a.label === 'Remove access')!.op).toBe(0.45);
+    expect(own.blocks.find((b) => b.title === 'Role')!.fields[0].hint).toBe('Ask another admin to change your own role.');
+    expect(BUILDERS.roles!(consoleAt('roles', { rtab: 'staff', sel: 's4' })).detail!.actions!.map((a) => a.label)).toEqual(['Restore access']);
+  });
+
+  it('saves a role with the reason, and says in English when the server refuses', async () => {
+    const draft = { _id: 'role:support', ...team.roles.find((r) => r.id === 'support')!, perms: { ...team.roles.find((r) => r.id === 'support')!.perms, refunds: 'view' } };
+    const ok = live('roles', { sel: 'support', draft });
+    action(ok.make(), 'Save role').go();
+    ok.state.confirm!.run('Responsibilities changed');
+    await settle();
+    expect(ok.calls[0]).toMatchObject({ path: '/admin/roles/support', method: 'PUT', body: { name: 'Support', reason: 'Responsibilities changed' } });
+    expect((ok.calls[0].body as { perms: Record<string, string> }).perms.refunds).toBe('view');
+    expect(ok.state).toMatchObject({ draft: null, toast: 'Role saved' });
+
+    const refused = live('roles', { sel: 'support', draft }, { answer: () => { throw { code: 'role_locked' }; } });
+    action(refused.make(), 'Save role').go();
+    refused.state.confirm!.run('Responsibilities changed');
+    await settle();
+    expect(refused.state.toast).toBe('This role cannot be changed.');
+    expect(refused.state.draft).toEqual(draft);
+    expect(refused.done.refreshed).toBe(0);
+  });
+
+  it('creates a role from the form, and keeps a role with members from being deleted', async () => {
+    const perms = { ...team.roles.find((r) => r.id === 'intern')!.perms, payments: 'view' as const };
+    const x = live('roles', { sel: 'new', form: { name: 'Night shift', desc: 'Covers the evening queue', perms } }, { answer: () => ({ id: 'night-shift' }) });
+    action(x.make(), 'Create role').go();
+    await settle();
+    expect(x.calls[0]).toMatchObject({ path: '/admin/roles', body: { name: 'Night shift', description: 'Covers the evening queue' } });
+    expect(x.state.sel).toBe('night-shift');
+    expect(action(consoleAt('roles', { sel: 'support' }), 'Delete').op).toBe(0.45);
+    expect(action(consoleAt('roles', { sel: 'intern' }), 'Delete').op).toBe(1);
+    expect(BUILDERS.roles!(consoleAt('roles', { sel: 'super' })).detail!.actions).toEqual([]);
+  });
+
+  it('deletes an unused role with a reason', async () => {
+    const x = live('roles', { sel: 'intern' });
+    action(x.make(), 'Delete').go();
+    x.state.confirm!.run('No longer needed');
+    await settle();
+    expect(x.calls).toEqual([{ path: '/admin/roles/intern/delete', method: undefined, body: { reason: 'No longer needed' } }]);
+    expect(x.state.sel).toBeNull();
+  });
+
+  it('has English words for every refusal it can get, and a general sentence for the rest', () => {
+    const general = sayAdmin(new Error('boom'));
+    for (const code of ADMIN_CODES) expect(sayAdmin({ code }), code).not.toBe(general);
+    expect(sayAdmin({ code: 'something_new' })).toBe(general);
+    expect(sayAdmin(undefined)).toBe(general);
+    expect(ADMIN_CODES).toEqual(expect.arrayContaining(['role_exists', 'role_locked', 'role_in_use', 'email_taken', 'not_yourself', 'last_super', 'no_permission', 'offline']));
+  });
+});

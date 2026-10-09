@@ -19,6 +19,10 @@ export class ApiFailure extends Error {
 
 export interface ApiInit { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal }
 
+let onSignedOut: (() => void) | null = null;
+/** What to do when the API says nobody is signed in any more (the session ended somewhere else). Set by ApiProvider. */
+export function watchSignedOut(fn: (() => void) | null) { onSignedOut = fn; }
+
 /**
  * Call the API. `path` is relative to /api/v1 on this site, which Next forwards to the server (see next.config.ts).
  * Giving a body makes it a POST unless `method` says otherwise.
@@ -41,7 +45,10 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const e = (data as ErrorBody | null)?.error;
-    throw new ApiFailure(res.status, e?.code || 'internal', e?.fields, e?.requestId);
+    // The API always answers with a code. An answer without one came from whatever stands in front of it: the API is not there.
+    const code = e?.code || (res.status === 404 || res.status >= 502 ? 'offline' : 'internal');
+    if (res.status === 401 && code === 'unauthorized') onSignedOut?.();
+    throw new ApiFailure(res.status, code, e?.fields, e?.requestId);
   }
   return data as T;
 }

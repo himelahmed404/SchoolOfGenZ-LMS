@@ -1,3 +1,4 @@
+import type { Me } from '@contract';
 import type { AdminData } from './admin/types';
 import { catalog } from './data';
 import type { Catalog, CourseId, Doubt, Enrollment, LessonRevision, PayMethod, PayStatus, PublishedLesson, QuizQ } from './types';
@@ -6,7 +7,8 @@ import type { Numerals } from './format';
 /**
  * Everything the prototype kept in one component, minus pure view state.
  * Persisted to localStorage for now; each slice maps to a server resource
- * (Progress, TestAttempt, Payment, LessonRevision, Doubt, Notification, Profile) once the API exists.
+ * (Progress, TestAttempt, Payment, LessonRevision, Doubt, Notification) and leaves this file when its screens move to the API.
+ * The account already has: `me` comes from the API and is never saved in the browser.
  * Bump `version` when a slice changes shape: saved state from an older version is dropped.
  * New top-level slices merge in on load, so adding one does not need a version bump.
  */
@@ -27,18 +29,15 @@ export interface TestResult {
 }
 
 export interface AppState {
-  version: 4;
+  version: 5;
+  /** The signed-in person, from the API. Null while nobody is signed in. Never saved in the browser. */
+  me: Me | null;
   /** Programs, batches and courses. Seed data for now; it is not saved with the rest, so a new build always shows the current catalog. */
   catalog: Catalog;
   /** What the signed-in student is in. An approved payment adds to it. */
   enrollments: Enrollment[];
-  prefs: {
-    numerals: Numerals;
-    name: string;
-    sem: number;
-    examDate: string | null;
-    setupDone: boolean;
-  };
+  /** Digits inside Bangla sentences on the screens before sign-in. A signed-in person's own setting (`me.numerals`) wins. */
+  prefs: { numerals: Numerals };
   /** Lessons completed in this session, keyed `cid:ci:li` (seed data marks earlier ones done). */
   progress: Record<string, true>;
   /** Where "চালিয়ে যাও" resumes; `t` is the playback position in seconds. */
@@ -65,18 +64,17 @@ export interface AppState {
   bookmarks: Record<string, true>;
   /** Private per-lesson notes, keyed `cid:ci:li`. */
   myNotes: Record<string, string>;
-  profile: { email: string; inst: string };
-  tProfile: { email: string; bio: string; subjects: string[] };
   /** Admin console data; seeded the first time the console opens. */
   admin: AdminData | null;
 }
 
 export const initialState: AppState = {
-  version: 4,
+  version: 5,
+  me: null,
   catalog,
   // A diploma semester in its first batch, and one single course.
   enrollments: [{ program: 'cst4', batch: 'CST-04-B01' }, { program: 'eng' }],
-  prefs: { numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
+  prefs: { numerals: 'bn' },
   progress: {},
   last: { courseId: 'dsa', ch: 2, li: 4, t: 372 },
   practiceAns: {},
@@ -98,11 +96,5 @@ export const initialState: AppState = {
   notifs: { read: { s4: true, s5: true, t3: true }, gone: {} },
   bookmarks: { 'dsa:2:4': true, 'dsa:1:1': true },
   myNotes: { 'dsa:2:4': 'push আর pop দুটোই O(1) — পরীক্ষায় প্রায়ই আসে!' },
-  profile: { email: 'mahmud.cst@gmail.com', inst: 'Dhaka Polytechnic Institute' },
-  tProfile: {
-    email: 'shahriar@schoolofgenz.com',
-    bio: '১০ বছর ধরে ডিপ্লোমা শিক্ষার্থীদের প্রোগ্রামিং পড়াচ্ছি। কঠিন জিনিস সহজ উদাহরণে বোঝাতে ভালোবাসি।',
-    subjects: ['Data Structure', 'C Programming', 'Algorithm'],
-  },
   admin: null,
 };

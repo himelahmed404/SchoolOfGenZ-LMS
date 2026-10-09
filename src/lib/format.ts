@@ -65,6 +65,12 @@ export function daysTo(iso: string): number {
   return Math.round((d - n.getTime()) / 86400000);
 }
 
+/** A phone number as the API keeps it (01712445589), split for reading: 01712-445589. */
+export const phoneEn = (p: string, sep = '-') => (/^\d{11}$/.test(p) ? p.slice(0, 5) + sep + p.slice(5) : p);
+
+/** The same with the middle hidden, for a screen someone else may see: 01712-••••89. */
+export const maskPhone = (p: string) => (/^\d{11}$/.test(p) ? p.slice(0, 5) + '-••••' + p.slice(9) : p);
+
 /* ---------- Bangla sentences ---------- */
 
 export type Numerals = 'bn' | 'latin';

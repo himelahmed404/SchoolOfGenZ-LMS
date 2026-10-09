@@ -7,6 +7,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
+  // One at a time: the tests share the demo accounts, and signing in as one ends its session in another test.
+  workers: 1,
   reporter: [['list']],
   use: { baseURL: 'http://localhost:3000', channel: 'chrome', trace: 'retain-on-failure' },
   webServer: [

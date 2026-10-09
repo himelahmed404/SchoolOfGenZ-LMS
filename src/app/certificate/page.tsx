@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui';
+import { useGuard } from '@/components/useGuard';
 import { pastCertificate } from '@/lib/data';
 import { counts, isSingle, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function CertificatePage() {
-  const { s, ready } = useStore();
-  if (!ready) return null;
+  const { s } = useStore();
+  const allowed = useGuard();
+  if (!allowed) return null;
 
   // Certificates belong to single courses: the one just finished, else the one the student already holds.
   const cur = s.catalog.courses[s.last.courseId];

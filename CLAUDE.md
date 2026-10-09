@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-School of GenZ LMS: a Bangla-first learning platform with three apps in one Next.js project (student, teacher, admin console). It was rebuilt from a claude.ai/design prototype and **has no server yet**. Every page is a client component, all data is seed data, and state lives in `localStorage`. `README.md` has the full route table and the list of what is simulated; keep it current when routes or behaviour change.
+School of GenZ LMS: a Bangla-first learning platform with three apps in one Next.js project (student, teacher, admin console). It was rebuilt from a claude.ai/design prototype and is moving onto its own API (`server/`): accounts are there, everything else is not. Every page is a client component, and apart from the signed-in person all data is seed data and state lives in `localStorage`. `README.md` has the full route table and the list of what is simulated; keep it current when routes or behaviour change.
 
 Stack: Next.js 16 (App Router), React 19, TypeScript (strict), Vitest, ESLint 9 with `eslint-config-next`. No Tailwind, no CSS modules, no UI library. KaTeX renders formulas.
 
@@ -36,7 +36,7 @@ Vercel deploys `main`, so work on a branch.
 
 ## Where this is going
 
-The app is moving from seed data in the browser to a real server, in milestones B0–B11. **B0 and B1 are done**: the two kinds of product are modelled in the LMS, and `server/` exists with its database, but only `/api/v1/health` is used. Every screen still runs on seed data and `localStorage`. From B2 on, an area moves to the API at a time, and its seed data is deleted from the client when it does. Until a section below says otherwise, what it describes is still true.
+The app is moving from seed data in the browser to a real server, in milestones B0–B11. **B0, B1 and B2 are done**: the two kinds of product are modelled in the LMS, `server/` exists with its database, and accounts are on it (sign-in, sessions, passwords, the profile, the console's roles and staff). Every other screen still runs on seed data and `localStorage`. From here an area moves to the API at a time, and its seed data is deleted from the client when it does. Until a section below says otherwise, what it describes is still true.
 
 ## The API (`server/`)
 
@@ -54,6 +54,18 @@ A separate Express 5 app in TypeScript with its own `package.json`, ESLint and V
 - **Logs** are one JSON line each (`log` in `src/http/log.ts`). Never log a password, token, code or request body.
 - **Tests** get a fresh migrated database per file from `testDb()`; test the HTTP surface with supertest on `createApp`. Test names are sentences, as in the LMS.
 - **Demo data** is `src/db/seed/demo.json`, loaded by `seed.ts` into an empty development database. It is not for production.
+
+## Signing in
+
+- **Who is signed in** is `me` from `useStore()` (`Me` from `@contract`), fetched from `/auth/me` with TanStack Query under `ME_KEY`. It is also `s.me` inside actions and selectors, but it is never saved: `store.tsx` strips it from `localStorage`. A null `me` means nothing until `ready`.
+- **Three kinds of person**, one app each: `student` (`/`), `teacher` (`/teacher`), `staff` (`/admin`). Students sign in with a phone number, the others with an email.
+- **Two guards, neither is security.** `src/proxy.ts` redirects a request with no session cookie to `/signin?next=…` before a page is drawn. `useGuard()` runs in `Shell`, `AdminShell`, `/setup` and `/certificate`, and sends a signed-in person out of an app that is not theirs; render nothing until it returns true. The API checks the session and the permission on every request.
+- **The rules are pure functions** in `src/lib/api/session.ts` (`redirectFor`, `afterSignIn`, `safeNext`, `passwordOk`), with tests. `OPEN` there and in `proxy.ts` must list the same screens.
+- **Screens before sign-in** (`/signin`, `/activate`, `/forgot`, `/invite/[token]`) are built from `src/components/AuthFrame.tsx`. A new one goes in both `OPEN` lists.
+- **Errors are codes.** `sayError(e, n)` in `src/lib/api/messages.ts` words a code in Bangla for students and teachers; `sayAdmin` in `src/lib/admin/errors.ts` words it in English for the console. Add the wording when the API gains a code.
+- **Signing out** is `signOut()` from the store, then `router.replace('/signin')`. It drops everything fetched for that person; `signedIn(user)` fetches it again for the next one.
+- **Limits to remember when testing:** a student may be on two devices (`sgz-device` in `localStorage` names the browser), and one login gets ten tries in 15 minutes, right or wrong. `e2e/session.ts` has the helpers that stay inside both.
+- **Demo accounts** share the password `DEMO_PASSWORD` in `server/src/db/seed.ts`. In development the API prints each SMS in its terminal, which is where a reset code is read.
 
 ## Architecture
 
@@ -126,7 +138,7 @@ A teacher's edits and what students see are separate:
 - `src/components/Shell.tsx`: student and teacher frame. Each page wraps itself: `<Shell role="student" title="…">`. `NAV` holds the sidebar groups; items with a `tab` label also appear in the phone tab bar, the rest go under "More".
 - `src/app/admin/layout.tsx` → `AdminShell` in `src/components/admin/Console.tsx`: the console frame for every `/admin` route.
 
-There is no auth. `DevBar` switches role by navigating (`/`, `/teacher`, `/admin`).
+Both frames call `useGuard()` and show the signed-in person. `DevBar` is rendered in development only; it signs in as a demo student, teacher or admin through `/auth/dev`, a route the API has only outside production.
 
 **Adding a student or teacher screen:** create the route, add it to `NAV` in `Shell.tsx`, add it to `JUMPS` and `screenOf` in `DevBar.tsx`, and add a row to the README route table.
 
@@ -150,7 +162,7 @@ Rules the console follows:
 
 - Destructive or money actions go through `c.ask({ needReason, reasons, run })` and then `c.log(area, action, target, reason)`. The activity log is append-only.
 - `c.ro` is true when the role has view access only. `inp`/`seg`/`A` disable themselves from it; pass `free` to `A` for actions that are safe when read-only (navigation, copy).
-- Permissions are enforced in the UI only. Do not treat them as security.
+- Permissions are enforced by the API for Roles & staff, which is the one section on the server (`src/lib/admin/api.ts`; `c.send(call, then)` runs a request and shows its failure). Every other section still enforces them in the UI only. Do not treat those as security.
 
 **Adding a section:** extend `Area` in `types.ts`, add it to `AREAS` in `seed.ts` and to `NAV` and `ICON` in `console.ts`, write the builder under `sections/`, and register it in `index.ts`. `/admin/[section]` picks it up through `isSection`.
 
@@ -191,4 +203,4 @@ Tests cover `src/lib` only and run in Node with no DOM. Put logic in `src/lib` a
 
 ## Before production
 
-See "Not real yet" in `README.md`. In short: no auth (routes are open), no API or database, simulated video and uploads, and a newly created lesson that an admin publishes does not reach students yet because the course structure is static seed data.
+See "Not real yet" in `README.md`. In short: only accounts are on the server, no SMS gateway is connected, simulated video and uploads, and a newly created lesson that an admin publishes does not reach students yet because the course structure is static seed data.

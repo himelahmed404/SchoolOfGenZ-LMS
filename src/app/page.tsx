@@ -23,12 +23,14 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const { s, set, ready } = useStore();
+  const { s, set, me: account } = useStore();
   const router = useRouter();
 
+  // A student who has not answered the first-run questions is asked them once.
+  const askFirst = account?.kind === 'student' && !account.setupDone;
   useEffect(() => {
-    if (ready && !s.prefs.setupDone) router.replace('/setup');
-  }, [ready, s.prefs.setupDone, router]);
+    if (askFirst) router.replace('/setup');
+  }, [askFirst, router]);
 
   const { courseId, ch, li, t } = s.last;
   const course = s.catalog.courses[courseId];

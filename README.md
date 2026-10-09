@@ -33,7 +33,8 @@ migration, and the tests twice, on the embedded database and on Postgres 17.
 ## The API (`server/`)
 
 The LMS is moving from seed data in the browser to this server, one area at a time. The dot in the
-dev bar says whether the API is answering. So far only `/api/v1/health` is used.
+dev bar says whether the API is answering. So far it holds the accounts: signing in, sessions,
+passwords, the profile, and the console's roles and staff. Everything else is still seed data.
 
 - The browser never calls the API directly. It calls `/api/*` on the LMS, and Next forwards the
   request to `API_ORIGIN` (`next.config.ts`; `http://localhost:4000` in development). Cookies stay
@@ -49,11 +50,32 @@ dev bar says whether the API is answering. So far only `/api/v1/health` is used.
   `@contract`, so the two cannot drift apart.
 - `server/.env.example` lists the environment variables. None is needed locally.
 
-## Dev bar (no sign-in yet)
+## Signing in
 
-There is no auth. A dark strip at the top of every page switches role (student / teacher / admin)
-and numerals (bn / latin), and has a jump menu to every screen of the current role. Hide it with `NEXT_PUBLIC_DEV_BAR=0`; remove it once real sign-in exists. Logout and password
-change are UI-only.
+Every screen but `/signin`, `/activate`, `/forgot` and `/invite/[token]` needs a session. A student
+signs in with their phone number, a teacher or staff member with their email. `src/proxy.ts` sends a
+visitor with no session cookie to sign in before a page is drawn; `useGuard` (in `Shell`, `AdminShell`,
+`/setup` and `/certificate`) sends a signed-in person out of an app that is not theirs. Both only save
+people from an empty page: the API checks the session and the permission on every request.
+
+- The signed-in person is `me` from `useStore()`, fetched from `/api/v1/auth/me`. It is not kept in
+  `localStorage`.
+- Every demo account's password is `genz2026`: student `01712445589`, teacher
+  `shahriar@schoolofgenz.com`, super admin `rifat@schoolofgenz.com` (`server/src/db/seed/demo.json`
+  has the rest).
+- A student may be signed in on two devices (the `devices` setting in the database). A third is
+  refused until one logs out.
+- Ten tries at one phone or email in 15 minutes, right or wrong, and the server asks to wait.
+- No SMS gateway is connected. In development the API prints each SMS, with its code, in its terminal.
+- A teacher or staff member has no reset by SMS: an admin makes a one-time link in Roles & staff and
+  sends it.
+
+## Dev bar
+
+A dark strip at the top of every page, in development only. It signs in as the demo student, teacher
+or admin without a password (the API has that route only outside production), switches numerals
+(bn / latin), and has a jump menu to every screen of the current role. Hide it with
+`NEXT_PUBLIC_DEV_BAR=0`.
 
 ## Theme
 
@@ -100,6 +122,10 @@ single program. An enrollment names a program and, for diploma, a batch.
 
 | Role | Path | Screen |
 |---|---|---|
+| Anyone | `/signin` | Sign in with a phone number or an email, and a password |
+| | `/activate` | A new student sets a password with the code from their SMS |
+| | `/forgot` | A student resets a password by SMS code; staff are told to ask an admin |
+| | `/invite/[token]` | A teacher or staff member sets a password from a one-time link |
 | Student | `/` | Dashboard: streak, resume card, exam countdown, courses, this week (redirects to `/setup` on first visit) |
 | | `/setup` | First-run setup (name, semester, exam date, numerals) |
 | | `/courses`, `/course/[course]` | My courses (each semester with its subjects, then single courses); course page |
@@ -153,8 +179,8 @@ unanswered. The best score counts 5 leaderboard points per correct answer. Keys:
 
 ## Not real yet
 
-There is no server. State lives in `localStorage`, so the cross-role flows work within one browser,
-including across tabs:
+Only accounts are on the server. The rest of the state lives in `localStorage`, so the cross-role
+flows work within one browser, including across tabs (each tab signed in through the dev bar):
 - Student pays → admin approves → the student sees it.
 - Teacher submits → admin publishes → students see the new version.
 - Teacher replies → the student's Ask tab shows it.
@@ -162,13 +188,18 @@ including across tabs:
 Also simulated:
 - video playback and upload, and image picking
 - the roster, doubts and leaderboard peers
-- the admin console's students, refunds, reports and staff
+- the admin console's students, refunds and reports
 
 Fonts and icons (Material Symbols Rounded) load from Google Fonts. The mascot, covers and avatars
 are placeholders.
 
 Before production:
-- Auth and roles. Routes are open, and admin permissions are enforced only in the UI.
+- Permissions for the rest of the console. Roles & staff is checked by the API; every other section
+  still runs on seed data, with permissions enforced only in the UI.
+- An SMS gateway. Until then nobody outside development receives a code, and `/activate` has nothing
+  to accept: the code is sent when an admin approves a payment, which is not on the server yet.
+- A screen for the devices a person is signed in on. The API can list and end them
+  (`/auth/sessions`); no screen uses it.
 - API and persistence for Progress, TestAttempt, Payment, LessonRevision, Doubt and the admin data.
   The duplicate TrxID check must run server-side, and the leaderboard API must return only the ±5 window.
 - Stream player (bunny.net), real uploads, SMS/push for payment decisions and announcements.

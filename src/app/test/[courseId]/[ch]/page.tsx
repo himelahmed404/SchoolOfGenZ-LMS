@@ -6,6 +6,7 @@ import { startTest, submitTest, testElapsed } from '@/lib/actions';
 import { mmss, pad2 } from '@/lib/format';
 import { Icon } from '@/components/ui';
 import { chapterDone, chapterTest, testKey } from '@/lib/selectors';
+import { useGuard } from '@/components/useGuard';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -14,7 +15,9 @@ const LETTERS = 'কখগঘ';
 /** Chapter test runner. The test is optional and opens once the chapter's lessons are done. */
 export default function ChapterTestPage() {
   const p = useParams<{ courseId: string; ch: string }>();
-  const { s, set, ready, n } = useStore();
+  const { s, set, n } = useStore();
+  // Ready, and a student: a signed-out visitor is sent to sign in before any attempt starts.
+  const ready = useGuard();
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [exitAsk, setExitAsk] = useState(false);

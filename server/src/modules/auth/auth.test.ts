@@ -46,7 +46,7 @@ async function student(over: Partial<typeof users.$inferInsert> = {}): Promise<U
 
 describe('signing in', () => {
   it('takes a student\'s phone however it is typed, and answers with who they are', async () => {
-    for (const login of ['01712445589', '01712 445589', '+8801712-445589']) {
+    for (const login of ['01712445589', '01712 445589', '+8801712-445589', '০১৭১২৪৪৫৫৮৯']) {
       const res = await post('/auth/signin', { login, password: DEMO_PASSWORD });
       expect(res.status, login).toBe(200);
       expect(Me.parse(res.body.user)).toMatchObject({ kind: 'student', name: 'Mahmudul Hasan', phone: STUDENT, role: null });
@@ -371,6 +371,20 @@ describe('roles and staff', () => {
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('role_locked');
     expect((await o.db.select().from(roles).where(eq(roles.id, 'super')))[0]!.locked).toBe(true);
+  });
+
+  it('deletes a role nobody holds, with a reason, and keeps one that is locked or in use', async () => {
+    const admin = await sessionOf(SUPER);
+    const del = (id: string, body: object = { reason: 'Merged into another role' }) => post('/admin/roles/' + id + '/delete', body, admin);
+    expect((await post('/admin/roles', { name: 'Night shift', perms: { payments: 'view' } }, admin)).status).toBe(201);
+    expect((await del('night-shift', {})).body.error.code).toBe('invalid_input');
+    expect((await del('super')).body.error.code).toBe('role_locked');
+    expect((await del('finance')).body.error.code).toBe('role_in_use');
+    expect((await del('no-such-role')).status).toBe(404);
+    expect((await del('night-shift')).status).toBe(204);
+    expect(await o.db.select().from(roles).where(eq(roles.id, 'night-shift'))).toEqual([]);
+    expect((await o.db.select().from(roles).where(eq(roles.id, 'finance')))).toHaveLength(1);
+    expect((await o.db.select().from(activityLog).where(eq(activityLog.action, 'Deleted role')))[0]).toMatchObject({ target: 'Night shift', reason: 'Merged into another role' });
   });
 
   it('removes a staff member\'s access at once, and can give it back', async () => {

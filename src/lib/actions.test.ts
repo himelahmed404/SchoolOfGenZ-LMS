@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   askDoubt, chooseProgram, clearNotifs, completeLesson, createDraft, decideContent, decidePayments, markRead, newLessonKey, patchItem,
-  resetPayment, savePosition, saveStudentProfile, setMyNote, startTest, startUpload, submitForReview, submitPayment, submitTest,
+  resetPayment, savePosition, setMyNote, startTest, startUpload, submitForReview, submitPayment, submitTest,
   testElapsed, toggleBookmark, trxTaken, withdraw,
 } from './actions';
 import { allQueue, chapterTest, counts, item, myCourses, myPrograms, offers, testRevKey, testStatus } from './selectors';
@@ -212,18 +212,9 @@ describe('admin content review', () => {
   });
 });
 
-describe('notifications and profile', () => {
+describe('notifications', () => {
   it('marks notifications read and clears them', () => {
     expect(markRead(s0, ['s1']).notifs.read.s1).toBe(true);
     expect(clearNotifs(s0, ['s1', 's2']).notifs.gone).toEqual({ s1: true, s2: true });
-  });
-
-  it('drops the manual exam date when the semester changes', () => {
-    const s = { ...s0, prefs: { ...s0.prefs, examDate: '2026-12-20' } };
-    const same = saveStudentProfile(s, { name: 'ক', email: 'a@b.c', inst: 'X', sem: s.prefs.sem });
-    expect(same.prefs.examDate).toBe('2026-12-20');
-    const moved = saveStudentProfile(s, { name: 'ক', email: 'a@b.c', inst: 'X', sem: 5 });
-    expect(moved.prefs).toMatchObject({ sem: 5, examDate: null, name: 'ক' });
-    expect(moved.profile).toMatchObject({ email: 'a@b.c', inst: 'X' });
   });
 });

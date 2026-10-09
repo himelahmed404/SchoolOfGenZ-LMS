@@ -345,9 +345,13 @@ export const practiceQs: QuizQ[] = [
   { stem: 'নিচের কোনটি স্ট্যাকের প্রয়োগ নয়?', o: ['ব্রাউজারের ব্যাক বাটন', 'ইনফিক্স থেকে পোস্টফিক্স', 'প্রিন্টার স্পুলিং', 'রিকার্শন'], a: 2, why: 'প্রিন্টার স্পুলিং কিউ — যে ফাইল আগে এসেছে, সেটাই আগে ছাপা হয়।' }
 ];
 
-/** The signed-in teacher: the subject they teach and the batch their home screen follows. */
-export const teacher = { name: 'Shahriar Hossain', course: 'dsa', batch: 'CST-04-B01', phone: '01711-649032', title: 'Senior Instructor · Computer Technology' };
-export const defaultStudent = { name: 'Mahmudul Hasan', phone: '01712 445589', masked: '01712-••••89' };
+/** The class the teacher screens show until teaching moves to the API: the subject, its batch, and who wrote the seeded lessons. */
+export const teacher = { name: 'Shahriar Hossain', course: 'dsa', batch: 'CST-04-B01' };
+/**
+ * The student the seeded progress, payment and questions belong to. A signed-in student sees their own name instead;
+ * a teacher or an admin sees this one in the roster and the payment queue, until those move to the API.
+ */
+export const defaultStudent = { name: 'Mahmudul Hasan', phone: '01712445589' };
 /** Subjects a teacher can list on their profile. */
 export const subjectOptions = ['Data Structure', 'C Programming', 'Algorithm', 'Database', 'Web Development', 'Networking'];
 export const supportPhone = '01777 090909';

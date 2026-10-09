@@ -1,12 +1,18 @@
+import type { Me } from '@contract';
 import { describe, expect, it } from 'vitest';
-import { contentReasons, defaultStudent, queueSeed, rejectReasons } from './data';
+import { boardExam, contentReasons, defaultStudent, queueSeed, rejectReasons } from './data';
 import {
-  allQueue, batchLabel, batchOf, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, frontier, isDone, isLocked, isSingle, issues, item, itemKeys, lessonCount, lessonRef, liveRow, monthCells, myBatch, myCourses, myPayments, myPrograms, myQuestions, nextOpenTest, offers, offerView, payingOffer, programName, programOf, reasonText, refundPolicy, resumePoint, returnReason, revisionRef, roster, rowFlags, satIndex, savedItems, statusOf, step, studentLesson, studentName, subjectMeta, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
+  allQueue, batchLabel, batchOf, boardRows, chapterDone, chapterTest, counts, courseKicker, courseMeta, deviceLimit, doneChapters, doubtsFor, examISO, frontier, isDone, isLocked, isSingle, issues, item, itemKeys, lessonCount, lessonRef, liveRow, monthCells, myBatch, myCourses, myPayments, myPrograms, myQuestions, nextOpenTest, offers, offerView, payingOffer, programName, programOf, reasonText, refundPolicy, resumePoint, returnReason, revisionRef, roster, rowFlags, satIndex, savedItems, semesterOf, statusOf, step, studentLesson, studentName, studentPhone, subjectMeta, testFacts, testItem, testPoints, testStatus, unreadCount, weekDots,
 } from './selectors';
 import { initialState, type AppState } from './state';
 
 const s0 = initialState;
 const withState = (p: Partial<AppState>): AppState => ({ ...s0, ...p });
+/** Someone signed in, as the API describes them. */
+const person = (kind: Me['kind'], p: Partial<Me> = {}): Me => ({
+  id: 'u1', kind, name: 'Riya Das', phone: kind === 'student' ? '01911000111' : null, email: null, numerals: 'bn', semester: null, institute: null,
+  examDate: null, setupDone: true, bio: null, subjects: [], role: null, ...p,
+});
 const courses = s0.catalog.courses;
 const BATCH = 'CST-04-B01';
 /** Lessons the seeded student has finished across the seven subjects of their semester. */
@@ -135,9 +141,30 @@ describe('roster and leaderboard', () => {
     expect(roster(s0, 'CST-04-B02', 'dsa').some((r) => r.live)).toBe(false);
   });
 
-  it('uses the name from setup when there is one', () => {
+  it('names the signed-in student, and the seeded one while a teacher or an admin is looking', () => {
     expect(studentName(s0)).toBe(defaultStudent.name);
-    expect(studentName(withState({ prefs: { ...s0.prefs, name: '  রিয়া  ' } }))).toBe('রিয়া');
+    expect(studentName(withState({ me: person('student', { name: '  রিয়া  ' }) }))).toBe('রিয়া');
+    expect(studentPhone(withState({ me: person('student') }))).toBe('01911000111');
+    expect(studentName(withState({ me: person('teacher', { name: 'Tanvir Ahmed' }) }))).toBe(defaultStudent.name);
+    expect(studentPhone(withState({ me: person('staff') }))).toBe(defaultStudent.phone);
+  });
+
+  it('takes the semester from the account, and otherwise from the diploma program the student is in', () => {
+    expect(semesterOf(withState({ me: person('student', { semester: 6 }) }))).toBe(6);
+    expect(semesterOf(withState({ me: person('student') }))).toBe(4);
+    expect(semesterOf(withState({ me: person('student'), enrollments: [{ program: 'eng' }] }))).toBe(1);
+  });
+
+  it('uses the exam date the student set, and otherwise the board date for their semester', () => {
+    expect(examISO(withState({ me: person('student', { semester: 5, examDate: '2026-12-20' }) }))).toBe('2026-12-20');
+    expect(examISO(withState({ me: person('student', { semester: 5 }) }))).toBe(boardExam.odd);
+    expect(examISO(withState({ me: person('student', { semester: 4 }) }))).toBe(boardExam.even);
+  });
+
+  it('shows the admin the payment under the student\'s own name and number', () => {
+    const paying = withState({ me: person('student'), payment: { ...s0.payment, program: 'web', trxId: 'BKX1', status: 'pending' } });
+    expect(liveRow(paying)).toMatchObject({ name: 'Riya Das', phone: '01911 000111', sender: '01911 000111' });
+    expect(liveRow({ ...paying, me: person('staff') })).toMatchObject({ name: defaultStudent.name, phone: '01712 445589' });
   });
 
   it('ranks by points, with ties sharing a rank', () => {

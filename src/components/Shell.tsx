@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import { defaultStudent, teacher } from '@/lib/data';
-import { counts, myBatch, studentName, type AppRole, unreadCount } from '@/lib/selectors';
+import { teacher } from '@/lib/data';
+import { maskPhone } from '@/lib/format';
+import { counts, myBatch, type AppRole, unreadCount } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
 import { Notifications } from './Notifications';
 import { ThemeToggle } from './ThemeToggle';
 import { Avatar, Icon } from './ui';
+import { useGuard } from './useGuard';
 
 interface NavItem {
   label: string; icon: string; href: string; match: (p: string) => boolean;
@@ -69,11 +71,13 @@ interface ShellProps {
 }
 
 export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAction, aside, children }: ShellProps) {
-  const { s, ready, setNotifOpen } = useStore();
+  const { s, me, setNotifOpen } = useStore();
   const path = usePathname();
   const router = useRouter();
   const [more, setMore] = useState(false);
-  if (!ready) return <div className="shell" />;
+  // Signed out, or signed in as someone this screen is not for: the guard is already sending them on.
+  const allowed = useGuard();
+  if (!allowed || !me) return <div className="shell" />;
 
   const groups = NAV[role].map((g) => ({ ...g, items: g.items.filter((it) => !it.show || it.show(s)) })).filter((g) => g.items.length);
   const all = groups.flatMap((g) => g.items);
@@ -86,8 +90,8 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
 
   const pct = role === 'student' ? counts(s, s.last.courseId).pct : 0;
   const unread = unreadCount(s, role);
-  const footName = role === 'teacher' ? teacher.name : studentName(s);
-  const footSub = role === 'teacher' ? teacher.batch : defaultStudent.masked;
+  const footName = me.name;
+  const footSub = role === 'teacher' ? teacher.batch : maskPhone(me.phone || '');
   const openNotif = () => setNotifOpen(true);
 
   return (
