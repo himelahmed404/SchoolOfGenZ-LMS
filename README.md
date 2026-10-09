@@ -6,17 +6,48 @@ claude.ai/design project).
 
 ## Run
 
+Two apps live in this repo: the LMS (Next.js, at the root) and its API (Express, in `server/`).
+
 ```bash
-npm install
-npm run dev        # http://localhost:3000
+npm run setup      # install both: the LMS and server/
+npm run dev        # both: the LMS on http://localhost:3000, the API on http://localhost:4000
+npm run dev:web    # only the LMS
+npm run dev:api    # only the API
 npm run build && npm start
 npm run lint       # ESLint (eslint-config-next)
 npm run check:admin-en   # fails if Bangla text appears in admin code
 npm run typecheck
-npm test           # Vitest: src/lib/*.test.ts
+npm test           # the LMS: Vitest, src/lib/**/*.test.ts
+npm run test:api   # the API: Vitest, server/src/**/*.test.ts
+npm run test:e2e   # journeys through both, in Chrome (Playwright, e2e/)
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, the admin-English check, typecheck, tests and the build on every push.
+Nothing else needs installing. With no `DATABASE_URL` the API runs on an embedded Postgres kept in
+`server/.data/` and loads the demo data the first time it starts. `npm --prefix server run db:reset`
+rebuilds it.
+
+CI (`.github/workflows/ci.yml`) runs two jobs on every push. The LMS: lint, the admin-English check,
+typecheck, tests and the build. The API: lint, typecheck, a check that every schema change has its
+migration, and the tests twice, on the embedded database and on Postgres 17.
+
+## The API (`server/`)
+
+The LMS is moving from seed data in the browser to this server, one area at a time. The dot in the
+dev bar says whether the API is answering. So far only `/api/v1/health` is used.
+
+- The browser never calls the API directly. It calls `/api/*` on the LMS, and Next forwards the
+  request to `API_ORIGIN` (`next.config.ts`; `http://localhost:4000` in development). Cookies stay
+  first-party and there is no CORS.
+- `server/src/index.ts` exports the Express app, which is what Vercel runs. `src/dev.ts` listens locally.
+- `server/src/app.ts` builds the app: security headers, a request id on every response, JSON bodies,
+  the routes under `/v1`, and one error handler.
+- Every failure has the same shape, `{ error: { code, message, fields?, requestId } }`. The LMS words
+  the `code` in Bangla; `message` is for developers.
+- `server/src/db/schema.ts` is the database (Drizzle). After changing it run
+  `npm --prefix server run db:generate`, which writes the next SQL migration into `server/drizzle/`.
+- `server/src/contract/` holds the request and response shapes (zod). The LMS imports its types as
+  `@contract`, so the two cannot drift apart.
+- `server/.env.example` lists the environment variables. None is needed locally.
 
 ## Dev bar (no sign-in yet)
 

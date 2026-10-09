@@ -354,6 +354,11 @@ textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height
 }
 .devbar-tag { display: flex; align-items: center; gap: 8px; color: #AEB4CC; flex-shrink: 0; }
 .devbar-tag::before { content: ''; width: 8px; height: 8px; border-radius: 999px; background: #FFE45C; }
+/* Whether the API answers: green up, red down, grey while checking. */
+.devbar-api { display: flex; align-items: center; gap: 6px; color: #AEB4CC; flex-shrink: 0; white-space: nowrap; }
+.devbar-api::before { content: ''; width: 8px; height: 8px; border-radius: 999px; background: #8A93B2; }
+.devbar-api[data-state="up"]::before { background: #3DDC97; }
+.devbar-api[data-state="down"]::before { background: #FF6B6B; }
 .dseg { display: flex; align-items: center; flex-shrink: 0; }
 .dseg > * {
   height: 28px; padding: 0 12px; border: 1px solid #343C5C; border-right: none; border-radius: 0; background: transparent;
@@ -368,7 +373,7 @@ textarea.field { height: auto; padding: 12px 14px; resize: vertical; line-height
 .djumps a:hover { color: #EBEEF9; text-decoration: none; }
 .djumps a[aria-current="page"] { color: #FFE45C; border-bottom-color: #FFE45C; }
 /* on a phone the label shrinks to its dot, so the role switch is in view without scrolling the bar */
-@media (max-width: 599px) { .devbar { padding: 0 12px; gap: 10px; } .devbar-tag { gap: 0; font-size: 0; } }
+@media (max-width: 599px) { .devbar { padding: 0 12px; gap: 10px; } .devbar-tag, .devbar-api { gap: 0; font-size: 0; } }
 
 /* The admin console has its own stylesheet: src/app/admin/admin.css. */
 

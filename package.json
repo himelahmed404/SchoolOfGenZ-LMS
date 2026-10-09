@@ -3,25 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -n web,api -c green,cyan \"next dev\" \"npm --prefix server run dev\"",
+    "dev:web": "next dev",
+    "dev:api": "npm --prefix server run dev",
+    "setup": "npm install && npm --prefix server install",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:api": "npm --prefix server test",
+    "test:e2e": "playwright test",
     "check:admin-en": "node scripts/check-admin-en.mjs"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
     "katex": "^0.18.9",
     "next": "^16.3.6",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/katex": "^0.16.8",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "concurrently": "^10.0.6",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.0",
     "typescript": "^5.9.3",

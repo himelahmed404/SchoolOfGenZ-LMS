@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import 'katex/dist/katex.min.css';
 import './globals.css';
+import { ApiProvider } from '@/lib/api/provider';
 import { StoreProvider } from '@/lib/store';
 import { THEME_SCRIPT } from '@/lib/theme';
 import { Celebrations } from '@/components/Penguin';
@@ -36,11 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={DEV_BAR ? 'has-devbar' : undefined}>
-        <StoreProvider>
-          {DEV_BAR ? <DevBar /> : null}
-          {children}
-          <Celebrations />
-        </StoreProvider>
+        <ApiProvider>
+          <StoreProvider>
+            {DEV_BAR ? <DevBar /> : null}
+            {children}
+            <Celebrations />
+          </StoreProvider>
+        </ApiProvider>
       </body>
     </html>
   );

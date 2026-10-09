@@ -26,5 +26,12 @@ Thumbs.db
 next-env.d.ts
 .vercel
 
+# The API's embedded development database
+server/.data/
+
+# Playwright
+playwright-report/
+test-results/
+
 # Design references (claude.ai/design exports, read-only)
 design/

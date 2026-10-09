@@ -1,0 +1,2120 @@
+{
+ "settings": {
+  "bkash": "01777 090909",
+  "nagad": "01888 070707",
+  "watermark": "on",
+  "devices": 2,
+  "refundDays": 7,
+  "refundWatch": 20,
+  "autoClose": "on",
+  "sms": "on",
+  "supportPhone": "01777 090909",
+  "boardExam": {
+   "name": "পর্ব সমাপনী পরীক্ষা",
+   "even": "2026-12-14",
+   "odd": "2027-04-18"
+  }
+ },
+ "roles": [
+  {
+   "id": "super",
+   "name": "Super admin",
+   "description": "Everything: money, settings, roles",
+   "locked": true,
+   "perms": {
+    "payments": "edit",
+    "content": "edit",
+    "refunds": "edit",
+    "students": "edit",
+    "teachers": "edit",
+    "certificates": "edit",
+    "courses": "edit",
+    "batches": "edit",
+    "coupons": "edit",
+    "announcements": "edit",
+    "reports": "edit",
+    "activity": "edit",
+    "settings": "edit",
+    "roles": "edit"
+   }
+  },
+  {
+   "id": "finance",
+   "name": "Finance",
+   "description": "Payments, refunds, coupons",
+   "locked": false,
+   "perms": {
+    "payments": "edit",
+    "content": "none",
+    "refunds": "edit",
+    "students": "view",
+    "teachers": "none",
+    "certificates": "none",
+    "courses": "none",
+    "batches": "none",
+    "coupons": "edit",
+    "announcements": "none",
+    "reports": "view",
+    "activity": "view",
+    "settings": "none",
+    "roles": "none"
+   }
+  },
+  {
+   "id": "content",
+   "name": "Content",
+   "description": "Courses, lesson review, batches",
+   "locked": false,
+   "perms": {
+    "payments": "none",
+    "content": "edit",
+    "refunds": "none",
+    "students": "none",
+    "teachers": "view",
+    "certificates": "view",
+    "courses": "edit",
+    "batches": "view",
+    "coupons": "none",
+    "announcements": "none",
+    "reports": "none",
+    "activity": "none",
+    "settings": "none",
+    "roles": "none"
+   }
+  },
+  {
+   "id": "support",
+   "name": "Support",
+   "description": "Students, notices, certificates",
+   "locked": false,
+   "perms": {
+    "payments": "view",
+    "content": "none",
+    "refunds": "none",
+    "students": "edit",
+    "teachers": "view",
+    "certificates": "edit",
+    "courses": "none",
+    "batches": "view",
+    "coupons": "none",
+    "announcements": "edit",
+    "reports": "none",
+    "activity": "none",
+    "settings": "none",
+    "roles": "none"
+   }
+  }
+ ],
+ "programs": [
+  {
+   "slug": "cst-4th-semester",
+   "kind": "diploma",
+   "code": "CST",
+   "title": "CST · 4th Semester",
+   "titleBn": "",
+   "department": "CST",
+   "semester": 4,
+   "status": "published",
+   "model": "one",
+   "price": 3000,
+   "installments": 2,
+   "earlyOn": false,
+   "earlyPrice": 2500,
+   "earlyEnd": "2026-08-01",
+   "weeks": null,
+   "hasCertificate": false,
+   "enrolled": 0,
+   "courses": [
+    "math4",
+    "dsa",
+    "dbms",
+    "wdd",
+    "de2",
+    "mp",
+    "soc"
+   ]
+  },
+  {
+   "slug": "cst-5th-semester",
+   "kind": "diploma",
+   "code": "CST",
+   "title": "CST · 5th Semester",
+   "titleBn": "",
+   "department": "CST",
+   "semester": 5,
+   "status": "published",
+   "model": "one",
+   "price": 3200,
+   "installments": 2,
+   "earlyOn": true,
+   "earlyPrice": 2800,
+   "earlyEnd": "2026-12-31",
+   "weeks": null,
+   "hasCertificate": false,
+   "enrolled": 0,
+   "courses": [
+    "os",
+    "net",
+    "java",
+    "se"
+   ]
+  },
+  {
+   "slug": "cst-3rd-semester",
+   "kind": "diploma",
+   "code": "CST",
+   "title": "CST · 3rd Semester",
+   "titleBn": "",
+   "department": "CST",
+   "semester": 3,
+   "status": "archived",
+   "model": "one",
+   "price": 2800,
+   "installments": 2,
+   "earlyOn": false,
+   "earlyPrice": 0,
+   "earlyEnd": null,
+   "weeks": null,
+   "hasCertificate": false,
+   "enrolled": 0,
+   "courses": [
+    "prog",
+    "math3"
+   ]
+  },
+  {
+   "slug": "spoken-english-foundation",
+   "kind": "single",
+   "code": "ENG",
+   "title": "Spoken English — Foundation",
+   "titleBn": "স্পোকেন ইংলিশ — ফাউন্ডেশন",
+   "department": null,
+   "semester": null,
+   "status": "published",
+   "model": "inst",
+   "price": 2000,
+   "installments": 2,
+   "earlyOn": false,
+   "earlyPrice": 1800,
+   "earlyEnd": null,
+   "weeks": 8,
+   "hasCertificate": true,
+   "enrolled": 318,
+   "courses": [
+    "eng"
+   ]
+  },
+  {
+   "slug": "web-development-basics",
+   "kind": "single",
+   "code": "WEB",
+   "title": "Web Development Basics",
+   "titleBn": "ওয়েব ডেভেলপমেন্ট বেসিক",
+   "department": null,
+   "semester": null,
+   "status": "published",
+   "model": "one",
+   "price": 2500,
+   "installments": 2,
+   "earlyOn": true,
+   "earlyPrice": 1999,
+   "earlyEnd": "2026-10-15",
+   "weeks": 10,
+   "hasCertificate": true,
+   "enrolled": 126,
+   "courses": [
+    "web"
+   ]
+  },
+  {
+   "slug": "career-planning-101",
+   "kind": "single",
+   "code": "CAR",
+   "title": "Career Planning 101",
+   "titleBn": "",
+   "department": null,
+   "semester": null,
+   "status": "published",
+   "model": "free",
+   "price": 0,
+   "installments": 2,
+   "earlyOn": false,
+   "earlyPrice": 0,
+   "earlyEnd": null,
+   "weeks": null,
+   "hasCertificate": true,
+   "enrolled": 86,
+   "courses": [
+    "car"
+   ]
+  },
+  {
+   "slug": "ui-design-basics",
+   "kind": "single",
+   "code": "UIX",
+   "title": "UI Design Basics",
+   "titleBn": "",
+   "department": null,
+   "semester": null,
+   "status": "draft",
+   "model": "one",
+   "price": 2200,
+   "installments": 2,
+   "earlyOn": false,
+   "earlyPrice": 0,
+   "earlyEnd": null,
+   "weeks": null,
+   "hasCertificate": true,
+   "enrolled": 0,
+   "courses": [
+    "uix"
+   ]
+  }
+ ],
+ "batches": [
+  {
+   "code": "CST-04-B01",
+   "slug": "cst-4th-semester-batch-01",
+   "program": "cst-4th-semester",
+   "no": 1,
+   "startDate": "2026-08-01",
+   "examDate": "2026-12-28",
+   "seats": 30,
+   "enrolled": 28,
+   "status": "running",
+   "price": 3000
+  },
+  {
+   "code": "CST-04-B02",
+   "slug": "cst-4th-semester-batch-02",
+   "program": "cst-4th-semester",
+   "no": 2,
+   "startDate": "2026-09-01",
+   "examDate": "2027-01-15",
+   "seats": 24,
+   "enrolled": 23,
+   "status": "running",
+   "price": 2800
+  },
+  {
+   "code": "CST-05-B01",
+   "slug": "cst-5th-semester-batch-01",
+   "program": "cst-5th-semester",
+   "no": 1,
+   "startDate": "2027-01-10",
+   "examDate": "2027-06-20",
+   "seats": 35,
+   "enrolled": 12,
+   "status": "enrolling",
+   "price": null
+  },
+  {
+   "code": "CST-03-B02",
+   "slug": "cst-3rd-semester-batch-02",
+   "program": "cst-3rd-semester",
+   "no": 2,
+   "startDate": "2026-01-10",
+   "examDate": "2026-06-20",
+   "seats": 30,
+   "enrolled": 29,
+   "status": "finished",
+   "price": null
+  }
+ ],
+ "courses": [
+  {
+   "slug": "math4",
+   "code": "MATH",
+   "title": "Mathematics-4",
+   "titleBn": "গণিত-৪",
+   "bteb": "25941",
+   "instructor": "Shahriar Hossain",
+   "chapters": [
+    {
+     "name": "Complex Number",
+     "lessons": [
+      {
+       "title": "Complex Number — পর্ব ১",
+       "durationSec": 878
+      },
+      {
+       "title": "Complex Number — পর্ব ২",
+       "durationSec": 655
+      },
+      {
+       "title": "Complex Number — পর্ব ৩",
+       "durationSec": 912
+      },
+      {
+       "title": "Complex Number — পর্ব ৪",
+       "durationSec": 689
+      }
+     ]
+    },
+    {
+     "name": "Differential Calculus",
+     "lessons": [
+      {
+       "title": "Differential Calculus — পর্ব ১",
+       "durationSec": 747
+      },
+      {
+       "title": "Differential Calculus — পর্ব ২",
+       "durationSec": 1064
+      },
+      {
+       "title": "Differential Calculus — পর্ব ৩",
+       "durationSec": 781
+      },
+      {
+       "title": "Differential Calculus — পর্ব ৪",
+       "durationSec": 558
+      },
+      {
+       "title": "Differential Calculus — পর্ব ৫",
+       "durationSec": 875
+      }
+     ]
+    },
+    {
+     "name": "Integral Calculus",
+     "lessons": [
+      {
+       "title": "Integral Calculus — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "Integral Calculus — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "Integral Calculus — পর্ব ৩",
+       "durationSec": 573
+      },
+      {
+       "title": "Integral Calculus — পর্ব ৪",
+       "durationSec": 890
+      },
+      {
+       "title": "Integral Calculus — পর্ব ৫",
+       "durationSec": 607
+      }
+     ]
+    },
+    {
+     "name": "Differential Equations",
+     "lessons": [
+      {
+       "title": "Differential Equations — পর্ব ১",
+       "durationSec": 814
+      },
+      {
+       "title": "Differential Equations — পর্ব ২",
+       "durationSec": 591
+      },
+      {
+       "title": "Differential Equations — পর্ব ৩",
+       "durationSec": 848
+      },
+      {
+       "title": "Differential Equations — পর্ব ৪",
+       "durationSec": 625
+      }
+     ]
+    },
+    {
+     "name": "Statistics & Probability",
+     "lessons": [
+      {
+       "title": "Statistics & Probability — পর্ব ১",
+       "durationSec": 948
+      },
+      {
+       "title": "Statistics & Probability — পর্ব ২",
+       "durationSec": 665
+      },
+      {
+       "title": "Statistics & Probability — পর্ব ৩",
+       "durationSec": 982
+      },
+      {
+       "title": "Statistics & Probability — পর্ব ৪",
+       "durationSec": 759
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "dsa",
+   "code": "DSA",
+   "title": "Data Structure & Algorithm",
+   "titleBn": "ডেটা স্ট্রাকচার ও অ্যালগরিদম",
+   "bteb": "25942",
+   "instructor": "Shahriar Hossain",
+   "chapters": [
+    {
+     "name": "ভূমিকা ও অ্যারে (Array)",
+     "test": {
+      "seconds": 480,
+      "questions": [
+       {
+        "stem": "অ্যারের কোনো এলিমেন্ট ইনডেক্স দিয়ে পড়তে কত সময় লাগে?",
+        "o": [
+         "O(1)",
+         "O(n)",
+         "O(log n)",
+         "O(n²)"
+        ],
+        "a": 0
+       },
+       {
+        "stem": "C ভাষায় অ্যারের প্রথম এলিমেন্টের ইনডেক্স কত?",
+        "o": [
+         "0",
+         "1",
+         "−1",
+         "অ্যারের সাইজ"
+        ],
+        "a": 0
+       },
+       {
+        "stem": "অ্যারের মাঝখানে নতুন এলিমেন্ট ঢোকাতে সবচেয়ে খারাপ ক্ষেত্রে কত সময় লাগে?",
+        "o": [
+         "O(1)",
+         "O(n)",
+         "O(log n)",
+         "O(n²)"
+        ],
+        "a": 1
+       },
+       {
+        "stem": "অ্যারের এলিমেন্টগুলো মেমরিতে কীভাবে থাকে?",
+        "o": [
+         "পাশাপাশি, একটানা ঘরে",
+         "এলোমেলো জায়গায়",
+         "পয়েন্টার দিয়ে জোড়া লাগানো",
+         "হার্ড ডিস্কে"
+        ],
+        "a": 0
+       },
+       {
+        "stem": "O(n) বলতে কী বোঝায়?",
+        "o": [
+         "ডেটা যত গুণ বাড়ে, কাজও মোটামুটি তত গুণ বাড়ে",
+         "কাজ শেষ হতে ঠিক n সেকেন্ড লাগে",
+         "ডেটা বাড়লেও সময় একই থাকে",
+         "সময় বাড়ে ডেটার বর্গ হারে"
+        ],
+        "a": 0
+       }
+      ]
+     },
+     "lessons": [
+      {
+       "title": "কোর্স পরিচিতি",
+       "durationSec": 500
+      },
+      {
+       "title": "ডেটা স্ট্রাকচার কেন দরকার",
+       "durationSec": 665
+      },
+      {
+       "title": "অ্যারে — মেমরি লেআউট",
+       "durationSec": 870
+      },
+      {
+       "title": "অ্যারে অপারেশন ও কমপ্লেক্সিটি",
+       "durationSec": 735
+      }
+     ]
+    },
+    {
+     "name": "লিংকড লিস্ট (Linked List)",
+     "test": {
+      "seconds": 480,
+      "questions": [
+       {
+        "stem": "অ্যারের তুলনায় লিংকড লিস্টের প্রধান সুবিধা কী?",
+        "o": [
+         "ইনডেক্স দিয়ে দ্রুত পড়া যায়",
+         "সাইজ ইচ্ছামতো বাড়ে-কমে",
+         "কম মেমরি লাগে",
+         "সবসময় সাজানো থাকে"
+        ],
+        "a": 1
+       },
+       {
+        "stem": "সিঙ্গলি লিংকড লিস্টের প্রতিটি নোডে কী থাকে?",
+        "o": [
+         "শুধু ডেটা",
+         "ডেটা আর ইনডেক্স",
+         "ডেটা আর পরের নোডের ঠিকানা",
+         "আগের ও পরের দুই নোডের ঠিকানা"
+        ],
+        "a": 2
+       },
+       {
+        "stem": "লিংকড লিস্টের একদম শুরুতে নতুন নোড যোগ করতে কত সময় লাগে?",
+        "o": [
+         "O(1)",
+         "O(n)",
+         "O(log n)",
+         "O(n²)"
+        ],
+        "a": 0
+       },
+       {
+        "stem": "ডাবলি লিংকড লিস্টের নোডে বাড়তি কী থাকে?",
+        "o": [
+         "আরেকটা ডেটা",
+         "ইনডেক্স নম্বর",
+         "লিস্টের সাইজ",
+         "আগের নোডের ঠিকানা (prev)"
+        ],
+        "a": 3
+       },
+       {
+        "stem": "লিংকড লিস্টের k-তম এলিমেন্ট পড়তে কত সময় লাগে?",
+        "o": [
+         "O(1)",
+         "O(n)",
+         "O(log n)",
+         "O(n²)"
+        ],
+        "a": 1
+       }
+      ]
+     },
+     "lessons": [
+      {
+       "title": "সিঙ্গলি লিংকড লিস্ট",
+       "durationSec": 940
+      },
+      {
+       "title": "ইনসার্ট ও ডিলিট",
+       "durationSec": 800
+      },
+      {
+       "title": "ডাবলি লিংকড লিস্ট",
+       "durationSec": 770
+      },
+      {
+       "title": "অ্যারে বনাম লিংকড লিস্ট",
+       "durationSec": 575
+      }
+     ]
+    },
+    {
+     "name": "স্ট্যাক ও কিউ (Stack & Queue)",
+     "test": {
+      "seconds": 480,
+      "questions": [
+       {
+        "stem": "স্ট্যাক কোন নীতিতে চলে?",
+        "o": [
+         "FIFO",
+         "LIFO",
+         "প্রায়োরিটি",
+         "র‍্যান্ডম"
+        ],
+        "a": 1
+       },
+       {
+        "stem": "কিউ থেকে এলিমেন্ট বের করার অপারেশনের নাম কী?",
+        "o": [
+         "pop()",
+         "enqueue()",
+         "dequeue()",
+         "peek()"
+        ],
+        "a": 2
+       },
+       {
+        "stem": "ইনফিক্স থেকে পোস্টফিক্স রূপান্তরে কোন ডেটা স্ট্রাকচার লাগে?",
+        "o": [
+         "কিউ",
+         "স্ট্যাক",
+         "ট্রি",
+         "গ্রাফ"
+        ],
+        "a": 1
+       },
+       {
+        "stem": "অ্যারে দিয়ে বানানো খালি স্ট্যাকে top-এর মান সাধারণত কত ধরা হয়?",
+        "o": [
+         "0",
+         "1",
+         "−1",
+         "অ্যারের সাইজ"
+        ],
+        "a": 2
+       },
+       {
+        "stem": "সার্কুলার কিউ ভরা — কোন শর্তে বোঝা যায়?",
+        "o": [
+         "(rear + 1) % size == front",
+         "rear == front",
+         "front == 0",
+         "rear == size"
+        ],
+        "a": 0
+       }
+      ]
+     },
+     "lessons": [
+      {
+       "title": "স্ট্যাক কী",
+       "durationSec": 610
+      },
+      {
+       "title": "পুশ ও পপ",
+       "durationSec": 705
+      },
+      {
+       "title": "অ্যারে দিয়ে স্ট্যাক ইমপ্লিমেন্ট",
+       "durationSec": 785
+      },
+      {
+       "title": "কিউ কী",
+       "durationSec": 590
+      },
+      {
+       "title": "Stack ও Queue — বেসিক ধারণা",
+       "durationSec": 750,
+       "blocks": [
+        {
+         "t": "h",
+         "x": "স্ট্যাক (Stack) কী?"
+        },
+        {
+         "t": "p",
+         "x": "স্ট্যাক হলো এমন একটি লিনিয়ার ডেটা স্ট্রাকচার যেখানে ডেটা একটি প্রান্ত দিয়েই ঢোকে আর সেই একই প্রান্ত দিয়েই বের হয়। প্রান্তটির নাম top। ব্যাপারটা প্লেটের স্তূপের মতো — সবার শেষে যে প্লেটটা রাখলে, হাতে আসবে সেটাই আগে।"
+        },
+        {
+         "t": "code",
+         "x": "LIFO — Last In, First Out"
+        },
+        {
+         "t": "p",
+         "x": "স্ট্যাকের মূল অপারেশন চারটি:"
+        },
+        {
+         "t": "list",
+         "x": "push() — উপরে নতুন এলিমেন্ট বসানো\npop() — উপরের এলিমেন্ট সরানো\npeek() — উপরের এলিমেন্ট দেখা, না সরিয়ে\nisEmpty() — স্ট্যাক খালি কিনা যাচাই"
+        },
+        {
+         "t": "h",
+         "x": "কিউ (Queue) কী?"
+        },
+        {
+         "t": "p",
+         "x": "কিউ-এর নিয়ম উল্টো। এক প্রান্ত দিয়ে ডেটা ঢোকে (rear), অন্য প্রান্ত দিয়ে বের হয় (front) — ঠিক টিকিট কাউন্টারের লাইনের মতো। যে আগে দাঁড়িয়েছে, সে আগে যাবে।"
+        },
+        {
+         "t": "p",
+         "x": "পরীক্ষায় প্রায় প্রতিবার আসে: স্ট্যাক LIFO, কিউ FIFO। আর ইনফিক্স থেকে পোস্টফিক্স রূপান্তর, ফাংশন কল ট্র্যাকিং, ব্রাউজারের ব্যাক বাটন — এই তিনটাই স্ট্যাকের প্রয়োগ।"
+        }
+       ],
+       "quiz": [
+        {
+         "stem": "স্ট্যাক কোন নীতিতে কাজ করে?",
+         "o": [
+          "LIFO — Last In, First Out",
+          "FIFO — First In, First Out",
+          "র‍্যান্ডম অ্যাক্সেস",
+          "প্রায়োরিটি অনুযায়ী"
+         ],
+         "a": 0,
+         "why": "সবার শেষে যেটা ঢোকে, সেটাই আগে বের হয় — তাই LIFO।"
+        },
+        {
+         "stem": "কিউ-তে নতুন এলিমেন্ট কোন প্রান্তে যোগ হয়?",
+         "o": [
+          "front",
+          "rear",
+          "top",
+          "middle"
+         ],
+         "a": 1,
+         "why": "কিউ-তে যোগ হয় rear দিয়ে, বের হয় front দিয়ে।"
+        },
+        {
+         "stem": "স্ট্যাক থেকে এলিমেন্ট সরানোর অপারেশনের নাম কী?",
+         "o": [
+          "push()",
+          "peek()",
+          "pop()",
+          "dequeue()"
+         ],
+         "a": 2,
+         "why": "push() বসায়, pop() সরায়, peek() শুধু দেখায়।"
+        },
+        {
+         "stem": "খালি স্ট্যাকে pop() করলে কী হয়?",
+         "o": [
+          "Overflow",
+          "Underflow",
+          "কিছুই হয় না",
+          "স্ট্যাক রিসেট হয়"
+         ],
+         "a": 1,
+         "why": "খালি স্ট্যাকে pop() করলে underflow, ভরা স্ট্যাকে push() করলে overflow।"
+        },
+        {
+         "stem": "ফাংশন কল ট্র্যাক করতে অপারেটিং সিস্টেম কোনটি ব্যবহার করে?",
+         "o": [
+          "কিউ",
+          "লিংকড লিস্ট",
+          "কল স্ট্যাক",
+          "হিপ"
+         ],
+         "a": 2,
+         "why": "শেষ যে ফাংশনটা ডাকা হয়, সেটাই আগে শেষ হয় — কল স্ট্যাক।"
+        },
+        {
+         "stem": "সার্কুলার কিউ কেন ব্যবহার করা হয়?",
+         "o": [
+          "মেমরির অপচয় কমাতে",
+          "সার্চ দ্রুত করতে",
+          "ডেটা সাজাতে",
+          "রিকার্শন সহজ করতে"
+         ],
+         "a": 0,
+         "why": "সাধারণ কিউ-তে front এগিয়ে গেলে সামনের জায়গা ফাঁকা পড়ে থাকে; সার্কুলার কিউ সেটা আবার ব্যবহার করে।"
+        },
+        {
+         "stem": "নিচের কোনটি স্ট্যাকের প্রয়োগ নয়?",
+         "o": [
+          "ব্রাউজারের ব্যাক বাটন",
+          "ইনফিক্স থেকে পোস্টফিক্স",
+          "প্রিন্টার স্পুলিং",
+          "রিকার্শন"
+         ],
+         "a": 2,
+         "why": "প্রিন্টার স্পুলিং কিউ — যে ফাইল আগে এসেছে, সেটাই আগে ছাপা হয়।"
+        }
+       ]
+      },
+      {
+       "title": "সার্কুলার কিউ",
+       "durationSec": 680
+      }
+     ]
+    },
+    {
+     "name": "ট্রি (Tree)",
+     "lessons": [
+      {
+       "title": "বাইনারি ট্রি পরিচিতি",
+       "durationSec": 790
+      },
+      {
+       "title": "ট্রি ট্রাভার্সাল",
+       "durationSec": 960
+      },
+      {
+       "title": "বাইনারি সার্চ ট্রি",
+       "durationSec": 865
+      },
+      {
+       "title": "BST ইনসার্ট ও ডিলিট",
+       "durationSec": 910
+      },
+      {
+       "title": "হিপ (Heap)",
+       "durationSec": 760
+      }
+     ]
+    },
+    {
+     "name": "সর্টিং ও সার্চিং",
+     "lessons": [
+      {
+       "title": "লিনিয়ার ও বাইনারি সার্চ",
+       "durationSec": 720
+      },
+      {
+       "title": "বাবল ও সিলেকশন সর্ট",
+       "durationSec": 810
+      },
+      {
+       "title": "ইনসার্শন সর্ট",
+       "durationSec": 645
+      },
+      {
+       "title": "মার্জ সর্ট",
+       "durationSec": 920
+      },
+      {
+       "title": "কুইক সর্ট",
+       "durationSec": 970
+      },
+      {
+       "title": "কমপ্লেক্সিটি তুলনা",
+       "durationSec": 660
+      }
+     ]
+    },
+    {
+     "name": "গ্রাফ (Graph)",
+     "lessons": [
+      {
+       "title": "গ্রাফ পরিচিতি",
+       "durationSec": 740
+      },
+      {
+       "title": "অ্যাডজেসেন্সি ম্যাট্রিক্স ও লিস্ট",
+       "durationSec": 825
+      },
+      {
+       "title": "BFS",
+       "durationSec": 840
+      },
+      {
+       "title": "DFS",
+       "durationSec": 795
+      },
+      {
+       "title": "শর্টেস্ট পাথ — Dijkstra",
+       "durationSec": 1050
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "dbms",
+   "code": "DBMS",
+   "title": "Database Management System",
+   "titleBn": "ডেটাবেজ ম্যানেজমেন্ট সিস্টেম",
+   "bteb": "25943",
+   "instructor": "Tanvir Ahmed",
+   "chapters": [
+    {
+     "name": "Database Concepts",
+     "lessons": [
+      {
+       "title": "Database Concepts — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "Database Concepts — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "Database Concepts — পর্ব ৩",
+       "durationSec": 573
+      }
+     ]
+    },
+    {
+     "name": "ER Model",
+     "lessons": [
+      {
+       "title": "ER Model — পর্ব ১",
+       "durationSec": 1076
+      },
+      {
+       "title": "ER Model — পর্ব ২",
+       "durationSec": 793
+      },
+      {
+       "title": "ER Model — পর্ব ৩",
+       "durationSec": 570
+      },
+      {
+       "title": "ER Model — পর্ব ৪",
+       "durationSec": 887
+      }
+     ]
+    },
+    {
+     "name": "SQL",
+     "lessons": [
+      {
+       "title": "SQL — পর্ব ১",
+       "durationSec": 741
+      },
+      {
+       "title": "SQL — পর্ব ২",
+       "durationSec": 1058
+      },
+      {
+       "title": "SQL — পর্ব ৩",
+       "durationSec": 835
+      },
+      {
+       "title": "SQL — পর্ব ৪",
+       "durationSec": 552
+      },
+      {
+       "title": "SQL — পর্ব ৫",
+       "durationSec": 869
+      }
+     ]
+    },
+    {
+     "name": "Normalization",
+     "lessons": [
+      {
+       "title": "Normalization — পর্ব ১",
+       "durationSec": 811
+      },
+      {
+       "title": "Normalization — পর্ব ২",
+       "durationSec": 588
+      },
+      {
+       "title": "Normalization — পর্ব ৩",
+       "durationSec": 845
+      }
+     ]
+    },
+    {
+     "name": "Transactions",
+     "lessons": [
+      {
+       "title": "Transactions — পর্ব ১",
+       "durationSec": 744
+      },
+      {
+       "title": "Transactions — পর্ব ২",
+       "durationSec": 1061
+      },
+      {
+       "title": "Transactions — পর্ব ৩",
+       "durationSec": 838
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "wdd",
+   "code": "WDD",
+   "title": "Web Design & Development",
+   "titleBn": "ওয়েব ডিজাইন ও ডেভেলপমেন্ট",
+   "bteb": "25944",
+   "instructor": "Tanvir Ahmed",
+   "chapters": [
+    {
+     "name": "HTML & CSS",
+     "lessons": [
+      {
+       "title": "HTML & CSS — পর্ব ১",
+       "durationSec": 610
+      },
+      {
+       "title": "HTML & CSS — পর্ব ২",
+       "durationSec": 927
+      },
+      {
+       "title": "HTML & CSS — পর্ব ৩",
+       "durationSec": 704
+      },
+      {
+       "title": "HTML & CSS — পর্ব ৪",
+       "durationSec": 961
+      },
+      {
+       "title": "HTML & CSS — পর্ব ৫",
+       "durationSec": 738
+      }
+     ]
+    },
+    {
+     "name": "JavaScript",
+     "lessons": [
+      {
+       "title": "JavaScript — পর্ব ১",
+       "durationSec": 610
+      },
+      {
+       "title": "JavaScript — পর্ব ২",
+       "durationSec": 927
+      },
+      {
+       "title": "JavaScript — পর্ব ৩",
+       "durationSec": 704
+      },
+      {
+       "title": "JavaScript — পর্ব ৪",
+       "durationSec": 961
+      },
+      {
+       "title": "JavaScript — পর্ব ৫",
+       "durationSec": 738
+      },
+      {
+       "title": "JavaScript — পর্ব ৬",
+       "durationSec": 1055
+      }
+     ]
+    },
+    {
+     "name": "Responsive Design",
+     "lessons": [
+      {
+       "title": "Responsive Design — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "Responsive Design — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "Responsive Design — পর্ব ৩",
+       "durationSec": 573
+      },
+      {
+       "title": "Responsive Design — পর্ব ৪",
+       "durationSec": 890
+      }
+     ]
+    },
+    {
+     "name": "PHP Basics",
+     "lessons": [
+      {
+       "title": "PHP Basics — পর্ব ১",
+       "durationSec": 610
+      },
+      {
+       "title": "PHP Basics — পর্ব ২",
+       "durationSec": 927
+      },
+      {
+       "title": "PHP Basics — পর্ব ৩",
+       "durationSec": 704
+      },
+      {
+       "title": "PHP Basics — পর্ব ৪",
+       "durationSec": 961
+      },
+      {
+       "title": "PHP Basics — পর্ব ৫",
+       "durationSec": 738
+      }
+     ]
+    },
+    {
+     "name": "Project",
+     "lessons": [
+      {
+       "title": "Project — পর্ব ১",
+       "durationSec": 1009
+      },
+      {
+       "title": "Project — পর্ব ২",
+       "durationSec": 726
+      },
+      {
+       "title": "Project — পর্ব ৩",
+       "durationSec": 1043
+      },
+      {
+       "title": "Project — পর্ব ৪",
+       "durationSec": 820
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "de2",
+   "code": "DE2",
+   "title": "Digital Electronics-2",
+   "titleBn": "ডিজিটাল ইলেকট্রনিক্স-২",
+   "bteb": "25945",
+   "instructor": "Imtiaz Rahman",
+   "chapters": [
+    {
+     "name": "Flip-Flops",
+     "lessons": [
+      {
+       "title": "Flip-Flops — পর্ব ১",
+       "durationSec": 610
+      },
+      {
+       "title": "Flip-Flops — পর্ব ২",
+       "durationSec": 927
+      },
+      {
+       "title": "Flip-Flops — পর্ব ৩",
+       "durationSec": 704
+      },
+      {
+       "title": "Flip-Flops — পর্ব ৪",
+       "durationSec": 961
+      }
+     ]
+    },
+    {
+     "name": "Counters",
+     "lessons": [
+      {
+       "title": "Counters — পর্ব ১",
+       "durationSec": 1076
+      },
+      {
+       "title": "Counters — পর্ব ২",
+       "durationSec": 793
+      },
+      {
+       "title": "Counters — পর্ব ৩",
+       "durationSec": 570
+      },
+      {
+       "title": "Counters — পর্ব ৪",
+       "durationSec": 887
+      }
+     ]
+    },
+    {
+     "name": "Registers",
+     "lessons": [
+      {
+       "title": "Registers — পর্ব ১",
+       "durationSec": 543
+      },
+      {
+       "title": "Registers — পর্ব ২",
+       "durationSec": 860
+      },
+      {
+       "title": "Registers — পর্ব ৩",
+       "durationSec": 637
+      },
+      {
+       "title": "Registers — পর্ব ৪",
+       "durationSec": 954
+      }
+     ]
+    },
+    {
+     "name": "ADC & DAC",
+     "lessons": [
+      {
+       "title": "ADC & DAC — পর্ব ১",
+       "durationSec": 543
+      },
+      {
+       "title": "ADC & DAC — পর্ব ২",
+       "durationSec": 860
+      },
+      {
+       "title": "ADC & DAC — পর্ব ৩",
+       "durationSec": 637
+      },
+      {
+       "title": "ADC & DAC — পর্ব ৪",
+       "durationSec": 954
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "mp",
+   "code": "MP",
+   "title": "Microprocessor",
+   "titleBn": "মাইক্রোপ্রসেসর",
+   "bteb": "25946",
+   "instructor": "Imtiaz Rahman",
+   "chapters": [
+    {
+     "name": "8085 Architecture",
+     "lessons": [
+      {
+       "title": "8085 Architecture — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "8085 Architecture — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "8085 Architecture — পর্ব ৩",
+       "durationSec": 573
+      },
+      {
+       "title": "8085 Architecture — পর্ব ৪",
+       "durationSec": 890
+      }
+     ]
+    },
+    {
+     "name": "Instruction Set",
+     "lessons": [
+      {
+       "title": "Instruction Set — পর্ব ১",
+       "durationSec": 945
+      },
+      {
+       "title": "Instruction Set — পর্ব ২",
+       "durationSec": 662
+      },
+      {
+       "title": "Instruction Set — পর্ব ৩",
+       "durationSec": 979
+      },
+      {
+       "title": "Instruction Set — পর্ব ৪",
+       "durationSec": 756
+      }
+     ]
+    },
+    {
+     "name": "Assembly Programming",
+     "lessons": [
+      {
+       "title": "Assembly Programming — পর্ব ১",
+       "durationSec": 680
+      },
+      {
+       "title": "Assembly Programming — পর্ব ২",
+       "durationSec": 997
+      },
+      {
+       "title": "Assembly Programming — পর্ব ৩",
+       "durationSec": 774
+      }
+     ]
+    },
+    {
+     "name": "Interfacing",
+     "lessons": [
+      {
+       "title": "Interfacing — পর্ব ১",
+       "durationSec": 677
+      },
+      {
+       "title": "Interfacing — পর্ব ২",
+       "durationSec": 994
+      },
+      {
+       "title": "Interfacing — পর্ব ৩",
+       "durationSec": 771
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "soc",
+   "code": "SOC",
+   "title": "Social Science",
+   "titleBn": "সোশ্যাল সায়েন্স",
+   "bteb": "25811",
+   "instructor": "Farzana Yasmin",
+   "chapters": [
+    {
+     "name": "বাংলাদেশের ইতিহাস",
+     "lessons": [
+      {
+       "title": "বাংলাদেশের ইতিহাস — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "বাংলাদেশের ইতিহাস — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "বাংলাদেশের ইতিহাস — পর্ব ৩",
+       "durationSec": 573
+      }
+     ]
+    },
+    {
+     "name": "অর্থনীতি",
+     "lessons": [
+      {
+       "title": "অর্থনীতি — পর্ব ১",
+       "durationSec": 1076
+      },
+      {
+       "title": "অর্থনীতি — পর্ব ২",
+       "durationSec": 793
+      },
+      {
+       "title": "অর্থনীতি — পর্ব ৩",
+       "durationSec": 570
+      }
+     ]
+    },
+    {
+     "name": "সমাজ ও সংস্কৃতি",
+     "lessons": [
+      {
+       "title": "সমাজ ও সংস্কৃতি — পর্ব ১",
+       "durationSec": 945
+      },
+      {
+       "title": "সমাজ ও সংস্কৃতি — পর্ব ২",
+       "durationSec": 662
+      },
+      {
+       "title": "সমাজ ও সংস্কৃতি — পর্ব ৩",
+       "durationSec": 979
+      }
+     ]
+    },
+    {
+     "name": "পরিবেশ",
+     "lessons": [
+      {
+       "title": "পরিবেশ — পর্ব ১",
+       "durationSec": 942
+      },
+      {
+       "title": "পরিবেশ — পর্ব ২",
+       "durationSec": 719
+      },
+      {
+       "title": "পরিবেশ — পর্ব ৩",
+       "durationSec": 976
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "os",
+   "code": "OS",
+   "title": "Operating System",
+   "titleBn": "অপারেটিং সিস্টেম",
+   "bteb": null,
+   "instructor": "Imtiaz Rahman",
+   "chapters": [
+    {
+     "name": "Process Management",
+     "lessons": [
+      {
+       "title": "Process Management — পর্ব ১",
+       "durationSec": 546
+      },
+      {
+       "title": "Process Management — পর্ব ২",
+       "durationSec": 863
+      },
+      {
+       "title": "Process Management — পর্ব ৩",
+       "durationSec": 640
+      },
+      {
+       "title": "Process Management — পর্ব ৪",
+       "durationSec": 957
+      }
+     ]
+    },
+    {
+     "name": "Memory Management",
+     "lessons": [
+      {
+       "title": "Memory Management — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "Memory Management — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "Memory Management — পর্ব ৩",
+       "durationSec": 573
+      },
+      {
+       "title": "Memory Management — পর্ব ৪",
+       "durationSec": 890
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "net",
+   "code": "NET",
+   "title": "Computer Network",
+   "titleBn": "কম্পিউটার নেটওয়ার্ক",
+   "bteb": null,
+   "instructor": "Tanvir Ahmed",
+   "chapters": [
+    {
+     "name": "Network Models",
+     "lessons": [
+      {
+       "title": "Network Models — পর্ব ১",
+       "durationSec": 878
+      },
+      {
+       "title": "Network Models — পর্ব ২",
+       "durationSec": 655
+      },
+      {
+       "title": "Network Models — পর্ব ৩",
+       "durationSec": 912
+      },
+      {
+       "title": "Network Models — পর্ব ৪",
+       "durationSec": 689
+      }
+     ]
+    },
+    {
+     "name": "IP Addressing",
+     "lessons": [
+      {
+       "title": "IP Addressing — পর্ব ১",
+       "durationSec": 811
+      },
+      {
+       "title": "IP Addressing — পর্ব ২",
+       "durationSec": 588
+      },
+      {
+       "title": "IP Addressing — পর্ব ৩",
+       "durationSec": 845
+      },
+      {
+       "title": "IP Addressing — পর্ব ৪",
+       "durationSec": 622
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "java",
+   "code": "JAVA",
+   "title": "Java Programming",
+   "titleBn": "জাভা প্রোগ্রামিং",
+   "bteb": null,
+   "instructor": "Shahriar Hossain",
+   "chapters": [
+    {
+     "name": "Classes & Objects",
+     "lessons": [
+      {
+       "title": "Classes & Objects — পর্ব ১",
+       "durationSec": 1079
+      },
+      {
+       "title": "Classes & Objects — পর্ব ২",
+       "durationSec": 796
+      },
+      {
+       "title": "Classes & Objects — পর্ব ৩",
+       "durationSec": 573
+      },
+      {
+       "title": "Classes & Objects — পর্ব ৪",
+       "durationSec": 890
+      },
+      {
+       "title": "Classes & Objects — পর্ব ৫",
+       "durationSec": 607
+      }
+     ]
+    },
+    {
+     "name": "Inheritance",
+     "lessons": [
+      {
+       "title": "Inheritance — পর্ব ১",
+       "durationSec": 677
+      },
+      {
+       "title": "Inheritance — পর্ব ২",
+       "durationSec": 994
+      },
+      {
+       "title": "Inheritance — পর্ব ৩",
+       "durationSec": 771
+      },
+      {
+       "title": "Inheritance — পর্ব ৪",
+       "durationSec": 1028
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "se",
+   "code": "SE",
+   "title": "Software Engineering",
+   "titleBn": "সফটওয়্যার ইঞ্জিনিয়ারিং",
+   "bteb": null,
+   "instructor": "Tanvir Ahmed",
+   "chapters": [
+    {
+     "name": "Software Process",
+     "lessons": [
+      {
+       "title": "Software Process — পর্ব ১",
+       "durationSec": 1012
+      },
+      {
+       "title": "Software Process — পর্ব ২",
+       "durationSec": 729
+      },
+      {
+       "title": "Software Process — পর্ব ৩",
+       "durationSec": 1046
+      }
+     ]
+    },
+    {
+     "name": "Requirements",
+     "lessons": [
+      {
+       "title": "Requirements — পর্ব ১",
+       "durationSec": 744
+      },
+      {
+       "title": "Requirements — পর্ব ২",
+       "durationSec": 1061
+      },
+      {
+       "title": "Requirements — পর্ব ৩",
+       "durationSec": 838
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "prog",
+   "code": "PROG",
+   "title": "Programming in C",
+   "titleBn": "",
+   "bteb": null,
+   "instructor": null,
+   "chapters": [
+    {
+     "name": "Chapter 1",
+     "lessons": [
+      {
+       "title": "Lesson 1",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 2",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 3",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 4",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 5",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 6",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 7",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 8",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 9",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 10",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 11",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 12",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 13",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 14",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 15",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 16",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 17",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 18",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 19",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 20",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 21",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 22",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 23",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 24",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 25",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 26",
+       "durationSec": 600
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "math3",
+   "code": "MTH3",
+   "title": "Mathematics-3",
+   "titleBn": "",
+   "bteb": null,
+   "instructor": null,
+   "chapters": [
+    {
+     "name": "Chapter 1",
+     "lessons": [
+      {
+       "title": "Lesson 1",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 2",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 3",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 4",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 5",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 6",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 7",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 8",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 9",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 10",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 11",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 12",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 13",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 14",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 15",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 16",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 17",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 18",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 19",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 20",
+       "durationSec": 600
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "eng",
+   "code": "ENG",
+   "title": "Spoken English — Foundation",
+   "titleBn": "স্পোকেন ইংলিশ — ফাউন্ডেশন",
+   "bteb": null,
+   "instructor": "Nusrat Jahan",
+   "chapters": [
+    {
+     "name": "উচ্চারণ ও শব্দ",
+     "lessons": [
+      {
+       "title": "কোর্স কীভাবে করবে",
+       "durationSec": 400
+      },
+      {
+       "title": "ভাওয়েল সাউন্ড",
+       "durationSec": 730
+      },
+      {
+       "title": "কনসোনেন্ট ক্লাস্টার",
+       "durationSec": 690
+      },
+      {
+       "title": "শব্দে জোর (Word stress)",
+       "durationSec": 605
+      }
+     ]
+    },
+    {
+     "name": "দৈনন্দিন কথোপকথন",
+     "lessons": [
+      {
+       "title": "পরিচয় দেওয়া",
+       "durationSec": 560
+      },
+      {
+       "title": "দিক ও ঠিকানা জিজ্ঞাসা",
+       "durationSec": 640
+      },
+      {
+       "title": "ফোনে কথা বলা",
+       "durationSec": 675
+      },
+      {
+       "title": "দোকানে দরদাম",
+       "durationSec": 535
+      },
+      {
+       "title": "ছোট গল্প বলা",
+       "durationSec": 745
+      }
+     ]
+    },
+    {
+     "name": "ইন্টারভিউ ইংলিশ",
+     "lessons": [
+      {
+       "title": "নিজের পরিচয় — ৬০ সেকেন্ড",
+       "durationSec": 630
+      },
+      {
+       "title": "সাধারণ প্রশ্নের উত্তর",
+       "durationSec": 780
+      },
+      {
+       "title": "দুর্বলতা নিয়ে প্রশ্ন",
+       "durationSec": 585
+      },
+      {
+       "title": "প্রশ্ন করা শেখো",
+       "durationSec": 510
+      },
+      {
+       "title": "মক ইন্টারভিউ",
+       "durationSec": 1100
+      }
+     ]
+    },
+    {
+     "name": "পাবলিক স্পিকিং বেসিক",
+     "lessons": [
+      {
+       "title": "ভয় সামলানো",
+       "durationSec": 670
+      },
+      {
+       "title": "কথার গঠন",
+       "durationSec": 755
+      },
+      {
+       "title": "শরীরী ভাষা",
+       "durationSec": 620
+      },
+      {
+       "title": "শেষ উপস্থাপনা",
+       "durationSec": 940
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "web",
+   "code": "WEB",
+   "title": "Web Development Basics",
+   "titleBn": "ওয়েব ডেভেলপমেন্ট বেসিক",
+   "bteb": null,
+   "instructor": "Tanvir Ahmed",
+   "chapters": [
+    {
+     "name": "HTML দিয়ে পেজের কাঠামো",
+     "lessons": [
+      {
+       "title": "HTML দিয়ে পেজের কাঠামো — পর্ব ১",
+       "durationSec": 881
+      },
+      {
+       "title": "HTML দিয়ে পেজের কাঠামো — পর্ব ২",
+       "durationSec": 658
+      },
+      {
+       "title": "HTML দিয়ে পেজের কাঠামো — পর্ব ৩",
+       "durationSec": 915
+      },
+      {
+       "title": "HTML দিয়ে পেজের কাঠামো — পর্ব ৪",
+       "durationSec": 692
+      },
+      {
+       "title": "HTML দিয়ে পেজের কাঠামো — পর্ব ৫",
+       "durationSec": 1009
+      }
+     ]
+    },
+    {
+     "name": "CSS দিয়ে ডিজাইন",
+     "lessons": [
+      {
+       "title": "CSS দিয়ে ডিজাইন — পর্ব ১",
+       "durationSec": 1012
+      },
+      {
+       "title": "CSS দিয়ে ডিজাইন — পর্ব ২",
+       "durationSec": 729
+      },
+      {
+       "title": "CSS দিয়ে ডিজাইন — পর্ব ৩",
+       "durationSec": 1046
+      },
+      {
+       "title": "CSS দিয়ে ডিজাইন — পর্ব ৪",
+       "durationSec": 823
+      },
+      {
+       "title": "CSS দিয়ে ডিজাইন — পর্ব ৫",
+       "durationSec": 540
+      }
+     ]
+    },
+    {
+     "name": "রেসপন্সিভ লেআউট",
+     "lessons": [
+      {
+       "title": "রেসপন্সিভ লেআউট — পর্ব ১",
+       "durationSec": 945
+      },
+      {
+       "title": "রেসপন্সিভ লেআউট — পর্ব ২",
+       "durationSec": 662
+      },
+      {
+       "title": "রেসপন্সিভ লেআউট — পর্ব ৩",
+       "durationSec": 979
+      },
+      {
+       "title": "রেসপন্সিভ লেআউট — পর্ব ৪",
+       "durationSec": 756
+      }
+     ]
+    },
+    {
+     "name": "JavaScript বেসিক",
+     "lessons": [
+      {
+       "title": "JavaScript বেসিক — পর্ব ১",
+       "durationSec": 1012
+      },
+      {
+       "title": "JavaScript বেসিক — পর্ব ২",
+       "durationSec": 729
+      },
+      {
+       "title": "JavaScript বেসিক — পর্ব ৩",
+       "durationSec": 1046
+      },
+      {
+       "title": "JavaScript বেসিক — পর্ব ৪",
+       "durationSec": 823
+      },
+      {
+       "title": "JavaScript বেসিক — পর্ব ৫",
+       "durationSec": 540
+      },
+      {
+       "title": "JavaScript বেসিক — পর্ব ৬",
+       "durationSec": 857
+      }
+     ]
+    },
+    {
+     "name": "Git, GitHub ও প্রজেক্ট",
+     "lessons": [
+      {
+       "title": "Git, GitHub ও প্রজেক্ট — পর্ব ১",
+       "durationSec": 814
+      },
+      {
+       "title": "Git, GitHub ও প্রজেক্ট — পর্ব ২",
+       "durationSec": 591
+      },
+      {
+       "title": "Git, GitHub ও প্রজেক্ট — পর্ব ৩",
+       "durationSec": 848
+      },
+      {
+       "title": "Git, GitHub ও প্রজেক্ট — পর্ব ৪",
+       "durationSec": 625
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "car",
+   "code": "CAR",
+   "title": "Career Planning 101",
+   "titleBn": "",
+   "bteb": null,
+   "instructor": null,
+   "chapters": [
+    {
+     "name": "Chapter 1",
+     "lessons": [
+      {
+       "title": "Lesson 1",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 2",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 3",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 4",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 5",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 6",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 7",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 8",
+       "durationSec": 600
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "uix",
+   "code": "UIX",
+   "title": "UI Design Basics",
+   "titleBn": "",
+   "bteb": null,
+   "instructor": null,
+   "chapters": [
+    {
+     "name": "Chapter 1",
+     "lessons": [
+      {
+       "title": "Lesson 1",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 2",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 3",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 4",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 5",
+       "durationSec": 600
+      },
+      {
+       "title": "Lesson 6",
+       "durationSec": 600
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

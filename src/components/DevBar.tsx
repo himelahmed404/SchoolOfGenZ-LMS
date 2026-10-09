@@ -1,7 +1,10 @@
 'use client';
 
+import type { Health } from '@contract';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { api } from '@/lib/api/client';
 import { editorHref } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
@@ -59,10 +62,16 @@ export function DevBar() {
   const role: Role = path.startsWith('/teacher') ? 'teacher' : path.startsWith('/admin') ? 'admin' : 'student';
   const here = screenOf(path);
   const setNumerals = (v: 'bn' | 'latin') => set((x) => ({ ...x, prefs: { ...x.prefs, numerals: v } }));
+  // Whether the API answers and can reach its database. Screens move to it one by one; until then they run on seed data.
+  const health = useQuery({ queryKey: ['health'], queryFn: () => api<Health>('/health'), retry: false, refetchInterval: 30_000 });
+  const apiUp = !!health.data && health.data.db;
 
   return (
     <div className="devbar" data-print="hide" role="navigation" aria-label="Prototype navigation">
       <div className="devbar-tag">school of genz · dev</div>
+      <div className="devbar-api" title={apiUp ? 'The API answers and its database is connected' : health.isPending ? 'Checking the API' : 'The API is not answering. Start it with npm run dev.'} data-state={apiUp ? 'up' : health.isPending ? 'wait' : 'down'}>
+        api {apiUp ? 'up' : health.isPending ? '…' : 'down'}
+      </div>
       <div className="dseg" style={{ marginLeft: 'auto' }}>
         {([['student', '/'], ['teacher', '/teacher'], ['admin', '/admin']] as [Role, string][]).map(([r, href]) => (
           <Link key={r} href={href} aria-current={role === r ? 'true' : undefined}>{r}</Link>

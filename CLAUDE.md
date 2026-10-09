@@ -11,7 +11,8 @@ Stack: Next.js 16 (App Router), React 19, TypeScript (strict), Vitest, ESLint 9 
 ## Commands
 
 ```bash
-npm run dev              # http://localhost:3000
+npm run setup            # install the LMS and server/
+npm run dev              # the LMS on :3000 and the API on :4000 (dev:web / dev:api for one)
 npm run build            # production build
 npm run lint             # ESLint
 npm run check:admin-en   # fails if a Bangla letter or digit appears in admin code
@@ -21,13 +22,38 @@ npm test                 # vitest run (src/**/*.test.ts, node environment)
 npx vitest run src/lib/format.test.ts          # one file
 npx vitest run src/lib/actions.test.ts -t 'TrxID'   # tests whose name matches
 npx vitest src/lib/selectors.test.ts           # watch mode
+
+npm run test:api                               # the API's tests (server/, embedded Postgres)
+npm --prefix server run lint                   # and typecheck, db:generate, db:reset
+npm run test:e2e                               # Playwright journeys through both apps (e2e/)
 ```
 
-CI (`.github/workflows/ci.yml`, Node 24) runs lint, `check:admin-en`, typecheck, tests and the build on every push. Run the first four before committing.
+CI (`.github/workflows/ci.yml`, Node 24) runs two jobs on every push: the LMS (lint, `check:admin-en`, typecheck, tests, build) and the API (lint, typecheck, migrations match the schema, tests on the embedded database and again on Postgres 17). Run lint, typecheck and tests for whichever side you changed before committing.
 
-`NEXT_PUBLIC_DEV_BAR=0` hides the dev bar. There are no other environment variables.
+`NEXT_PUBLIC_DEV_BAR=0` hides the dev bar. `API_ORIGIN` is where `/api/*` is forwarded (default `http://localhost:4000` in development). The server's variables are in `server/.env.example`; none is needed locally.
 
 Vercel deploys `main`, so work on a branch.
+
+## Where this is going
+
+The app is moving from seed data in the browser to a real server, in milestones B0–B11. **B0 and B1 are done**: the two kinds of product are modelled in the LMS, and `server/` exists with its database, but only `/api/v1/health` is used. Every screen still runs on seed data and `localStorage`. From B2 on, an area moves to the API at a time, and its seed data is deleted from the client when it does. Until a section below says otherwise, what it describes is still true.
+
+## The API (`server/`)
+
+A separate Express 5 app in TypeScript with its own `package.json`, ESLint and Vitest configs. It serves the LMS, the marketing site and later a mobile app.
+
+- **The browser never calls it across sites.** The LMS forwards `/api/*` to `API_ORIGIN` (`next.config.ts`). Call it from the LMS with `api()` in `src/lib/api/client.ts`, which throws `ApiFailure` with a `code`; fetch with TanStack Query (`ApiProvider` is in the root layout).
+- **Files:** `src/index.ts` default-exports the app (Vercel's entry), `src/dev.ts` listens locally, `src/app.ts` builds it from what it depends on (`createApp({ db })`), so a test can hand it a fresh database. A feature goes in `src/modules/<area>/` as `routes.ts` (HTTP only) and `service.ts` (the rule, taking `Tx`).
+- **Imports end in `.js`** (`./app.js`), because the server is Node ESM. The LMS does not do this.
+- **Errors:** throw `ApiError` (`badRequest`, `forbidden`, `conflict`…) with a code; `errorHandler` is the only place a response is written for a failure. Anything else thrown is a bug: it is logged and the client gets `internal`. Codes, not sentences: each client words them.
+- **Input:** `parse(schema, req.body)` from `src/http/validate.ts`. It returns only the fields the contract names.
+- **Contract:** `src/contract/` holds the shapes (zod). The LMS imports the types as `@contract`. Keep that folder free of imports other than zod, since the LMS compiles it.
+- **Database:** Drizzle, `src/db/schema.ts`. `Db` runs on Postgres (Neon) when `DATABASE_URL` is set and on PGlite, an embedded Postgres, when it is not. After changing the schema run `npm --prefix server run db:generate` and commit the SQL it writes into `server/drizzle/`; CI fails if you forget. Hand-written SQL (the activity log's append-only trigger) is a `--custom` migration.
+- **Rules the database keeps:** a TrxID is unique, a student is in a program once, the activity log cannot be updated or deleted. Do not weaken these in code; test them in `src/db/db.test.ts`.
+- **Rate limits** are counted in the database (`limit()` in `src/http/rateLimit.ts`), because the server keeps no memory between requests on Vercel.
+- **Logs** are one JSON line each (`log` in `src/http/log.ts`). Never log a password, token, code or request body.
+- **Tests** get a fresh migrated database per file from `testDb()`; test the HTTP surface with supertest on `createApp`. Test names are sentences, as in the LMS.
+- **Demo data** is `src/db/seed/demo.json`, loaded by `seed.ts` into an empty development database. It is not for production.
 
 ## Architecture
 

@@ -5,5 +5,6 @@ import nextTs from 'eslint-config-next/typescript';
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'design/**']),
+  // The API in server/ has its own ESLint config.
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'design/**', 'server/**', 'playwright-report/**', 'test-results/**']),
 ]);
