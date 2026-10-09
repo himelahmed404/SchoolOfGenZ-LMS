@@ -2,33 +2,55 @@ import { AREAS } from '../seed';
 import { SL, type AdminConsole, type Rec } from '../console';
 import type { Area, Perm, Role, SectionView, Settings } from '../types';
 
-/** Reports: period switch, KPI tiles, revenue by course, payment method split, batch fill and coupon use. */
+/** A revenue figure for each of the last 182 days, the same on every render: a slow rise with a weekly rhythm. Seeded until reporting exists. */
+const DAILY = Array.from({ length: 182 }, (_, i) => Math.round(3600 + i * 22 + 1500 * Math.sin(i / 3.2) + (i % 7 === 5 ? 2400 : 0)));
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+/** Eight steps from `from` to `to` with a steady wobble, for a tile's trend line. Seeded like the rest of the report. */
+const walk = (from: number, to: number, seed: number) => Array.from({ length: 8 }, (_, i) =>
+  from + ((to - from) * i) / 7 + (i > 0 && i < 7 ? Math.sin(seed + i * 2.3) * (Math.abs(to - from) || to * 0.1) * 0.4 : 0));
+
+/** Reports: the period switch scopes every number on the page. Tiles, revenue over time, payment split, revenue by course, batch fill, coupons. */
 export function reports(c: AdminConsole): SectionView {
-  const S = c.S, nf = c.nf, tk = c.tk;
-  const m = { week: 0.24, month: 1, quarter: 2.9 }[S.period], lbl = { week: 'This week', month: 'This month', quarter: 'Last 3 months' }[S.period];
-  // Seeded until reporting exists.
-  const byC: [string, number][] = [['CST', 112000], ['ENG', 46000], ['WEB', 30000], ['UIX', 0], ['CAR', 0]], tot = byC.reduce((a, b) => a + b[1], 0);
-  const seg = ([['week', 'This week'], ['month', 'This month'], ['quarter', 'Last 3 months']] as [ConsoleState['period'], string][]).map(([k, l]) => {
-    const on = S.period === k;
-    return { label: l, go: () => c.setState({ period: k }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', fg: on ? 'var(--brand)' : 'var(--ink-2)', bd: on ? 'var(--brand)' : 'var(--line-strong)', weight: on ? 600 : 400 };
-  });
+  const S = c.S, nf = c.nf, tk = c.tk, P = S.period;
+  const span = { week: 7, month: 30, quarter: 91 }[P];
+  const lbl = { week: 'This week', month: 'This month', quarter: 'Last 3 months' }[P], vs = { week: 'vs last week', month: 'vs last month', quarter: 'vs the 3 months before' }[P];
+  const cur = DAILY.slice(-span), before = DAILY.slice(-2 * span, -span), rev = sum(cur);
+  // Daily points for a week or a month; a quarter reads better by week.
+  const dayAt = (back: number) => { const d = new Date(c.env.today); d.setDate(d.getDate() - back); return d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' }); };
+  const points = P === 'quarter'
+    ? Array.from({ length: 13 }, (_, w) => ({ x: dayAt(span - 1 - w * 7), y: sum(cur.slice(w * 7, w * 7 + 7)) }))
+    : cur.map((y, i) => ({ x: dayAt(span - 1 - i), y }));
+  const enrolled = Math.round(rev / 2650), enrolledBefore = Math.round(sum(before) / 2650);
+  const avg = Math.round(rev / Math.max(1, enrolled)), avgBefore = Math.round(sum(before) / Math.max(1, enrolledBefore));
+  const byCourse = ([['CST', 0.6], ['ENG', 0.24], ['WEB', 0.16], ['UIX', 0], ['CAR', 0]] as [string, number][]).map(([code, share]) => [code, Math.round(rev * share)] as [string, number]);
+  const top = Math.max(...byCourse.map((x) => x[1]), 1);
+  const scale = span / 30, refunded = 3500 * scale, refundedBefore = 5000 * scale;
+  const paidBy = (share: number) => c.pl(Math.round(enrolled * share), 'payment');
+
   return {
-    title: 'Reports', sub: lbl + ' — revenue, enrollment, refunds and learning progress.',
+    title: 'Reports', sub: 'Revenue, enrollment, refunds and learning.',
     head: [c.A('Export CSV', () => { c.log('reports', 'Exported report', lbl); c.flash('CSV download started'); }, 'ghost', false, true)],
     dash: {
-      hasSeg: true, seg,
+      seg: ([['week', 'This week'], ['month', 'This month'], ['quarter', 'Last 3 months']] as [ConsoleState['period'], string][])
+        .map(([k, label]) => ({ label, count: '', on: P === k, go: () => c.setState({ period: k }) })),
       kpis: [
-        c.K('Revenue', tk(tot * m), lbl, 'reports', 'brand'),
-        c.K('New enrollments', nf(Math.round(71 * m)), lbl, 'students', 'blue'),
-        c.K('Refunded', tk(3500 * m), c.pl(Math.max(1, Math.round(2 * m)), 'request'), 'refunds', 'danger'),
-        c.K('Completion', nf(63) + '%', 'average of running batches', 'batches', 'muted'),
-        c.K('Median reply', nf(14) + ' h', 'across teachers', 'teachers', 'warn'),
+        c.K('Revenue', tk(rev), lbl, 'reports', 'brand', { spark: points.map((x) => x.y), delta: c.delta(rev, sum(before), vs, true, true) }),
+        c.K('New enrollments', nf(enrolled), lbl, 'students', 'blue', { spark: walk(enrolledBefore, enrolled, 1), delta: c.delta(enrolled, enrolledBefore, vs, true) }),
+        c.K('Average payment', tk(avg), 'per enrollment', 'payments', 'muted', { spark: walk(avgBefore, avg, 2), delta: c.delta(avg, avgBefore, vs, true, tk) }),
+        c.K('Refunded', tk(refunded), c.pl(Math.max(1, Math.round(2 * scale)), 'request'), 'refunds', 'danger', { spark: walk(refundedBefore, refunded, 3), delta: c.delta(refunded, refundedBefore, vs, false, true) }),
+        c.K('Completion', nf(63) + '%', 'average of running batches', 'batches', 'muted', { spark: walk(61, 63, 4), delta: c.delta(63, 61, vs, true, (n) => c.pl(n, 'point')) }),
+        c.K('Median reply', nf(14) + ' h', 'across teachers', 'teachers', 'warn', { spark: walk(16, 14, 5), delta: c.delta(14, 16, vs, false, (n) => nf(n) + ' h') }),
       ],
+      // The first row is the tall one, so the list that grows with the catalog sits beside the chart.
       panels: [
-        { title: 'Revenue by course', hasBars: true, bars: byC.map(([code, v]) => c.bar(code, tk(v * m), (v / 112000) * 100)), hasItems: false, items: [] },
-        { title: 'Payment method', hasBars: true, bars: [c.bar('bKash', nf(64) + '%', 64), c.bar('Nagad', nf(36) + '%', 36, 'var(--accent-2)')], hasItems: false, items: [] },
-        { title: 'Batch fill', hasBars: true, bars: S.batches.filter((b) => b.status !== 'finished').map((b) => c.bar(b.id, nf(b.enrolled) + '/' + nf(b.seats), (b.enrolled / Number(b.seats)) * 100, b.enrolled / Number(b.seats) > 0.9 ? 'var(--warn)' : 'var(--accent-2)')), hasItems: false, items: [] },
-        { title: 'Coupons', hasItems: true, items: S.coupons.map((k) => c.it(k.code, SL[c.couponStatus(k)], c.pl(k.used, 'use'))), hasBars: false, bars: [] },
+        { title: 'Revenue', sub: lbl + (P === 'quarter' ? ' · by week' : ' · by day'), span: 8, trend: { points, unit: 'taka' } },
+        { title: 'Revenue by course', sub: lbl, span: 4, bars: byCourse.map(([code, v]) => c.bar(code, tk(v), (v / top) * 100)) },
+        { title: 'Payment method', sub: 'Share of revenue · ' + lbl.toLowerCase(), span: 4, share: [
+          { label: 'bKash', value: tk(rev * 0.64), pct: 64, slot: 1, sub: paidBy(0.64) }, { label: 'Nagad', value: tk(rev * 0.36), pct: 36, slot: 2, sub: paidBy(0.36) },
+        ] },
+        { title: 'Batch fill', sub: 'Enrolled against seats', span: 4,
+          meters: S.batches.filter((b) => b.status !== 'finished').map((b) => c.meter(b.id, nf(b.enrolled) + '/' + nf(Number(b.seats)), (b.enrolled / Number(b.seats)) * 100)) },
+        { title: 'Coupons', sub: 'All time', span: 4, table: { cols: ['Code', 'Status', 'Uses'], rows: S.coupons.map((k) => [k.code, SL[c.couponStatus(k)], nf(k.used)]) } },
       ],
     },
   };
@@ -46,8 +68,11 @@ export function activity(c: AdminConsole): SectionView {
     list: c.mkList(areas.map((k) => [k, k === 'all' ? 'All' : c.areaLabel(k), S.activity.filter((a) => k === 'all' || a.area === k).length]),
       'Search name, action or reason',
       ['When', 'Who', 'Area', 'Action'], 'minmax(0,0.7fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,2.4fr)',
-      rows.map((a) => ({ id: a.id, cells: [c.T(c.when(a.at)), c.T(a.actor), c.B('x', c.areaLabel(a.area)), c.T(a.action, a.target + (a.reason ? ' · Reason: ' + a.reason : ''), { bold: true })] })),
-      'Nothing found.'),
+      rows.map((a) => ({ id: a.id, cells: [c.T(c.when(a.at)), c.T(a.actor), c.B('x', c.areaLabel(a.area)), c.T(a.action, a.target, { bold: true }), c.T(a.reason || '—', '', { fg: a.reason ? 'var(--ink)' : 'var(--ink-3)' })] })),
+      'Nothing found.',
+      { cols: ['Reason'], grid: 'minmax(0,0.6fr) minmax(0,0.9fr) minmax(0,0.8fr) minmax(0,1.8fr) minmax(0,1.6fr)' }),
+    tabsLabel: 'By area',
+    summary: [c.kv('Entries', c.nf(S.activity.length)), c.kv('People', c.nf(new Set(S.activity.map((a) => a.actor)).size)), c.kv('With a reason', c.nf(S.activity.filter((a) => a.reason).length))],
   };
   const a = S.activity.find((x) => x.id === S.sel);
   if (a) v.detail = {
@@ -67,6 +92,7 @@ export function settings(c: AdminConsole): SectionView {
   const phoneErr = (x: string) => (/^01\d[\d ]{8,10}$/.test(String(x).trim()) ? '' : 'An 11-digit number starting with 01');
   const err = !!phoneErr(d.bkash) || !!phoneErr(d.nagad) || !(+d.refundDays >= 0) || !(+d.refundWatch >= 0 && +d.refundWatch <= 100);
   const num = (x: string) => (x === '' ? '' : +x);
+  const history = S.activity.filter((a) => a.area === 'settings').slice(0, 8);
   return {
     title: 'Settings', sub: 'Rules for the whole platform. Every change needs a reason.', head: [],
     detail: {
@@ -88,6 +114,9 @@ export function settings(c: AdminConsole): SectionView {
           c.seg('Auto-close full batches', c.onoff(), d.autoClose, (x) => set('autoClose', x), { inline: true }),
           c.seg('SMS notifications', c.onoff(), d.sms, (x) => set('sms', x), { inline: true, hint: 'Payment approvals, exam dates and notices go out by SMS.' }),
         ] }),
+        // Who changed a rule, when and why, so nobody has to leave the page to check.
+        c.blk({ title: 'Change history', wide: true, note: history.length ? '' : 'No setting has been changed yet.',
+          items: history.map((a) => c.it(a.action + ' — ' + a.target, a.actor + ' · ' + c.when(a.at) + (a.reason ? ' · ' + a.reason : ''), '', 'View', () => c.nav('activity', a.id))) }),
       ],
       actions: [
         c.A('Save changes', () => c.ask({ title: 'Change settings?', body: changed.map((k) => LBL[k] + ': ' + nf(sr[k]) + ' → ' + nf(d[k])).join('\n'), needReason: true,
@@ -104,11 +133,6 @@ export function settings(c: AdminConsole): SectionView {
 export function roles(c: AdminConsole): SectionView {
   const S = c.S, nf = c.nf, me = c.me();
   const members = (rid: string) => S.staff.filter((s) => s.role === rid);
-  const summ = (r: Role) => {
-    if (r.locked) return 'Everything';
-    const ps = Object.values(r.perms);
-    return nf(ps.filter((p) => p === 'edit').length) + ' edit · ' + nf(ps.filter((p) => p === 'view').length) + ' view';
-  };
   const tabs: [string, string, number, () => void][] = [
     ['roles', 'Roles', S.roles.length, () => c.setState({ rtab: 'roles', sel: null, draft: null, form: null })],
     ['staff', 'Staff', S.staff.length, () => c.setState({ rtab: 'staff', sel: null, draft: null, form: null })],
@@ -129,8 +153,23 @@ export function roles(c: AdminConsole): SectionView {
         S.staff.filter((s) => c.match(s.name + s.email)).map((s) => ({ id: s.id, cells: [
           c.T(s.name + (s.id === me.id ? ' (you)' : ''), s.email, { bold: true }), c.B(c.roleOf(s).locked ? 'published' : 'x', c.roleOf(s).name), c.T(s.last),
         ] })), 'Nobody here.')
-      : c.mkList(tabs, '', ['Role', 'Access', 'Members'], 'minmax(0,1.8fr) minmax(0,1fr) minmax(0,0.6fr)',
-        S.roles.map((r) => ({ id: r.id, cells: [c.T(r.name, r.desc, { bold: true }), c.T(summ(r)), c.T(nf(members(r.id).length))] })), ''),
+      : undefined,
+    summary: staffTab ? [c.kv('Staff', nf(S.staff.length)), c.kv('Roles in use', nf(new Set(S.staff.map((s) => s.role)).size)), c.kv('Super admins', nf(S.staff.filter((s) => c.roleOf(s).locked).length))] : undefined,
+    // Every role against every area, so a gap or an overlap in access is visible at a glance. A column header opens that role.
+    matrix: staffTab ? undefined : {
+      filters: c.tabs(tabs),
+      cols: S.roles.map((r) => ({
+        key: r.id, title: r.name, sub: c.pl(members(r.id).length, 'member') + (r.locked ? ' · locked' : ''), on: S.sel === r.id,
+        go: () => c.setState({ sel: r.id, draft: null, form: null }),
+      })),
+      rows: AREAS.map(([k, label]) => ({
+        label,
+        cells: S.roles.map((r) => {
+          const p = r.locked ? 'edit' : r.perms[k];
+          return p === 'edit' ? c.B('published', 'Edit') : p === 'view' ? c.B('x', 'View') : c.T('—', '', { fg: 'var(--ink-3)' });
+        }),
+      })),
+    },
   };
 
   if (staffTab && S.sel === 'new') {

@@ -37,13 +37,16 @@ export interface AdminData {
   /** Staff member the console is being viewed as (no auth yet). */
   viewAs: string;
   navMini: boolean;
+  /** Width of the detail pane in px, as last dragged. */
+  paneW?: number;
 }
 
 /* ---------- view model the console renderer draws ---------- */
 
 export interface Cell { isText: boolean; isBadge: boolean; t: string; sub: string; hasSub: boolean; font: string; subFont: string; weight: number; fg: string; subFg: string; bg: string }
 export interface Action { label: string; go: () => void; bg: string; fg: string; bd: string; op: number }
-export interface KV { k: string; v: string; font: string; fg: string; weight: number }
+/** A label and its value. With `go` the row is a shortcut (e.g. to a filter); `on` marks the one in use. */
+export interface KV { k: string; v: string; font: string; fg: string; weight: number; go?: () => void; on?: boolean }
 export interface Item { t: string; sub: string; hasSub: boolean; right: string; hasRight: boolean; hasAct: boolean; actLabel: string; actGo: () => void }
 export interface SegOpt { label: string; go: () => void; bg: string; fg: string; bd: string; weight: number; op: number }
 export interface Field {
@@ -51,19 +54,70 @@ export interface Field {
   bd: string; hint: string; hasHint: boolean; hintFg: string;
   type?: string; value?: string; onChange?: (v: string) => void; ph?: string; disabled?: boolean; opts?: SegOpt[];
 }
-export interface Block { title: string; hasTitle: boolean; note: string; hasNote: boolean; noteBg: string; kv: KV[]; hasKv: boolean; fields: Field[]; hasFields: boolean; items: Item[]; hasItems: boolean }
-export interface Detail { title: string; sub?: string; badge?: Cell | null; closable?: boolean; wide?: boolean; blocks: Block[]; actions?: Action[] }
-export interface ListView {
-  filters: { label: string; count: string; go: () => void; weight: number; color: string; rule: string }[];
-  hasSearch: boolean; ph: string; cols: string[]; grid: string;
-  rows: { key: string; cells: Cell[]; go: () => void; bg: string; rule: string }[];
-  isEmpty: boolean; empty: string;
+export interface Block {
+  title: string; hasTitle: boolean; note: string; hasNote: boolean; noteBg: string; kv: KV[]; hasKv: boolean; fields: Field[]; hasFields: boolean; items: Item[]; hasItems: boolean;
+  /** In the full-width form (Settings) this block takes a whole row instead of one column. */
+  wide?: boolean;
 }
-export interface Kpi { label: string; value: string; sub: string; go: () => void; stripe: string; icon: string; iconBg: string; iconFg: string }
-export interface Bar { label: string; value: string; pct: number; color: string }
-export interface Panel { title: string; hasItems: boolean; items: Item[]; hasBars: boolean; bars: Bar[] }
-export interface Dash { hasSeg: boolean; seg: { label: string; go: () => void; bg: string; fg: string; bd: string; weight: number }[]; kpis: Kpi[]; panels: Panel[] }
-export interface SectionView { title: string; sub: string; head: Action[]; list?: ListView; dash?: Dash; detail?: Detail }
+export interface Detail { title: string; sub?: string; badge?: Cell | null; closable?: boolean; wide?: boolean; blocks: Block[]; actions?: Action[] }
+/** A filter tab. `view` marks a tab that switches the view (Roles / Staff) instead of filtering the list. */
+export interface Tab { label: string; count: string; go: () => void; on: boolean; view?: boolean }
+export interface ListView {
+  filters: Tab[];
+  hasSearch: boolean; ph: string;
+  /** Column headers. The last `extra` of them (and of each row's cells) show only when the list is wide. */
+  cols: string[]; extra: number;
+  /** grid-template-columns for the normal and the wide layout. */
+  grid: string; gridWide: string;
+  rows: { key: string; cells: Cell[]; go: () => void; on: boolean }[];
+  isEmpty: boolean; empty: string;
+  /** Paging over the filtered rows; `prev`/`next` are null at the ends. */
+  page: { from: number; to: number; total: number; prev: (() => void) | null; next: (() => void) | null };
+}
+
+/* Dashboards (Overview, Reports). Charts follow one hue per series; status colours are kept for status. */
+export interface Kpi {
+  label: string; value: string; sub: string; go: () => void; icon: string; iconBg: string; iconFg: string;
+  /** Change against a named period: `text` is signed ("+12% vs last month"), `good` says whether that direction is good news. */
+  delta?: { text: string; dir: 'up' | 'down' | 'flat'; good: boolean };
+  /** Recent values, oldest first; the last one is the current period. */
+  spark?: number[];
+}
+/** One bar of a ranked list; every bar shares the series colour. */
+export interface Bar { label: string; value: string; pct: number }
+/** A ratio against a limit. `warn` when it is close to the limit, with `note` saying so in words. */
+export interface Meter { label: string; value: string; pct: number; warn: boolean; note: string }
+export interface Point { x: string; y: number }
+/** One series over time. `partial` marks the last point as an unfinished period. */
+export interface Trend { points: Point[]; unit: 'taka' | 'count'; partial?: boolean }
+/** Parts of a whole; `slot` picks the validated categorical colour (1 or 2). `sub` is a second fact about the part. */
+export interface Share { label: string; value: string; pct: number; slot: 1 | 2; sub?: string }
+export interface Panel {
+  title: string; sub?: string;
+  /** Columns out of 12 on a wide screen. */
+  span: 4 | 6 | 8 | 12;
+  items?: Item[]; bars?: Bar[]; meters?: Meter[]; trend?: Trend; share?: Share[];
+  table?: { cols: string[]; rows: string[][] };
+  /** Link in the panel header, e.g. to the full list. */
+  more?: { label: string; go: () => void };
+}
+export interface Dash { seg: Tab[]; kpis: Kpi[]; panels: Panel[] }
+
+/** A table of every role against every area (Roles & staff). */
+export interface Matrix {
+  filters: Tab[];
+  cols: { key: string; title: string; sub: string; on: boolean; go: () => void }[];
+  rows: { label: string; cells: Cell[] }[];
+}
+
+export interface SectionView {
+  title: string; sub: string; head: Action[];
+  list?: ListView; dash?: Dash; matrix?: Matrix; detail?: Detail;
+  /** Section-wide numbers shown beside a list while no row is selected. */
+  summary?: KV[];
+  /** What the filter tabs divide the list by, as the summary's heading. Default: "By status". */
+  tabsLabel?: string;
+}
 
 export interface ConfirmSpec {
   title: string; body?: string; needReason?: boolean; reasons?: string[]; danger?: boolean; ok?: string;

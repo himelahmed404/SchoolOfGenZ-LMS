@@ -1,0 +1,371 @@
+/*
+ * Admin console. English only (lang="en" on the root).
+ * The frame is: sidebar | top bar over a body. The body is one of
+ *   - a dashboard on a 12-column grid (Overview, Reports),
+ *   - a table with a detail pane (the list sections and both queues),
+ *   - a full-width form (Settings), or a role-by-area table (Roles).
+ * Nothing has a fixed content width. The top bar and the dashboard re-flow by the room they have (container
+ * queries, so a collapsed sidebar counts); the frame itself changes at 1279, 1099, 899 and 767px.
+ */
+.adm-root {
+  position: fixed; top: var(--devbar-h, 0px); left: 0; right: 0; bottom: 0; display: flex;
+  background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.5;
+  /* Charts: one hue per series. --viz-1/--viz-2 are the validated two-series pair (bKash, Nagad). */
+  --viz: var(--brand); --viz-1: #C2357A; --viz-2: #EB6834; --viz-mute: var(--line-strong);
+  /* Detail pane: a third of the screen until the admin drags the splitter (then a width in px is set inline). */
+  --pane-w: clamp(380px, 32vw, 560px);
+}
+[data-theme="dark"] .adm-root { --viz-1: #D55181; --viz-2: #C98500; }
+.adm-root h1, .adm-root h2 { margin: 0; }
+.adm-root button:disabled { cursor: default; }
+
+/* ---------- sidebar ---------- */
+.adm-side { flex-shrink: 0; width: 232px; height: 100%; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--surface); transition: width .18s ease; }
+.adm-side[data-mini="true"] { width: 68px; }
+.adm-brand { flex-shrink: 0; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+.adm-side[data-mini="true"] .adm-brand { justify-content: center; padding: 0; }
+.adm-logo { width: 30px; height: 30px; border-radius: 10px; background: var(--brand); color: var(--on-brand); }
+.adm-navs { flex: 1; min-height: 0; overflow: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 14px; }
+.adm-navgroup { display: flex; flex-direction: column; gap: 2px; }
+.adm-group { padding: 0 8px 4px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.adm-rule { height: 1px; margin: 0 8px 6px; background: var(--line); }
+.adm-nav { width: 100%; height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 6px; border: none; border-radius: 10px; background: transparent; color: var(--ink-2); font-size: 14px; font-weight: 400; text-align: left; }
+.adm-side[data-mini="true"] .adm-nav { justify-content: center; padding: 0; }
+.adm-nav:hover { background: var(--surface-sunk); }
+.adm-nav[aria-current="page"], .adm-nav[aria-current="page"]:hover { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.adm-nav-ico { position: relative; width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: var(--surface-sunk); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+.adm-nav[aria-current="page"] .adm-nav-ico { background: var(--brand); color: var(--on-brand); }
+.adm-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 9999px; background: var(--margin); border: 2px solid var(--surface); }
+.adm-count { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.adm-scrim { position: fixed; top: var(--devbar-h, 0px); left: 0; right: 0; bottom: 0; z-index: 39; background: rgba(12,16,32,0.42); }
+/* a shorter window gets a denser menu, so the last sections stay in view */
+@media (max-height: 939px) {
+  .adm-navs { padding: 8px 10px; gap: 8px; }
+  .adm-nav { height: 34px; }
+  .adm-nav-ico { width: 26px; height: 26px; }
+}
+
+/* ---------- top bar ---------- */
+.adm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* The bar is a container, so its row re-flows by the room it has. The row is a child, because a container cannot restyle itself. */
+.adm-top { position: relative; z-index: 10; flex-shrink: 0; border-bottom: 1px solid var(--line); background: var(--surface); container: top / inline-size; }
+.adm-top-in { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 20px; }
+.adm-top-ico { width: 38px; height: 38px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); }
+.adm-top-title { min-width: 72px; display: flex; flex-direction: column; line-height: 1.35; }
+.adm-top-title h1 { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-top-sub { font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-grow { flex: 1; min-width: 0; }
+.adm-icon-btn { width: 34px; height: 34px; flex-shrink: 0; border: none; border-radius: 10px; background: transparent; color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+.adm-icon-btn:hover { background: var(--surface-sunk); color: var(--ink); }
+.adm-icon-btn.adm-bordered { border: 1px solid var(--line); background: var(--surface); }
+.adm-icon-btn.adm-bordered:hover { border-color: var(--line-strong); }
+.adm-icon-btn.adm-menu { display: none; }
+.adm-search { flex-shrink: 0; width: 240px; height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); color: var(--ink-3); font-size: 13px; }
+.adm-search:hover { border-color: var(--brand); color: var(--ink); }
+.adm-search > span:first-of-type { flex: 1; text-align: left; }
+.adm-kbd { padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+.adm-readonly { flex-shrink: 0; height: 26px; padding: 0 10px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 12px; font-weight: 600; display: flex; align-items: center; }
+.adm-btn { flex-shrink: 0; height: 34px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.adm-btn:not(:disabled):hover { filter: brightness(0.96); }
+.adm-btn:disabled { opacity: .45; }
+.adm-btn-lg { height: 38px; font-size: 14px; }
+.adm-btn-sm { height: 30px; padding: 0 10px; font-size: 12px; }
+.adm-me { flex-shrink: 0; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 8px 0 4px; border: none; border-radius: 10px; background: none; color: var(--ink); text-align: left; }
+.adm-me:hover { background: var(--surface-sunk); }
+.adm-avatar { width: 30px; height: 30px; border-radius: 9999px; background: var(--surface-sunk); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.adm-me-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.adm-pop { position: absolute; right: 0; top: calc(100% + 6px); width: 260px; z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--overlay); }
+.adm-pop button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: none; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; }
+.adm-pop button:hover { background: var(--surface-sunk); }
+.adm-pop button[aria-checked="true"] { background: var(--brand-soft); }
+
+/* period switch and other small segmented controls */
+.adm-seg { flex-shrink: 0; display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-sunk); }
+.adm-seg button { height: 30px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.adm-seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--seg-shadow); }
+
+.adm-body { flex: 1; min-height: 0; display: flex; }
+
+/* ---------- tabs, inputs ---------- */
+.adm-tabs { display: flex; align-items: stretch; gap: 0 18px; min-height: 44px; flex-wrap: wrap; }
+.adm-tab { height: 44px; padding: 0; border: none; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+.adm-tab:hover { color: var(--ink); }
+.adm-tab[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--brand); }
+.adm-tab .adm-n { margin-left: 4px; font-variant-numeric: tabular-nums; }
+.adm-input { height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 13px; outline: none; }
+.adm-input:focus { border-color: var(--brand); }
+
+/* ---------- list: table that fills its column ---------- */
+.adm-list { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--surface); container-type: inline-size; }
+.adm-toolbar { flex-shrink: 0; display: flex; align-items: flex-start; gap: 16px; min-height: 44px; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--surface); }
+/* many tabs wrap to a second line; the search and the buttons stay level with the first */
+.adm-toolbar > .adm-input { width: 260px; max-width: 100%; margin-top: 6px; }
+.adm-toolbar > .adm-btn { margin-top: 7px; }
+.adm-thead, .adm-row { display: grid; grid-template-columns: var(--g); gap: 12px; align-items: center; }
+.adm-thead { flex-shrink: 0; height: 34px; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--paper); font-size: 12px; color: var(--ink-3); }
+.adm-rows { flex: 1; min-height: 0; overflow: auto; }
+.adm-row { width: 100%; min-height: 50px; padding: 6px 20px 6px 18px; border: none; border-left: 2px solid transparent; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; white-space: normal; font-variant-numeric: tabular-nums; }
+.adm-row:hover { background: var(--paper); }
+/* a row that needs a second look (Payments) */
+.adm-row[data-flag="true"] { border-left-color: var(--margin); }
+.adm-row[aria-current="true"], .adm-row[aria-current="true"]:hover { background: var(--brand-soft); border-left-color: var(--brand); }
+.adm-cell { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; line-height: 1.4; }
+.adm-cell-t { max-width: 100%; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-cell-s { max-width: 100%; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-badge { height: 22px; padding: 0 8px; border-radius: 10px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap; }
+/* the column name inside a cell: only where rows are stacked as cards and have no header (phones) */
+.adm-cell-l { display: none; font-size: 11px; line-height: 1.3; color: var(--ink-3); }
+/* columns that only show when the list itself is wide */
+.adm-x, .adm-cell.adm-x { display: none; }
+@container (min-width: 920px) {
+  .adm-thead, .adm-row { grid-template-columns: var(--gw); }
+  .adm-x { display: block; }
+  .adm-cell.adm-x { display: flex; }
+}
+.adm-empty { padding: 56px 20px; text-align: center; font-size: 14px; color: var(--ink-3); }
+.adm-foot { flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 20px; border-top: 1px solid var(--line); background: var(--surface); font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* ---------- detail pane ---------- */
+.adm-split { position: relative; width: 0; flex-shrink: 0; z-index: 3; }
+.adm-split > span { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; }
+.adm-split > span:hover, .adm-split > span[data-on="true"] { background: var(--brand-soft); }
+.adm-pane { flex-shrink: 0; width: clamp(360px, var(--pane-w), 60%); border-left: 1px solid var(--line); background: var(--surface); overflow: auto; }
+.adm-pane-in { padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.adm-pane-head { display: flex; align-items: flex-start; gap: 12px; }
+.adm-pane-title { font-size: 17px; font-weight: 600; line-height: 1.4; }
+.adm-muted { font-size: 13px; color: var(--ink-3); }
+.adm-x-btn { width: 32px; height: 32px; margin: -4px -8px 0 0; border: none; border-radius: 8px; background: none; color: var(--ink-2); font-size: 15px; }
+.adm-x-btn:hover { background: var(--surface-sunk); }
+.adm-block { display: flex; flex-direction: column; gap: 10px; }
+.adm-note { padding: 10px 12px; border-radius: 10px; color: var(--ink); font-size: 13px; line-height: 1.6; white-space: pre-line; }
+.adm-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.adm-kv > :nth-child(odd) { color: var(--ink-3); white-space: nowrap; }
+.adm-kv > :nth-child(even) { text-align: right; overflow-wrap: anywhere; }
+/* summary rows that are shortcuts: a filter and its count */
+.adm-kv-links { display: flex; flex-direction: column; margin: -4px -8px; }
+.adm-kv-links button { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 30px; padding: 2px 8px; border: none; border-radius: 8px; background: none; color: var(--ink); font-size: 13px; text-align: left; font-variant-numeric: tabular-nums; }
+.adm-kv-links button > :first-child { color: var(--ink-3); }
+.adm-kv-links button:hover { background: var(--surface-sunk); }
+.adm-kv-links button:hover > :first-child { color: var(--ink); }
+.adm-kv-links button[aria-pressed="true"] { background: var(--brand-soft); font-weight: 600; }
+.adm-kv-links button[aria-pressed="true"] > :first-child { color: var(--brand); }
+.adm-fields { display: flex; flex-direction: column; gap: 14px; }
+.adm-field-in { width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 14px; outline: none; }
+.adm-field-in:focus { border-color: var(--brand); }
+textarea.adm-field-in { height: auto; min-height: 96px; padding: 8px 10px; line-height: 1.6; resize: vertical; }
+.adm-opt { height: 30px; padding: 0 10px; border-radius: 10px; font-size: 13px; }
+.adm-items { display: flex; flex-direction: column; }
+.adm-item { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+.adm-item:last-child { border-bottom: none; }
+.adm-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ---------- dashboard ---------- */
+/* The dashboard is a container: tiles and panels re-flow by the room it has, whatever the sidebar is doing. */
+.adm-dash { flex: 1; min-width: 0; overflow: auto; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; container: dash / inline-size; }
+.adm-kpis { flex-shrink: 0; display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); gap: 12px; }
+.adm-kpi { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; white-space: normal; container-type: inline-size; }
+.adm-kpi:hover { border-color: var(--line-strong); box-shadow: var(--lift); }
+.adm-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.adm-kpi-label { font-size: 12px; color: var(--ink-3); }
+.adm-kpi-ico { width: 30px; height: 30px; border-radius: 9px; }
+.adm-kpi-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+/* a large standalone number keeps proportional figures */
+.adm-kpi-val { font-size: 26px; font-weight: 600; line-height: 1.25; font-variant-numeric: normal; white-space: nowrap; }
+.adm-kpi-sub { font-size: 12px; color: var(--ink-2); }
+.adm-delta { display: flex; align-items: flex-start; gap: 4px; margin-top: auto; padding-top: 6px; font-size: 12px; font-weight: 500; line-height: 1.35; color: var(--ink-2); }
+.adm-delta svg { flex-shrink: 0; margin-top: 2px; }
+.adm-delta[data-good="true"] { color: var(--ok); }
+.adm-delta[data-good="false"] { color: var(--margin); }
+/* a narrow tile drops its icon first, then its trend line; the figure and the change always stay */
+@container (max-width: 169px) { .adm-kpi-ico { display: none; } }
+@container (max-width: 149px) { .viz-spark { display: none; } }
+/*
+ * The first row of panels takes the height that is left, so the chart grows with the screen; the rows under it stay
+ * compact (240px to 400px). When even the minimum does not fit, the dashboard scrolls.
+ */
+.adm-grid { --rows: var(--rows-lg, 2); flex: 1 1 0; min-height: calc(var(--rows) * 240px + (var(--rows) - 1) * 16px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: minmax(240px, 1fr); grid-auto-rows: minmax(240px, min(400px, 30vh)); gap: 16px; }
+.adm-panel { grid-column: span var(--span, 4); min-width: 0; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.adm-panel-head { flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px 8px 16px; border-bottom: 1px solid var(--line); }
+.adm-panel-head h2 { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.adm-panel-sub { font-size: 12px; color: var(--ink-3); line-height: 1.35; }
+.adm-panel-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.adm-link { flex-shrink: 0; height: 28px; padding: 0 8px; border: none; border-radius: 8px; background: none; color: var(--ink-2); font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+.adm-link:hover { background: var(--surface-sunk); color: var(--ink); }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.adm-table th { position: sticky; top: 0; padding: 8px 16px; background: var(--paper); border-bottom: 1px solid var(--line); text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.adm-table td { padding: 8px 16px; border-bottom: 1px solid var(--line); }
+.adm-table tr:last-child td { border-bottom: none; }
+.adm-table th:not(:first-child), .adm-table td:not(:first-child) { text-align: right; }
+
+/* ---------- charts ---------- */
+.viz-spark { position: relative; flex: 1 1 0; min-width: 0; max-width: 96px; height: 28px; }
+.viz-spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.viz-spark i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 2px solid var(--surface); border-radius: 50%; background: var(--viz); }
+.viz-plot { position: relative; flex: 1; min-height: 180px; margin: 12px 16px 10px; }
+.viz-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.viz-plot:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 6px; }
+.viz-tick { fill: var(--ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-end { fill: var(--ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.viz-tip { position: absolute; z-index: 4; pointer-events: none; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); box-shadow: var(--overlay); white-space: nowrap; line-height: 1.35; transform: translate(-50%, -100%); }
+.viz-tip b { display: block; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.viz-tip span { font-size: 12px; color: var(--ink-3); }
+/* One grid for all rows, so every bar starts and ends on the same line. The rows share the panel's height, up to 48px apart. */
+.viz-rows { flex: 1 1 auto; min-height: calc(var(--n, 1) * 32px + 20px); display: grid; grid-template-columns: minmax(48px, max-content) minmax(0, 1fr) auto; grid-auto-rows: minmax(20px, 36px); gap: 12px; align-content: start; padding: 16px; }
+.viz-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; font-size: 13px; }
+.viz-row > :first-child { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viz-row > :last-child { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.viz-bar { height: 10px; border-radius: 0 4px 4px 0; background: var(--viz); min-width: 2px; }
+.viz-track { height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--fill) 18%, var(--surface)); overflow: hidden; }
+.viz-track > span { display: block; height: 100%; border-radius: 5px; background: var(--fill); }
+.viz-share { display: flex; gap: 2px; height: 20px; margin: 20px 16px 16px; }
+.viz-share > span { min-width: 4px; }
+.viz-share > span:first-child { border-radius: 4px 0 0 4px; }
+.viz-share > span:last-child { border-radius: 0 4px 4px 0; }
+.viz-share > span:hover, .viz-share > span:focus-visible { filter: brightness(1.12); outline: none; }
+.viz-legend { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; }
+.viz-legend-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.viz-legend-row i { width: 12px; height: 12px; border-radius: 3px; }
+.viz-legend-row b { font-weight: 600; }
+.viz-legend-row small { margin-left: 8px; font-size: 12px; color: var(--ink-3); }
+.viz-warn { display: inline-flex; align-items: center; gap: 4px; color: var(--warn); font-weight: 600; }
+
+/* ---------- settings: section menu, cards in columns, save bar ---------- */
+.adm-settings { flex: 1; min-width: 0; display: flex; flex-direction: column; container: settings / inline-size; }
+.adm-set-scroll { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; padding: 20px 24px 24px; align-items: start; scroll-behavior: smooth; }
+.adm-set-nav { position: sticky; top: 0; display: flex; flex-direction: column; gap: 2px; }
+.adm-set-nav a { min-height: 34px; display: flex; align-items: center; padding: 4px 10px; border-radius: 10px; color: var(--ink-2); font-size: 13px; text-decoration: none; }
+.adm-set-nav a:hover { background: var(--surface-sunk); color: var(--ink); text-decoration: none; }
+/* one, two or four columns, so a row is always full; cards in a row share its height */
+.adm-set-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container settings (min-width: 1000px) { .adm-set-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container settings (min-width: 1640px) { .adm-set-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.adm-card[data-wide="true"] { grid-column: 1 / -1; }
+.adm-card { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); scroll-margin-top: 12px; }
+.adm-card h2 { font-size: 14px; font-weight: 600; }
+.adm-savebar { flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 24px; border-top: 1px solid var(--line); background: var(--surface); }
+
+/* ---------- roles: every role against every area ---------- */
+.adm-matrix { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
+.adm-matrix-scroll { flex: 1; min-height: 0; overflow: auto; }
+.adm-matrix table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.adm-matrix th, .adm-matrix td { padding: 9px 16px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.adm-matrix thead th { position: sticky; top: 0; z-index: 2; padding: 0; background: var(--paper); font-weight: 400; vertical-align: bottom; }
+.adm-matrix thead th:first-child { padding: 9px 16px; font-size: 12px; color: var(--ink-3); }
+.adm-matrix tbody th { position: sticky; left: 0; background: var(--surface); font-weight: 500; color: var(--ink); }
+.adm-matrix-col { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 9px 16px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--ink); text-align: left; line-height: 1.35; }
+.adm-matrix-col:hover { background: var(--surface-sunk); }
+.adm-matrix-col[aria-pressed="true"] { background: var(--brand-soft); border-bottom-color: var(--brand); }
+.adm-matrix tbody tr:hover td, .adm-matrix tbody tr:hover th { background: var(--paper); }
+
+/* ---------- queues: Payments and Content review ---------- */
+div.adm-row { cursor: pointer; }
+.adm-cell-row { flex-direction: row; align-items: center; gap: 4px; }
+.adm-check { width: 28px; height: 28px; margin-left: -6px; padding: 0; flex-shrink: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }
+.adm-check > span { width: 16px; height: 16px; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--surface); color: var(--on-brand); font-size: 10px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.adm-check[aria-checked="true"] > span { border-color: var(--brand); background: var(--brand); }
+.adm-row-name { max-width: 100%; padding: 0; border: none; background: none; font-size: 13px; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+.adm-flag { color: var(--margin); font-weight: 600; }
+.adm-keys { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.adm-narrow-only, .adm-phone-only { display: none; }
+.adm-blank { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center; }
+
+/* Content review: the queue, the submission as students will see it, and a rail with the checks and the decision. */
+.adm-qlist { flex: 0 0 clamp(320px, 26vw, 440px); border-right: 1px solid var(--line); }
+.adm-qitem { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 12px 20px 12px 18px; border: none; border-left: 2px solid transparent; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; white-space: normal; }
+.adm-qitem:hover { background: var(--paper); }
+.adm-qitem[aria-current="true"], .adm-qitem[aria-current="true"]:hover { background: var(--brand-soft); border-left-color: var(--brand); }
+.adm-review { flex: 1; min-width: 0; display: flex; background: var(--paper); container-type: inline-size; }
+.adm-review-in { flex: 1; min-width: 0; min-height: 0; display: flex; }
+.adm-review-doc { flex: 1; min-width: 0; overflow: auto; padding: 24px 28px 40px; }
+.adm-review-head { margin-bottom: 20px; }
+.adm-review-head h2 { margin: 2px 0 4px; font-size: 22px; line-height: 1.4; font-weight: 600; }
+/* As many reading-width columns as fit: the video and notes first, then the questions. */
+.adm-review-flow { columns: 400px; column-gap: 24px; }
+.adm-review-flow > * { break-inside: avoid; margin: 0 0 16px; }
+.adm-review-label { margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.adm-review-card { padding: 16px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.adm-review-video { height: 220px; padding: 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-sunk); }
+.adm-review-video span { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink-2); font-family: var(--font-mono); font-size: 11px; }
+.adm-review-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.adm-review-opt { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 14px; }
+.adm-review-opt[data-right="true"] { border-color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.adm-review-rail { flex-shrink: 0; width: 320px; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--surface); overflow: auto; }
+.adm-review-info { flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; }
+.adm-review-act { flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 20px 20px; }
+.adm-review-act:empty { display: none; }
+.adm-checks { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.adm-checks > span { display: flex; gap: 8px; }
+/* In a narrow preview the facts go on top, the submission follows, and the decision stays in reach at the bottom. */
+@container (max-width: 819px) {
+  .adm-review-in { flex-direction: column; overflow: auto; }
+  .adm-review-doc { flex: none; overflow: visible; padding: 20px 16px 28px; }
+  .adm-review-rail { display: contents; }
+  .adm-review-info { order: -1; padding: 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .adm-review-act { order: 1; position: sticky; bottom: 0; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--surface); }
+}
+
+/* ---------- overlays ---------- */
+.adm-ov { position: fixed; top: var(--devbar-h, 0px); left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; }
+.adm-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; max-width: min(520px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 10px; background: var(--ink); color: var(--paper); font-size: 14px; box-shadow: var(--overlay); }
+
+/* ---------- narrower screens ---------- */
+@container top (max-width: 1139px) {
+  .adm-search { width: 36px; padding: 0; justify-content: center; }
+  .adm-search > span { display: none; }
+}
+@container top (max-width: 939px) {
+  .adm-me-text, .adm-top-sub { display: none; }
+}
+@container top (max-width: 739px) {
+  /* the period switch takes its own line under the title */
+  .adm-top-in { flex-wrap: wrap; }
+  .adm-seg { order: 10; flex: 1 0 100%; }
+  .adm-seg button { flex: 1; padding: 0 6px; }
+}
+@container dash (max-width: 999px) {
+  .adm-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .adm-panel { grid-column: span 6; }
+  .adm-panel[data-span="8"], .adm-panel[data-span="12"] { grid-column: span 12; }
+  .adm-grid { --rows: var(--rows-md, 3); }
+}
+@container dash (max-width: 699px) {
+  .adm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-panel, .adm-panel[data-span] { grid-column: span 12; }
+  /* one panel per row, each as tall as its content */
+  .adm-grid { flex: none; min-height: 0; grid-template-rows: none; grid-auto-rows: auto; }
+  .viz-rows { min-height: 0; grid-auto-rows: auto; }
+}
+@media (max-width: 1099px) {
+  /* the detail pane slides over the list; the section summary is dropped */
+  .adm-pane { position: fixed; top: var(--devbar-h, 0px); right: 0; bottom: 0; z-index: 30; width: min(480px, 100vw); box-shadow: var(--overlay); }
+  .adm-pane[data-summary="true"], .adm-pane[data-closed="true"], .adm-split { display: none; }
+  .adm-narrow-only { display: flex; }
+}
+@media (max-width: 899px) {
+  .adm-set-scroll { grid-template-columns: minmax(0, 1fr); }
+  .adm-set-nav { display: none; }
+  .adm-dash { padding: 16px; }
+  .adm-keys { display: none; }
+}
+@media (max-width: 767px) {
+  .adm-side { position: fixed; top: var(--devbar-h, 0px); bottom: 0; left: 0; z-index: 40; height: auto; width: 248px; transform: translateX(-100%); transition: transform .18s ease; }
+  .adm-side[data-open="true"] { transform: none; box-shadow: var(--overlay); }
+  .adm-icon-btn.adm-menu { display: flex; }
+  .adm-collapse, .adm-top-ico { display: none; }
+  .adm-top-in { padding: 8px 12px; gap: 8px; }
+  .adm-toolbar { flex-wrap: wrap; padding: 6px 12px; gap: 8px; }
+  .adm-toolbar > .adm-input { width: 100%; margin-top: 0; }
+  .adm-toolbar > .adm-btn { margin-top: 0; }
+  /* a table row becomes a stacked card: the first cell leads, the rest follow in two columns */
+  .adm-thead { display: none; }
+  .adm-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 10px 12px; }
+  .adm-row > :first-child { grid-column: 1 / -1; }
+  .adm-cell-l { display: block; }
+  .adm-foot { padding: 0 12px; }
+  /* Content review: the queue fills the screen and an opened item covers it */
+  .adm-qlist { flex: 1 1 auto; border-right: none; }
+  .adm-review { position: fixed; top: var(--devbar-h, 0px); right: 0; bottom: 0; left: 0; z-index: 30; }
+  .adm-review[data-closed="true"], .adm-blank { display: none; }
+  .adm-phone-only { display: flex; }
+}

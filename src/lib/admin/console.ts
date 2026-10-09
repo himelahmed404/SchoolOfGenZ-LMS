@@ -7,7 +7,7 @@
 import { ago, dateEn } from '../format';
 import { AREAS } from './seed';
 import type {
-  Action, AdminData, Area, Block, Cell, ConfirmSpec, Detail, Field, Item, KV, ListView, Perm, Role, Section, SectionView, Staff,
+  Action, AdminData, Area, Bar, Block, Cell, ConfirmSpec, Detail, Field, Item, Kpi, KV, ListView, Meter, Perm, Role, Section, SectionView, Staff, Tab,
   AdminCourse, AdminTeacher, Coupon, Refund,
 } from './types';
 
@@ -20,14 +20,19 @@ export interface ConsoleUi {
   confirm: ConfirmSpec | null; cReason: string | null; cNote: string; toast: string | null;
   viewOpen: boolean; period: 'week' | 'month' | 'quarter'; rtab: 'roles' | 'staff';
   srOpen: boolean; srQ: string; srIdx: number;
+  /** Page of the current list, zero-based. */
+  page: number;
 }
 export type ConsoleState = AdminData & ConsoleUi;
 export type SetState = (p: Partial<ConsoleState> | ((s: ConsoleState) => Partial<ConsoleState>)) => void;
 
 export const initialUi: ConsoleUi = {
   sel: null, filter: 'all', q: '', form: null, draft: null, confirm: null, cReason: null, cNote: '', toast: null,
-  viewOpen: false, period: 'month', rtab: 'roles', srOpen: false, srQ: '', srIdx: 0,
+  viewOpen: false, period: 'month', rtab: 'roles', srOpen: false, srQ: '', srIdx: 0, page: 0,
 };
+
+/** Rows per list page. */
+const PAGE = 25;
 
 export interface ConsoleEnv {
   /** Current section, from the route. */
@@ -36,6 +41,8 @@ export interface ConsoleEnv {
   /** Live counts from the payment and content queues. */
   payCount: number;
   contentCount: number;
+  /** The payments that have waited longest, oldest first (Overview). */
+  pending: { id: string; name: string; sub: string; amount: string }[];
   navigate: (sec: Section) => void;
   toggleTheme: () => void;
   today: Date;
@@ -51,7 +58,8 @@ export const ICON: Record<string, string> = {
   collapse: 'M3 3h18v18H3zM9 3v18M16 9l-3 3 3 3', expand: 'M3 3h18v18H3zM9 3v18M13 9l3 3-3 3',
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3', plus: 'M12 5v14M5 12h14',
   sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
-  moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', cap: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6',
+  moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', menu: 'M3 6h18M3 12h18M3 18h18',
+  up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M19 12l-7 7-7-7', flat: 'M5 12h14', table: 'M3 5h18v14H3zM3 10h18M3 15h18M9 5v14', chart: 'M3 3v18h18M7 15l4-5 4 3 5-7', cap: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6',
 };
 
 const NAV: [string | null, Section[]][] = [
@@ -121,7 +129,7 @@ export class AdminConsole {
   setF(k: string, v: unknown) { this.setState((s) => ({ form: { ...(s.form || {}), [k]: v } })); }
   tog<T>(arr: T[], x: T) { return arr.includes(x) ? arr.filter((y) => y !== x) : arr.concat([x]); }
   go(sec: Section, sel?: string | null, filter?: string) {
-    this.setState({ sel: sel || null, filter: filter || (sec === 'refunds' ? 'open' : 'all'), q: '', form: null, draft: null, viewOpen: false, rtab: 'roles' });
+    this.setState({ sel: sel || null, filter: filter || (sec === 'refunds' ? 'open' : 'all'), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles' });
     this.env.navigate(sec);
   }
   nav(sec: Section, sel?: string | null, filter?: string) {
@@ -164,13 +172,18 @@ export class AdminConsole {
       }) });
   }
   onoff(): ['on' | 'off', string][] { return [['on', 'On'], ['off', 'Off']]; }
-  blk(b: { title?: string; note?: string; tone?: Tone; kv?: KV[]; fields?: Field[]; items?: Item[] }): Block {
+  blk(b: { title?: string; note?: string; tone?: Tone; kv?: KV[]; fields?: Field[]; items?: Item[]; wide?: boolean }): Block {
     const it = b.items || [], kv = b.kv || [], fl = b.fields || [];
-    return { title: b.title || '', hasTitle: !!b.title, note: b.note || '', hasNote: !!b.note, noteBg: SOFT[b.tone || 'muted'], kv, hasKv: kv.length > 0, fields: fl, hasFields: fl.length > 0, items: it, hasItems: it.length > 0 };
+    return { title: b.title || '', hasTitle: !!b.title, note: b.note || '', hasNote: !!b.note, noteBg: SOFT[b.tone || 'muted'], kv, hasKv: kv.length > 0, fields: fl, hasFields: fl.length > 0, items: it, hasItems: it.length > 0, wide: b.wide };
   }
-  kv(k: string, v: string | number, o: { mono?: boolean; fg?: string; bold?: boolean } = {}): KV { return { k, v: String(v), font: o.mono ? MONO : 'inherit', fg: o.fg || 'var(--ink)', weight: o.bold ? 600 : 400 }; }
+  /** A label and its value. `o.go` makes the row a shortcut, and `o.on` marks the one in use. */
+  kv(k: string, v: string | number, o: { mono?: boolean; fg?: string; bold?: boolean; go?: () => void; on?: boolean } = {}): KV {
+    return { k, v: String(v), font: o.mono ? MONO : 'inherit', fg: o.fg || 'var(--ink)', weight: o.bold ? 600 : 400, go: o.go, on: o.on };
+  }
   it(t: string, sub?: string, right?: string, act?: string, actGo?: () => void): Item {
-    return { t, sub: sub || '', hasSub: !!sub, right: right || '', hasRight: !!right, hasAct: !!act, actLabel: act || '', actGo: actGo || (() => {}) };
+    // A middle dot stays with the words before it, so a wrapped line never starts with one.
+    const tie = (x: string) => x.replace(/ · /g, '\u00a0· ');
+    return { t: tie(t), sub: tie(sub || ''), hasSub: !!sub, right: right || '', hasRight: !!right, hasAct: !!act, actLabel: act || '', actGo: actGo || (() => {}) };
   }
   /** Action button; `free` = allowed even in read-only sections (navigation, copying…). */
   A(label: string, go: () => void, kind: 'primary' | 'danger' | 'ghost' = 'ghost', dis?: boolean, free?: boolean): Action {
@@ -185,22 +198,48 @@ export class AdminConsole {
     const t = TONE[ST[key] || 'muted'];
     return { isText: false, isBadge: true, t: label || SL[key] || key, bg: t[0], fg: t[1], sub: '', hasSub: false, font: 'inherit', subFont: 'inherit', weight: 600, subFg: '' };
   }
-  K(label: string, value: string | number, sub: string, sec: Section, tone: Tone, sel?: string | null, filter?: string) {
-    const stripe = { brand: 'var(--brand)', warn: 'var(--warn)', blue: 'var(--accent-2)', danger: 'var(--margin)', muted: 'var(--line-strong)' }[tone];
+  /** Stat tile that opens its section. `o.delta` and `o.spark` add the change and the trend. */
+  K(label: string, value: string | number, sub: string, sec: Section, tone: Tone, o: { sel?: string | null; filter?: string; delta?: Kpi['delta']; spark?: number[] } = {}): Kpi {
     const fg = { brand: 'var(--brand)', warn: 'var(--warn)', blue: 'var(--accent-2)', danger: 'var(--margin)', muted: 'var(--ink-2)' }[tone];
-    return { label, value: String(value), sub, go: () => this.nav(sec, sel, filter), stripe, icon: ICON[sec] || ICON.overview, iconBg: SOFT[tone], iconFg: fg };
+    return { label, value: String(value), sub, go: () => this.nav(sec, o.sel, o.filter), icon: ICON[sec] || ICON.overview, iconBg: SOFT[tone], iconFg: fg, delta: o.delta, spark: o.spark };
   }
-  bar(label: string, value: string, pct: number, color?: string) { return { label, value, pct: Math.max(2, Math.min(100, Math.round(pct))), color: color || 'var(--brand)' }; }
-  mkList(filters: [string, string, number | null, (() => void)?][], ph: string, cols: string[], grid: string, rows: { id: string; cells: Cell[] }[], empty: string): ListView {
+  /**
+   * Change from `before` to `now`, as a signed figure against a named period ("vs last month"). `upGood` says which direction is good news.
+   * `fmt` shapes the figure: true for a percentage of `before`, or a function for a unit ("৳9", "2 h").
+   */
+  delta(now: number, before: number, vs: string, upGood: boolean, fmt: boolean | ((n: number) => string) = false): Kpi['delta'] {
+    const diff = now - before;
+    if (!diff) return { text: 'Same as ' + vs.replace(/^vs /, ''), dir: 'flat', good: true };
+    const amount = typeof fmt === 'function' ? fmt(Math.abs(diff)) : fmt && before ? Math.round((Math.abs(diff) / before) * 100) + '%' : this.nf(Math.abs(diff));
+    return { text: (diff > 0 ? '+' : '−') + amount + ' ' + vs, dir: diff > 0 ? 'up' : 'down', good: diff > 0 === upGood };
+  }
+  bar(label: string, value: string, pct: number): Bar { return { label, value, pct: Math.max(0, Math.min(100, Math.round(pct))) }; }
+  /** A ratio against a limit; from 90% it turns to the warning tone and says `note`. */
+  meter(label: string, value: string, pct: number, note = 'nearly full'): Meter { const p = Math.max(0, Math.min(100, Math.round(pct))); return { label, value, pct: p, warn: p >= 90, note }; }
+  /** Filter tabs. A tab with its own `go` switches the view (Roles / Staff) instead of filtering. */
+  tabs(filters: [string, string, number | null, (() => void)?][]): Tab[] {
     const S = this.S;
+    return filters.map(([k, l, n, go]) => ({
+      label: l, count: n == null ? '' : this.nf(n), on: (go ? S.rtab : S.filter) === k, view: !!go,
+      go: go || (() => this.setState({ filter: k, page: 0, sel: S.sel === 'new' ? 'new' : null })),
+    }));
+  }
+  /**
+   * A list section, paged. `wide` appends columns that show only when the list has room:
+   * its `cols` are the extra headers, `grid` the template with them, and each row's cells end with the extra cells.
+   */
+  mkList(filters: [string, string, number | null, (() => void)?][], ph: string, cols: string[], grid: string, rows: { id: string; cells: Cell[] }[], empty: string, wide?: { cols: string[]; grid: string }): ListView {
+    const S = this.S, total = rows.length, pages = Math.max(1, Math.ceil(total / PAGE));
+    const pg = Math.min(S.page || 0, pages - 1), from = pg * PAGE, shown = rows.slice(from, from + PAGE);
     return {
-      filters: filters.map(([k, l, n, go]) => {
-        const on = (go ? S.rtab : S.filter) === k;
-        return { label: l, count: n == null ? '' : this.nf(n), go: go || (() => this.setState({ filter: k, sel: S.sel === 'new' ? 'new' : null })), weight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', rule: on ? 'var(--brand)' : 'transparent' };
-      }),
-      hasSearch: !!ph, ph: ph || '', cols, grid,
-      rows: rows.map((r) => { const on = S.sel === r.id; return { key: r.id, cells: r.cells, go: () => this.setState({ sel: r.id, form: null, draft: null }), bg: on ? 'var(--brand-soft)' : 'var(--surface)', rule: on ? 'var(--brand)' : 'transparent' }; }),
-      isEmpty: rows.length === 0, empty,
+      filters: this.tabs(filters), hasSearch: !!ph, ph: ph || '',
+      cols: cols.concat(wide ? wide.cols : []), extra: wide ? wide.cols.length : 0, grid, gridWide: wide ? wide.grid : grid,
+      rows: shown.map((r) => ({ key: r.id, cells: r.cells, on: S.sel === r.id, go: () => this.setState({ sel: r.id, form: null, draft: null }) })),
+      isEmpty: total === 0, empty,
+      page: {
+        from: total ? from + 1 : 0, to: from + shown.length, total,
+        prev: pg > 0 ? () => this.setState({ page: pg - 1 }) : null, next: pg < pages - 1 ? () => this.setState({ page: pg + 1 }) : null,
+      },
     };
   }
   match(s: string) { const q = this.S.q.trim().toLowerCase(); return !q || s.toLowerCase().includes(q); }
@@ -279,24 +318,40 @@ export class AdminConsole {
     };
     const mini = !!S.navMini;
     const navGroups = NAV.map(([g, keys]) => ({
-      label: g || '', showLabel: !!g && !mini,
-      items: keys.filter((k) => this.perm(k) !== 'none').map((k) => {
-        const on = sec === k, c = counts[k] || 0;
-        const ro = this.perm(k) === 'view' && !['overview', 'reports', 'activity'].includes(k);
-        return { key: k, label: k === 'overview' ? 'Overview' : this.areaLabel(k), go: () => this.go(k), icon: ICON[k], on, count: this.nf(c), showCount: c > 0 && !mini, dot: c > 0 && mini, ro: ro && !mini };
-      }),
-    })).filter((g) => g.items.length).map((g, i) => ({ ...g, showRule: mini && i > 0 }));
+      label: g || '',
+      items: keys.filter((k) => this.perm(k) !== 'none').map((k) => ({
+        key: k, label: k === 'overview' ? 'Overview' : this.areaLabel(k), go: () => this.go(k), icon: ICON[k], on: sec === k,
+        /** Things waiting in this section. */
+        count: counts[k] || 0,
+        /** The role can look here but not change anything. */
+        ro: this.perm(k) === 'view' && !['overview', 'reports', 'activity'].includes(k),
+      })),
+    })).filter((g) => g.items.length);
 
     const me = this.me(), role = this.roleOf(me);
     const build = BUILDERS[sec];
     const v: SectionView = !isQueue && build ? build(this)
-      : isQueue ? { title: '', sub: '', head: [] }
+      : isQueue ? { title: this.areaLabel(sec), sub: sec === 'payments' ? this.pl(E.payCount, 'payment') + ' waiting for approval' : this.pl(E.contentCount, 'item') + ' waiting for review', head: [] }
       : { title: this.areaLabel(sec), sub: 'This section is not built yet.', head: [], detail: { title: this.areaLabel(sec), sub: 'Coming in a later milestone', closable: false, wide: true, blocks: [this.blk({ note: 'No builder is registered for this section.' })] } };
-    const d: Detail | undefined = v.detail;
+    // Beside a list with no row selected, the pane shows the whole section instead of blank space:
+    // the filters as shortcuts with their counts, the totals, what changed here lately, and the section's own actions.
+    const counted = v.list ? v.list.filters.filter((t) => !t.view && t.count !== '') : [];
+    const recent = sec === 'activity' ? [] : S.activity.filter((a) => a.area === sec).slice(0, 4);
+    const summary: Detail | undefined = !v.detail && v.list ? {
+      title: v.title, sub: 'Summary · select a row for its details', blocks: [
+        counted.length ? this.blk({ title: v.tabsLabel || 'By status', kv: counted.map((t) => this.kv(t.label, t.count, { go: t.go, on: t.on })) }) : null,
+        v.summary && v.summary.length ? this.blk({ title: 'Totals', kv: v.summary }) : null,
+        recent.length ? this.blk({ title: 'Recent changes', items: recent.map((a) => this.it(a.action + ' — ' + a.target, a.actor + ' · ' + this.when(a.at), '', 'View', () => this.nav('activity', a.id))) }) : null,
+      ].filter((b): b is Block => !!b),
+      actions: v.head,
+    } : undefined;
+    const d: Detail | undefined = v.detail || summary;
     const dt = d ? {
       title: d.title, sub: d.sub || '', badge: d.badge || null, closable: !!d.closable, blocks: d.blocks, actions: d.actions || [],
       hasRoNote: this.ro && (d.actions || []).length > 0,
-      w: d.wide ? 'auto' : v.list ? '420px' : 'auto', flex: d.wide || !v.list ? '1 1 auto' : '0 0 auto', max: d.wide ? '680px' : 'none',
+      /** Full-width form (Settings) rather than a pane beside a list. */
+      wide: !!d.wide,
+      isSummary: !v.detail,
     } : null;
 
     const cf = S.confirm;
@@ -328,6 +383,8 @@ export class AdminConsole {
       staffOpts: S.staff.map((s) => ({ id: s.id, name: s.name, role: this.roleOf(s).name, on: s.id === me.id, go: () => this.viewAs(s.id) })),
       meName: me.name, meRole: role.name + (me.id !== S.staff[0]?.id ? ' · view as' : ''),
       v, dt, confirm,
+      /** Width the admin dragged the detail pane to; 0 = the default, which follows the screen width. */
+      paneW: S.paneW || 0,
     };
   }
 }

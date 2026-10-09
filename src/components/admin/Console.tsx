@@ -1,15 +1,22 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AREAS, AdminConsole, adminSeed, ICON, initialUi, type AdminData, type Cell, type ConsoleState, type ConsoleVals, type Field, type Item, type Section, type SetState } from '@/lib/admin';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  AREAS, AdminConsole, adminSeed, ICON, initialUi,
+  type Action, type AdminData, type Block, type Cell, type ConsoleState, type ConsoleVals, type Field, type Item, type Kpi, type Panel, type Section, type SetState, type Tab,
+} from '@/lib/admin';
+import { ago, taka } from '@/lib/format';
 import { allQueue, item, itemKeys } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
+import { figure } from '@/lib/admin/chart-math';
+import { BarList, Meters, ShareBar, Sparkline, TrendChart } from './charts';
 
 const SECTIONS = new Set<string>(AREAS.map((a) => a[0]));
 export const isSection = (s: string): s is Section => s === 'overview' || SECTIONS.has(s);
 const sectionOf = (path: string): Section => { const seg = path.split('/')[2] || 'overview'; return isSection(seg) ? seg : 'overview'; };
-const DATA_KEYS: (keyof AdminData)[] = ['roles', 'staff', 'courses', 'batches', 'teachers', 'students', 'coupons', 'refunds', 'certs', 'ann', 'activity', 'settings', 'viewAs', 'navMini'];
+const DATA_KEYS: (keyof AdminData)[] = ['roles', 'staff', 'courses', 'batches', 'teachers', 'students', 'coupons', 'refunds', 'certs', 'ann', 'activity', 'settings', 'viewAs', 'navMini', 'paneW'];
+const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
 
 const Ctx = createContext<{ vals: ConsoleVals; logic: AdminConsole; setState: SetState; st: ConsoleState } | null>(null);
 /** Console state and logic for anything rendered inside AdminShell (sections, queues). */
@@ -20,9 +27,16 @@ export function Svg({ d, size = 16, w = 1.9 }: { d: string; size?: number; w?: n
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>;
 }
 
-const defaultFilter = (k: Section) => (k === 'refunds' ? 'open' : 'all');
+/** Whether a media query matches; false on the server and for the first client render. */
+function useMedia(query: string) {
+  return useSyncExternalStore(
+    (cb) => { const mq = window.matchMedia(query); mq.addEventListener('change', cb); return () => mq.removeEventListener('change', cb); },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
 
-/** Console frame for every /admin route: sidebar, overlays and the console state. Desktop only. */
+/** Console frame for every /admin route: sidebar, top bar, overlays and the console state. */
 export function AdminShell({ children }: { children: ReactNode }) {
   const { ready } = useStore();
   // Console state starts from the saved admin data, so the frame waits for the store.
@@ -37,6 +51,9 @@ function AdminFrame({ children }: { children: ReactNode }) {
   const sec = sectionOf(path);
   // Console data lives in the store (persisted); view state stays here.
   const [st, setSt] = useState<ConsoleState>(() => ({ ...(s.admin || adminSeed()), ...initialUi, filter: defaultFilter(sec) }));
+  // Below 1280px the sidebar is always icons only; below 768px it is a drawer opened from the top bar.
+  const narrow = useMedia('(max-width: 1279px)'), phone = useMedia('(max-width: 767px)');
+  const [navOpen, setNavOpen] = useState(false);
 
   // Section changes from outside the console (URL, dev bar, back button) start with fresh view state;
   // console navigation (go) has already set its own selection/filter.
@@ -44,7 +61,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
   const lastSec = useRef<Section | null>(null);
   useEffect(() => {
     if (lastSec.current && lastSec.current !== sec && !consoleNav.current)
-      setSt((c) => ({ ...c, sel: null, filter: defaultFilter(sec), q: '', form: null, draft: null, viewOpen: false, rtab: 'roles' }));
+      setSt((c) => ({ ...c, sel: null, filter: defaultFilter(sec), q: '', page: 0, form: null, draft: null, viewOpen: false, rtab: 'roles' }));
     consoleNav.current = false;
     lastSec.current = sec;
   }, [sec]);
@@ -84,10 +101,13 @@ function AdminFrame({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [st.srOpen]);
 
+  const queue = allQueue(s).filter((r) => r.status === 'pending');
   const env = {
     sec, theme, today: new Date(),
-    payCount: allQueue(s).filter((r) => r.status === 'pending').length,
+    payCount: queue.length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
+    pending: queue.slice().sort((a, b) => b.agoMin - a.agoMin).slice(0, 5)
+      .map((r) => ({ id: r.id, name: r.name, sub: r.batch + ' · ' + r.method + ' · ' + ago(r.agoMin), amount: taka(r.amount) })),
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
     toggleTheme,
   };
@@ -96,85 +116,99 @@ function AdminFrame({ children }: { children: ReactNode }) {
   const logic = new AdminConsole(st, setState, env);
   useEffect(() => { logicRef.current = logic; });
   const vals = logic.renderVals();
-  const mini = vals.mini;
+  const { v } = vals;
+  const mini = !phone && (vals.mini || narrow);
+  const openSearch = () => setState({ srOpen: true, srQ: '', srIdx: 0 });
 
   return (
     <Ctx.Provider value={{ vals, logic, setState, st }}>
-      <div className="adm-root" lang="en">
-        <aside className="adm-side" style={{ width: mini ? 72 : 232 }}>
-          <div style={{ flexShrink: 0, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 14px', borderBottom: '1px solid var(--line)' }}>
+      <div className="adm-root" lang="en" style={vals.paneW ? { ['--pane-w' as string]: vals.paneW + 'px' } : undefined}>
+        {phone && navOpen ? <div className="adm-scrim" onClick={() => setNavOpen(false)} /> : null}
+
+        <aside className="adm-side" data-mini={mini} data-open={navOpen}>
+          <div className="adm-brand">
+            <div className="tile adm-logo"><Svg d={ICON.cap} size={17} w={2} /></div>
             {!mini ? (
-              <>
-                <div className="tile" style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)' }}><Svg d={ICON.cap} size={17} w={2} /></div>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>School of GenZ</span>
-                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>admin console</span>
-                </div>
-              </>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>School of GenZ</span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>admin console</span>
+              </div>
             ) : null}
-            <button className="adm-icon-btn" onClick={() => setState({ navMini: !mini, viewOpen: false })} title={mini ? 'Expand menu' : 'Collapse menu'} aria-label={mini ? 'Expand menu' : 'Collapse menu'}>
-              <Svg d={mini ? ICON.expand : ICON.collapse} w={1.8} />
-            </button>
+            {!narrow && !mini ? (
+              <button className="adm-icon-btn adm-collapse" onClick={() => setState({ navMini: true, viewOpen: false })} title="Collapse menu" aria-label="Collapse menu"><Svg d={ICON.collapse} w={1.8} /></button>
+            ) : null}
           </div>
-          <div style={{ flexShrink: 0, padding: '12px 10px 0' }}>
-            <button className="adm-search" onClick={() => setState({ srOpen: true, srQ: '', srIdx: 0 })} title="Search (Ctrl K)"
-              style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 12px' }}>
-              <Svg d={ICON.search} />
-              {!mini ? <><span style={{ flex: 1, textAlign: 'left' }}>Search…</span><span className="adm-kbd">Ctrl K</span></> : null}
-            </button>
-          </div>
-          <nav style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 14 }} aria-label="Admin">
-            {vals.navGroups.map((g) => (
-              <div key={g.label || 'top'} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {g.showLabel ? <div className="adm-group">{g.label}</div> : null}
-                {g.showRule ? <div style={{ height: 1, margin: '0 8px 6px', background: 'var(--line)' }} /> : null}
+          <nav className="adm-navs" aria-label="Admin">
+            {!narrow && mini ? (
+              <button className="adm-nav" onClick={() => setState({ navMini: false })} title="Expand menu" aria-label="Expand menu"><span className="adm-nav-ico"><Svg d={ICON.expand} w={1.8} /></span></button>
+            ) : null}
+            {vals.navGroups.map((g, gi) => (
+              <div key={g.label || 'top'} className="adm-navgroup">
+                {g.label && !mini ? <div className="adm-group">{g.label}</div> : null}
+                {mini && gi > 0 ? <div className="adm-rule" /> : null}
                 {g.items.map((it) => (
-                  <button key={it.key} className={'adm-nav' + (it.on ? ' on' : '')} onClick={it.go} title={it.label} aria-current={it.on ? 'page' : undefined}
-                    style={{ justifyContent: mini ? 'center' : 'flex-start', padding: mini ? 0 : '0 6px' }}>
-                    <span className="adm-nav-ico"><Svg d={it.icon} />{it.dot ? <span className="adm-dot" /> : null}</span>
-                    {!mini ? <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span> : null}
-                    {it.ro ? <span className="mono" style={{ fontSize: 10, color: 'var(--ink-3)' }}>view</span> : null}
-                    {it.showCount ? <span className="adm-count">{it.count}</span> : null}
+                  <button key={it.key} className="adm-nav" onClick={() => { it.go(); setNavOpen(false); }} title={it.label} aria-current={it.on ? 'page' : undefined}>
+                    <span className="adm-nav-ico"><Svg d={it.icon} />{mini && it.count ? <span className="adm-dot" /> : null}</span>
+                    {!mini ? <span className="adm-nav-label">{it.label}</span> : null}
+                    {!mini && it.ro ? <span className="mono" style={{ fontSize: 10, color: 'var(--ink-3)' }}>view</span> : null}
+                    {!mini && it.count ? <span className="adm-count">{it.count}</span> : null}
                   </button>
                 ))}
               </div>
             ))}
           </nav>
-          <div style={{ flexShrink: 0, position: 'relative', borderTop: '1px solid var(--line)', padding: 8 }}>
-            {st.viewOpen ? (
-              <div className="adm-pop" role="menu">
-                <div style={{ padding: '4px 8px', fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'normal' }}>View as — check what each role sees</div>
-                {vals.staffOpts.map((o) => (
-                  <button key={o.id} role="menuitem" onClick={o.go} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 8px', border: 'none', borderRadius: 10, background: o.on ? 'var(--brand-soft)' : 'transparent', color: 'var(--ink)', textAlign: 'left' }}>
-                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>{o.name}</span><span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.role}</span>
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--brand)' }}>{o.on ? '✓' : ''}</span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <div style={{ display: 'flex', flexDirection: mini ? 'column' : 'row', alignItems: 'center', gap: 4 }}>
-              <button className="adm-me" onClick={() => setState({ viewOpen: !st.viewOpen })} aria-expanded={st.viewOpen} style={{ justifyContent: mini ? 'center' : 'flex-start' }}>
-                <span className="tile" style={{ width: 30, height: 30, borderRadius: 9999, background: 'var(--surface-sunk)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{Array.from(vals.meName)[0]}</span>
-                {!mini ? (
-                  <>
-                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
-                      <span className="ellipsis" style={{ fontSize: 13, fontWeight: 600 }}>{vals.meName}</span>
-                      <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{vals.meRole}</span>
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>▾</span>
-                  </>
-                ) : null}
-              </button>
-              <button className="adm-theme" onClick={env.toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label="Dark mode" aria-pressed={theme === 'dark'}>
-                <Svg d={theme === 'dark' ? ICON.sun : ICON.moon} />
-              </button>
-            </div>
-          </div>
         </aside>
 
-        {children}
+        <div className="adm-main">
+          <header className="adm-top">
+            <div className="adm-top-in">
+              <button className="adm-icon-btn adm-menu" onClick={() => setNavOpen(true)} aria-label="Menu"><Svg d={ICON.menu} size={18} /></button>
+              <div className="tile adm-top-ico"><Svg d={vals.headIcon} size={20} /></div>
+              <div className="adm-top-title">
+                <h1>{v.title}</h1>
+                {v.sub ? <div className="adm-top-sub">{v.sub}</div> : null}
+              </div>
+              <div className="adm-grow" />
+              {/* A period switch scopes every number on the page, so it sits up here, above all of them. */}
+              {v.dash && v.dash.seg.length ? (
+                <div className="adm-seg" role="group" aria-label="Period">
+                  {v.dash.seg.map((t) => <button key={t.label} onClick={t.go} aria-pressed={t.on}>{t.label}</button>)}
+                </div>
+              ) : null}
+              <button className="adm-search" onClick={openSearch} title="Search (Ctrl K)" aria-label="Search">
+                <Svg d={ICON.search} /><span>Search…</span><span className="adm-kbd">Ctrl K</span>
+              </button>
+              {vals.readOnly ? <span className="adm-readonly">Read-only</span> : null}
+              {v.head.map((a) => <ActionButton key={a.label} a={a} />)}
+              <button className="adm-icon-btn adm-bordered" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label="Dark mode" aria-pressed={theme === 'dark'}>
+                <Svg d={theme === 'dark' ? ICON.sun : ICON.moon} />
+              </button>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button className="adm-me" onClick={() => setState({ viewOpen: !st.viewOpen })} aria-expanded={st.viewOpen} aria-haspopup="menu" title="View as another role">
+                  <span className="tile adm-avatar">{Array.from(vals.meName)[0]}</span>
+                  <span className="adm-me-text">
+                    <span className="ellipsis" style={{ fontSize: 13, fontWeight: 600 }}>{vals.meName}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{vals.meRole}</span>
+                  </span>
+                </button>
+                {st.viewOpen ? (
+                  <div className="adm-pop" role="menu">
+                    <div style={{ padding: '4px 8px', fontSize: 12, color: 'var(--ink-3)' }}>View as — check what each role sees</div>
+                    {vals.staffOpts.map((o) => (
+                      <button key={o.id} role="menuitemradio" aria-checked={o.on} onClick={o.go}>
+                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500 }}>{o.name}</span><span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.role}</span>
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--brand)' }}>{o.on ? '✓' : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </header>
+          <div className="adm-body">{children}</div>
+        </div>
 
         {vals.srOpen ? (
           <div className="adm-ov" onClick={() => setState({ srOpen: false })} style={{ zIndex: 60, alignItems: 'flex-start', padding: '10vh 16px 16px', background: 'rgba(12,16,32,0.42)' }} data-screen-label="Global search">
@@ -227,191 +261,339 @@ function AdminFrame({ children }: { children: ReactNode }) {
                   <div style={{ fontSize: 13, fontWeight: 500 }}>Reason <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>— required, kept in the activity log</span></div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {vals.confirm.reasons.map((r) => (
-                      <button key={r.label} onClick={r.go} aria-pressed={r.bg !== 'var(--surface)'}
-                        style={{ height: 30, padding: '0 10px', border: '1px solid ' + r.bd, borderRadius: 10, background: r.bg, color: r.fg, fontSize: 13, fontWeight: r.weight }}>{r.label}</button>
+                      <button key={r.label} className="adm-opt" onClick={r.go} aria-pressed={r.bg !== 'var(--surface)'}
+                        style={{ border: '1px solid ' + r.bd, background: r.bg, color: r.fg, fontWeight: r.weight }}>{r.label}</button>
                     ))}
                   </div>
-                  <textarea value={st.cNote} onChange={(e) => setState({ cNote: e.target.value })} placeholder={vals.confirm.notePh} rows={2}
-                    style={{ width: '100%', minHeight: 60, padding: '8px 10px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
+                  <textarea className="adm-field-in" value={st.cNote} onChange={(e) => setState({ cNote: e.target.value })} placeholder={vals.confirm.notePh} rows={2} style={{ minHeight: 60 }} />
                 </div>
               ) : null}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button onClick={() => setState({ confirm: null })} style={{ height: 38, padding: '0 14px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--surface)', color: 'var(--ink)', fontSize: 14, fontWeight: 500 }}>Cancel</button>
-                <button onClick={vals.confirm.okGo} style={{ height: 38, padding: '0 16px', border: 'none', borderRadius: 10, background: vals.confirm.okBg, color: 'var(--on-brand)', opacity: vals.confirm.okOp, fontSize: 14, fontWeight: 500 }}>{vals.confirm.okLabel}</button>
+                <button className="adm-btn adm-btn-lg" onClick={() => setState({ confirm: null })}>Cancel</button>
+                <button className="adm-btn adm-btn-lg" onClick={vals.confirm.okGo} style={{ border: 'none', background: vals.confirm.okBg, color: 'var(--on-brand)', opacity: vals.confirm.okOp }}>{vals.confirm.okLabel}</button>
               </div>
             </div>
           </div>
         ) : null}
 
-        {st.toast ? (
-          <div role="status" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 60, maxWidth: 520, padding: '10px 16px', borderRadius: 10, background: 'var(--ink)', color: 'var(--paper)', fontSize: 14, boxShadow: 'var(--overlay)' }}>{st.toast}</div>
-        ) : null}
+        {st.toast ? <div className="adm-toast" role="status">{st.toast}</div> : null}
       </div>
     </Ctx.Provider>
   );
 }
 
-/** Section page: header, then list + detail pane, dashboard, or a wide detail (Settings). */
+/** Body of a console section: a table with a pane, a dashboard, the roles table, or a full-width form. */
 export function ConsoleMain() {
-  const { vals, setState, st } = useConsole();
+  const { vals } = useConsole();
   const { v, dt } = vals;
-  const panelIcon = (title: string) => {
-    const k = /attention/i.test(title) ? 'alert' : /revenue/i.test(title) ? 'reports' : /activity/i.test(title) ? 'activity' : /course/i.test(title) ? 'courses'
-      : /batch/i.test(title) ? 'batches' : /teacher/i.test(title) ? 'teachers' : /student/i.test(title) ? 'students' : /payment/i.test(title) ? 'payments' : null;
-    return k ? ICON[k] : null;
-  };
-
   return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, minHeight: 56, padding: '8px 24px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }}>
-        <div className="tile" style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--brand-soft)', color: 'var(--brand)' }}><Svg d={vals.headIcon} size={20} /></div>
-        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.35, marginLeft: -4 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 600 }}>{v.title}</h1>
-          <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{v.sub}</div>
-        </div>
-        <div style={{ flex: 1 }} />
-        {vals.readOnly ? <span style={{ height: 26, padding: '0 10px', borderRadius: 10, background: 'var(--warn-soft)', color: 'var(--warn)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center' }}>Read-only</span> : null}
-        {v.head.map((a) => (
-          <button key={a.label} onClick={a.go} style={{ height: 34, padding: '0 14px', border: '1px solid ' + a.bd, borderRadius: 10, background: a.bg, color: a.fg, opacity: a.op, fontSize: 13, fontWeight: 500 }}>{a.label}</button>
-        ))}
-      </div>
+    <>
+      {v.list ? <ListView /> : null}
+      {v.matrix ? <MatrixView /> : null}
+      {v.dash ? <DashView /> : null}
+      {dt && dt.wide ? <SettingsView dt={dt} /> : dt ? <><Splitter /><DetailPane dt={dt} /></> : null}
+    </>
+  );
+}
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {v.list ? (
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, minHeight: 44, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }}>
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 18, height: 44, flexWrap: 'wrap' }} role="tablist">
-                {v.list.filters.map((t) => (
-                  <button key={t.label} role="tab" aria-selected={t.weight === 600} onClick={t.go}
-                    style={{ height: 44, border: 'none', background: 'none', padding: 0, fontSize: 13, fontWeight: t.weight, color: t.color, borderBottom: '2px solid ' + t.rule, whiteSpace: 'nowrap' }}>{t.label} {t.count}</button>
-                ))}
-              </div>
-              <div style={{ flex: 1 }} />
-              {v.list.hasSearch ? (
-                <input value={st.q} onChange={(e) => setState({ q: e.target.value })} placeholder={v.list.ph} aria-label={v.list.ph}
-                  style={{ width: 240, maxWidth: '100%', height: 32, padding: '0 12px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 13 }} />
-              ) : null}
-            </div>
-            <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: v.list.grid, gap: 12, alignItems: 'center', height: 32, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--paper)', position: 'sticky', top: 0, zIndex: 2, fontSize: 12, color: 'var(--ink-3)' }}>
-              {v.list.cols.map((c) => <span key={c}>{c}</span>)}
-            </div>
-            {v.list.rows.map((r) => (
-              <button key={r.key} onClick={r.go} aria-current={r.rule !== 'transparent' ? 'true' : undefined}
-                style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: v.list!.grid, gap: 12, alignItems: 'center', width: '100%', minHeight: 48, padding: '6px 20px 6px 18px', border: 'none', borderLeft: '2px solid ' + r.rule, borderBottom: '1px solid var(--line)', background: r.bg, color: 'var(--ink)', textAlign: 'left', whiteSpace: 'normal' }}>
-                {r.cells.map((c, i) => <CellView key={i} c={c} />)}
-              </button>
-            ))}
-            {v.list.isEmpty ? <div style={{ padding: '48px 20px', textAlign: 'center', fontSize: 14, color: 'var(--ink-3)' }}>{v.list.empty}</div> : null}
-          </div>
-        ) : null}
+type Dt = NonNullable<ConsoleVals['dt']>;
 
-        {v.dash ? (
-          <div style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: 24 }}>
-            <div style={{ maxWidth: 1120, display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {v.dash.hasSeg ? (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {v.dash.seg.map((o) => (
-                    <button key={o.label} onClick={o.go} aria-pressed={o.weight === 600} style={{ height: 32, padding: '0 12px', border: '1px solid ' + o.bd, borderRadius: 10, background: o.bg, color: o.fg, fontSize: 13, fontWeight: o.weight }}>{o.label}</button>
-                  ))}
-                </div>
-              ) : null}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))', gap: 12 }}>
-                {v.dash.kpis.map((k) => (
-                  <button key={k.label} onClick={k.go}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '14px 16px', border: '1px solid var(--line)', borderTop: '3px solid ' + k.stripe, borderRadius: 10, background: 'var(--surface)', color: 'var(--ink)', textAlign: 'left', whiteSpace: 'normal' }}>
-                    <span style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{k.label}</span>
-                      <span className="tile" style={{ width: 30, height: 30, borderRadius: 9, background: k.iconBg, color: k.iconFg }}><Svg d={k.icon} /></span>
-                    </span>
-                    <span style={{ fontSize: 26, fontWeight: 600, lineHeight: 1.3 }}>{k.value}</span>
-                    <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{k.sub}</span>
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: 16, alignItems: 'start' }}>
-                {v.dash.panels.map((p) => {
-                  const ic = panelIcon(p.title);
-                  return (
-                    <div key={p.title} style={{ border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {ic ? <span className="tile" style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--surface-sunk)', color: 'var(--ink-2)' }}><Svg d={ic} size={15} /></span> : null}
-                        <span>{p.title}</span>
-                      </div>
-                      {p.hasBars ? (
-                        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {p.bars.map((b) => (
-                            <div key={b.label} style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) auto', gap: 12, alignItems: 'center', fontSize: 13 }}>
-                              <span className="ellipsis" style={{ color: 'var(--ink-2)' }}>{b.label}</span>
-                              <div style={{ height: 8, background: 'var(--surface-sunk)', borderRadius: 5 }}><div style={{ height: 8, width: b.pct + '%', background: b.color, borderRadius: 5 }} /></div>
-                              <span className="mono" style={{ fontSize: 12 }}>{b.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                      {p.hasItems ? <div style={{ display: 'flex', flexDirection: 'column' }}>{p.items.map((it, i) => <ItemRow key={i} it={it} pad="10px 16px" />)}</div> : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        ) : null}
+function ActionButton({ a, large }: { a: Action; large?: boolean }) {
+  return (
+    <button className={'adm-btn' + (large ? ' adm-btn-lg' : '')} onClick={a.go} disabled={a.op < 1}
+      style={{ borderColor: a.bd, background: a.bg, color: a.fg, opacity: a.op }}>{a.label}</button>
+  );
+}
 
-        {dt ? (
-          <aside style={{ width: dt.w, flex: dt.flex, minWidth: 0, borderLeft: v.list || v.dash ? '1px solid var(--line)' : 'none', background: 'var(--surface)', overflow: 'auto' }}>
-            <div style={{ maxWidth: dt.max, padding: '20px 24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.4 }}>
-                  <div style={{ fontSize: 17, fontWeight: 600 }}>{dt.title}</div>
-                  {dt.sub ? <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{dt.sub}</div> : null}
-                </div>
-                {dt.badge ? <span style={{ height: 24, padding: '0 8px', borderRadius: 10, background: dt.badge.bg, color: dt.badge.fg, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{dt.badge.t}</span> : null}
-                {dt.closable ? <button onClick={() => setState({ sel: null, form: null, draft: null })} aria-label="Close" style={{ width: 32, height: 32, margin: '-4px -8px 0 0', border: 'none', background: 'none', color: 'var(--ink-2)', fontSize: 15 }}>✕</button> : null}
-              </div>
-              {dt.blocks.map((b, bi) => (
-                <section key={bi} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {b.hasTitle ? <div className="adm-group" style={{ padding: 0 }}>{b.title}</div> : null}
-                  {b.hasNote ? <div style={{ padding: '10px 12px', borderRadius: 10, background: b.noteBg, color: 'var(--ink)', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{b.note}</div> : null}
-                  {b.hasKv ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr)', gap: '6px 16px', fontSize: 13 }}>
-                      {b.kv.map((kv, i) => [
-                        <span key={i + 'k'} style={{ color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{kv.k}</span>,
-                        <span key={i + 'v'} style={{ textAlign: 'right', fontFamily: kv.font, color: kv.fg, fontWeight: kv.weight, overflowWrap: 'anywhere' }}>{kv.v}</span>,
-                      ])}
-                    </div>
-                  ) : null}
-                  {b.hasFields ? <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{b.fields.map((f, fi) => <FieldView key={fi} f={f} />)}</div> : null}
-                  {b.hasItems ? <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--line)' }}>{b.items.map((it, i) => <ItemRow key={i} it={it} pad="10px 0" />)}</div> : null}
-                </section>
-              ))}
-              {dt.actions.length ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
-                  {dt.actions.map((a) => (
-                    <button key={a.label} onClick={a.go} disabled={a.op < 1} style={{ height: 38, padding: '0 14px', border: '1px solid ' + a.bd, borderRadius: 10, background: a.bg, color: a.fg, opacity: a.op, fontSize: 14, fontWeight: 500 }}>{a.label}</button>
-                  ))}
-                </div>
-              ) : null}
-              {dt.hasRoNote ? <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>You can only view this area. Ask a Super admin if you need to change it.</div> : null}
-            </div>
-          </aside>
-        ) : null}
-      </div>
+function TabStrip({ tabs }: { tabs: Tab[] }) {
+  return (
+    <div className="adm-tabs" role="tablist">
+      {tabs.map((t) => (
+        <button key={t.label} className="adm-tab" role="tab" aria-selected={t.on} onClick={t.go}>{t.label}{t.count !== '' ? <span className="adm-n">{t.count}</span> : null}</button>
+      ))}
     </div>
   );
 }
 
-function CellView({ c }: { c: Cell }) {
+/* ---------- table with paging ---------- */
+
+function ListView() {
+  const { vals, setState, st } = useConsole();
+  const l = vals.v.list!;
+  const base = l.cols.length - l.extra;
   return (
-    <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.4 }}>
+    <section className="adm-list" style={{ ['--g' as string]: l.grid, ['--gw' as string]: l.gridWide }}>
+      <div className="adm-toolbar">
+        <TabStrip tabs={l.filters} />
+        <div className="adm-grow" />
+        {l.hasSearch ? (
+          <input className="adm-input" value={st.q} onChange={(e) => setState({ q: e.target.value, page: 0 })} placeholder={l.ph} aria-label={l.ph} />
+        ) : null}
+      </div>
+      <div className="adm-thead">{l.cols.map((c, i) => <span key={c} className={i >= base ? 'adm-x' : undefined}>{c}</span>)}</div>
+      <div className="adm-rows">
+        {l.rows.map((r) => (
+          <button key={r.key} className="adm-row" onClick={r.go} aria-current={r.on ? 'true' : undefined}>
+            {r.cells.map((c, i) => <CellView key={i} c={c} extra={i >= base} label={i ? l.cols[i] : undefined} />)}
+          </button>
+        ))}
+        {l.isEmpty ? <div className="adm-empty">{l.empty}</div> : null}
+      </div>
+      <footer className="adm-foot">
+        <span>{l.page.total ? `Showing ${l.page.from}–${l.page.to} of ${l.page.total}` : 'Nothing to show'}</span>
+        <div className="adm-grow" />
+        <button className="adm-btn adm-btn-sm" onClick={l.page.prev || undefined} disabled={!l.page.prev}>Previous</button>
+        <button className="adm-btn adm-btn-sm" onClick={l.page.next || undefined} disabled={!l.page.next}>Next</button>
+      </footer>
+    </section>
+  );
+}
+
+/** `label` is the column name; it shows only where a row is stacked as a card (phones) and has no header above it. */
+function CellView({ c, extra, label }: { c: Cell; extra?: boolean; label?: string }) {
+  return (
+    <span className={'adm-cell' + (extra ? ' adm-x' : '')}>
+      {label ? <span className="adm-cell-l">{label}</span> : null}
       {c.isText ? (
         <>
-          <span style={{ maxWidth: '100%', fontSize: 13, fontFamily: c.font, fontWeight: c.weight, color: c.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.t}</span>
-          {c.hasSub ? <span style={{ maxWidth: '100%', fontSize: 11, fontFamily: c.subFont, color: c.subFg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.sub}</span> : null}
+          <span className="adm-cell-t" style={{ fontFamily: c.font, fontWeight: c.weight, color: c.fg }}>{c.t}</span>
+          {c.hasSub ? <span className="adm-cell-s" style={{ fontFamily: c.subFont, color: c.subFg }}>{c.sub}</span> : null}
         </>
       ) : (
-        <span style={{ height: 22, padding: '0 8px', borderRadius: 10, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{c.t}</span>
+        <span className="adm-badge" style={{ background: c.bg, color: c.fg }}>{c.t}</span>
       )}
     </span>
+  );
+}
+
+/* ---------- roles: every role against every area ---------- */
+
+function MatrixView() {
+  const { vals } = useConsole();
+  const m = vals.v.matrix!;
+  return (
+    <div className="adm-matrix">
+      <div className="adm-toolbar"><TabStrip tabs={m.filters} /></div>
+      <div className="adm-matrix-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Area</th>
+              {m.cols.map((c) => (
+                <th key={c.key} scope="col">
+                  <button className="adm-matrix-col" onClick={c.go} aria-pressed={c.on} title={'Open ' + c.title}>
+                    <span style={{ fontWeight: 600 }}>{c.title}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{c.sub}</span>
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {m.rows.map((r) => (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                {r.cells.map((c, i) => <td key={i}><CellView c={c} /></td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <footer className="adm-foot"><span>Select a role in the header to change what it can do.</span></footer>
+    </div>
+  );
+}
+
+/* ---------- dashboard: stat tiles, then panels on a 12-column grid ---------- */
+
+function DashView() {
+  const { vals } = useConsole();
+  const d = vals.v.dash!;
+  // Rows the panels make: twelve columns on a wide dashboard, and two panels a row (a wide one alone) on a narrower one.
+  const wide = d.panels.filter((p) => p.span >= 8).length;
+  const rows = Math.ceil(d.panels.reduce((a, p) => a + p.span, 0) / 12), rowsMd = wide + Math.ceil((d.panels.length - wide) / 2);
+  return (
+    <div className="adm-dash">
+      <div className="adm-kpis" style={{ ['--n' as string]: d.kpis.length }}>{d.kpis.map((k) => <KpiTile key={k.label} k={k} />)}</div>
+      <div className="adm-grid" style={{ ['--rows-lg' as string]: rows, ['--rows-md' as string]: rowsMd }}>{d.panels.map((p) => <PanelView key={p.title} p={p} />)}</div>
+    </div>
+  );
+}
+
+function KpiTile({ k }: { k: Kpi }) {
+  return (
+    <button className="adm-kpi" onClick={k.go}>
+      <span className="adm-kpi-top">
+        <span className="adm-kpi-label">{k.label}</span>
+        <span className="tile adm-kpi-ico" style={{ background: k.iconBg, color: k.iconFg }}><Svg d={k.icon} /></span>
+      </span>
+      <span className="adm-kpi-mid">
+        <span className="adm-kpi-val">{k.value}</span>
+        {k.spark ? <Sparkline values={k.spark} /> : null}
+      </span>
+      <span className="adm-kpi-sub">{k.sub}</span>
+      {k.delta ? (
+        <span className="adm-delta" data-good={k.delta.dir === 'flat' ? undefined : k.delta.good}>
+          <Svg d={ICON[k.delta.dir]} size={12} w={2.6} />{k.delta.text}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+/** The same numbers as a chart, as rows. Every chart panel can switch to it, so no value needs a hover. */
+function tableOf(p: Panel): { cols: string[]; rows: string[][] } | null {
+  const t = p.trend;
+  if (t) return { cols: ['Period', t.unit === 'taka' ? 'Amount' : 'Count'], rows: t.points.map((x) => [x.x, figure(x.y, t.unit)]) };
+  if (p.share) return { cols: ['Part', 'Amount', 'Share'], rows: p.share.map((x) => [x.label, x.value, x.pct + '%']) };
+  if (p.bars) return { cols: ['Name', 'Amount'], rows: p.bars.map((b) => [b.label, b.value]) };
+  if (p.meters) return { cols: ['Name', 'Used', 'Share'], rows: p.meters.map((m) => [m.label, m.value, m.pct + '%']) };
+  return null;
+}
+
+function PanelView({ p }: { p: Panel }) {
+  const [asTable, setAsTable] = useState(false);
+  const twin = tableOf(p);
+  return (
+    <section className="adm-panel" data-span={p.span} style={{ ['--span' as string]: p.span }}>
+      <header className="adm-panel-head">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2>{p.title}</h2>
+          {p.sub ? <div className="adm-panel-sub">{p.sub}</div> : null}
+        </div>
+        {twin ? (
+          <button className="adm-link" onClick={() => setAsTable(!asTable)} aria-pressed={asTable} title={asTable ? 'Show the chart' : 'Show the numbers as a table'}>
+            <Svg d={asTable ? ICON.chart : ICON.table} size={14} />{asTable ? 'Chart' : 'Table'}
+          </button>
+        ) : null}
+        {p.more ? <button className="adm-link" onClick={p.more.go}>{p.more.label} →</button> : null}
+      </header>
+      <div className="adm-panel-body">
+        {asTable && twin ? <DataTable cols={twin.cols} rows={twin.rows} />
+          : p.trend ? <TrendChart trend={p.trend} />
+          : p.share ? <ShareBar parts={p.share} />
+          : p.bars ? <BarList bars={p.bars} />
+          : p.meters ? <Meters meters={p.meters} />
+          : p.table ? <DataTable cols={p.table.cols} rows={p.table.rows} />
+          : p.items ? <div className="adm-items">{p.items.map((it, i) => <ItemRow key={i} it={it} pad="10px 16px" />)}</div>
+          : null}
+      </div>
+    </section>
+  );
+}
+
+function DataTable({ cols, rows }: { cols: string[]; rows: string[][] }) {
+  return (
+    <table className="adm-table">
+      <thead><tr>{cols.map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
+      <tbody>{rows.map((r, i) => <tr key={i}>{r.map((x, j) => <td key={j}>{x}</td>)}</tr>)}</tbody>
+    </table>
+  );
+}
+
+/* ---------- detail pane and the full-width form ---------- */
+
+/** Drag to resize the detail pane; double-click to go back to the default width. The width is remembered. */
+export function Splitter() {
+  const { setState } = useConsole();
+  const [on, setOn] = useState(false);
+  const start = (e: React.PointerEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    setOn(true);
+    const move = (ev: PointerEvent) => setState({ paneW: Math.round(Math.max(360, Math.min(window.innerWidth * 0.6, window.innerWidth - ev.clientX))) });
+    const stop = () => { setOn(false); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', stop); el.removeEventListener('pointercancel', stop); };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+  };
+  return (
+    <div className="adm-split">
+      <span data-on={on} onPointerDown={start} onDoubleClick={() => setState({ paneW: 0 })} role="separator" aria-orientation="vertical" aria-label="Resize the detail panel" title="Drag to resize · double-click to reset" />
+    </div>
+  );
+}
+
+function BlockView({ b }: { b: Block }) {
+  return (
+    <>
+      {b.hasNote ? <div className="adm-note" style={{ background: b.noteBg }}>{b.note}</div> : null}
+      {b.hasKv && b.kv.some((kv) => kv.go) ? (
+        <div className="adm-kv-links">
+          {b.kv.map((kv) => (
+            <button key={kv.k} onClick={kv.go} aria-pressed={!!kv.on} title={'Show ' + kv.k.toLowerCase()}>
+              <span>{kv.k}</span><span>{kv.v}</span>
+            </button>
+          ))}
+        </div>
+      ) : b.hasKv ? (
+        <div className="adm-kv">
+          {b.kv.map((kv, i) => [
+            <span key={i + 'k'}>{kv.k}</span>,
+            <span key={i + 'v'} style={{ fontFamily: kv.font, color: kv.fg, fontWeight: kv.weight }}>{kv.v}</span>,
+          ])}
+        </div>
+      ) : null}
+      {b.hasFields ? <div className="adm-fields">{b.fields.map((f, fi) => <FieldView key={fi} f={f} />)}</div> : null}
+      {b.hasItems ? <div className="adm-items" style={{ borderTop: '1px solid var(--line)' }}>{b.items.map((it, i) => <ItemRow key={i} it={it} pad="10px 0" />)}</div> : null}
+    </>
+  );
+}
+
+const RO_NOTE = 'You can only view this area. Ask a Super admin if you need to change it.';
+
+/** Beside a list: the selected row's details, or the section's summary while nothing is selected. */
+function DetailPane({ dt }: { dt: Dt }) {
+  const { setState } = useConsole();
+  return (
+    <aside className="adm-pane" data-summary={dt.isSummary} aria-label={dt.isSummary ? 'Section summary' : 'Details'}>
+      <div className="adm-pane-in">
+        <div className="adm-pane-head">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="adm-pane-title">{dt.title}</div>
+            {dt.sub ? <div className="adm-muted">{dt.sub}</div> : null}
+          </div>
+          {dt.badge ? <span className="adm-badge" style={{ background: dt.badge.bg, color: dt.badge.fg }}>{dt.badge.t}</span> : null}
+          {dt.closable ? <button className="adm-x-btn" onClick={() => setState({ sel: null, form: null, draft: null })} aria-label="Close">✕</button> : null}
+        </div>
+        {dt.blocks.map((b, bi) => (
+          <section key={bi} className="adm-block">
+            {b.hasTitle ? <div className="adm-group" style={{ padding: 0 }}>{b.title}</div> : null}
+            <BlockView b={b} />
+          </section>
+        ))}
+        {dt.actions.length ? <div className="adm-actions">{dt.actions.map((a) => <ActionButton key={a.label} a={a} large />)}</div> : null}
+        {dt.hasRoNote ? <div className="adm-muted" style={{ fontSize: 12 }}>{RO_NOTE}</div> : null}
+      </div>
+    </aside>
+  );
+}
+
+/** A form that owns the whole body (Settings): section menu, one card per block in columns, and a save bar that stays in view. */
+function SettingsView({ dt }: { dt: Dt }) {
+  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return (
+    <div className="adm-settings">
+      <div className="adm-set-scroll">
+        <nav className="adm-set-nav" aria-label={dt.title}>
+          <div className="adm-group">{dt.title}</div>
+          {dt.blocks.map((b, i) => (b.hasTitle ? <a key={b.title} href={'#set-' + i} onClick={(e) => { e.preventDefault(); jump('set-' + i); }}>{b.title}</a> : null))}
+        </nav>
+        <div className="adm-set-cards">
+          {dt.blocks.map((b, i) => (
+            <section key={i} id={'set-' + i} className="adm-card" data-wide={b.wide}>
+              {b.hasTitle ? <h2>{b.title}</h2> : null}
+              <BlockView b={b} />
+            </section>
+          ))}
+        </div>
+      </div>
+      <footer className="adm-savebar">
+        <span className="adm-muted adm-grow">{dt.hasRoNote ? RO_NOTE : dt.sub}</span>
+        {dt.actions.map((a) => <ActionButton key={a.label} a={a} large />)}
+      </footer>
+    </div>
   );
 }
 
@@ -421,18 +603,17 @@ function FieldView({ f }: { f: Field }) {
       <div style={{ display: 'flex', flexDirection: f.dir, alignItems: f.align, justifyContent: 'space-between', gap: '8px 12px', flexWrap: 'wrap' }}>
         {f.hasLabel ? <span style={{ fontSize: 13, fontWeight: 500 }}>{f.label}</span> : null}
         {f.isInput ? (
-          <input type={f.type} value={f.value} onChange={(e) => f.onChange?.(e.target.value)} placeholder={f.ph} disabled={f.disabled} aria-label={f.label || f.ph}
-            style={{ width: '100%', height: 36, padding: '0 10px', border: '1px solid ' + f.bd, borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, opacity: f.disabled ? 0.7 : 1 }} />
+          <input className="adm-field-in" type={f.type} value={f.value} onChange={(e) => f.onChange?.(e.target.value)} placeholder={f.ph} disabled={f.disabled} aria-label={f.label || f.ph}
+            style={{ borderColor: f.bd, opacity: f.disabled ? 0.7 : 1 }} />
         ) : null}
         {f.isArea ? (
-          <textarea value={f.value} onChange={(e) => f.onChange?.(e.target.value)} placeholder={f.ph} disabled={f.disabled} rows={4} aria-label={f.label || f.ph}
-            style={{ width: '100%', minHeight: 96, padding: '8px 10px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
+          <textarea className="adm-field-in" value={f.value} onChange={(e) => f.onChange?.(e.target.value)} placeholder={f.ph} disabled={f.disabled} rows={4} aria-label={f.label || f.ph} />
         ) : null}
         {f.isSeg ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label={f.label}>
             {(f.opts || []).map((o) => (
-              <button key={o.label} onClick={o.go} aria-pressed={o.weight === 600}
-                style={{ height: 30, padding: '0 10px', border: '1px solid ' + o.bd, borderRadius: 10, background: o.bg, color: o.fg, opacity: o.op, fontSize: 13, fontWeight: o.weight }}>{o.label}</button>
+              <button key={o.label} className="adm-opt" onClick={o.go} aria-pressed={o.weight === 600}
+                style={{ border: '1px solid ' + o.bd, background: o.bg, color: o.fg, opacity: o.op, fontWeight: o.weight }}>{o.label}</button>
             ))}
           </div>
         ) : null}
@@ -444,13 +625,13 @@ function FieldView({ f }: { f: Field }) {
 
 function ItemRow({ it, pad }: { it: Item; pad: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: pad, borderBottom: '1px solid var(--line)' }}>
+    <div className="adm-item" style={{ padding: pad }}>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.45 }}>
         <span style={{ fontSize: 13 }}>{it.t}</span>
         {it.hasSub ? <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{it.sub}</span> : null}
       </div>
       {it.hasRight ? <span className="mono" style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{it.right}</span> : null}
-      {it.hasAct ? <button onClick={it.actGo} style={{ height: 30, padding: '0 10px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--surface)', color: 'var(--ink)', fontSize: 12, fontWeight: 500 }}>{it.actLabel}</button> : null}
+      {it.hasAct ? <button className="adm-btn adm-btn-sm" onClick={it.actGo}>{it.actLabel}</button> : null}
     </div>
   );
 }

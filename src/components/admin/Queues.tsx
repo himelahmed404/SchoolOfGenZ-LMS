@@ -1,11 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { NoteBlocks } from '@/components/NoteBlocks';
 import { Penguin } from '@/components/Penguin';
-import { useConsole } from './Console';
+import { Splitter, useConsole } from './Console';
 import { decideContent, decidePayments } from '@/lib/actions';
+import type { Cell } from '@/lib/admin';
 import { contentReasons, courses, MIN_TEST_QUESTIONS, rejectReasons, teacher } from '@/lib/data';
 import { ago, pad2, plural, taka } from '@/lib/format';
 import { allQueue, blockHasContent, item, itemKeys, keyCourse, reasonText, returnReason, revisionRef, rowFlags } from '@/lib/selectors';
@@ -14,50 +14,82 @@ import { useStore } from '@/lib/store';
 import type { LessonRevision, PayStatus, Payment } from '@/lib/types';
 
 export type QueueMode = 'pay' | 'content';
-type Mode = QueueMode;
 type CFilter = 'review' | 'published' | 'returned';
 
-/** Course and position of a lesson revision, for list rows and the preview. */
-function where(k: string, x: LessonRevision) {
-  const c = courses[keyCourse(k)];
-  return { course: c.titleEn, tag: c.code, loc: revisionRef(x) };
+/** Payment approvals and content review. They sit in the console frame like every other section. */
+export function AdminQueues({ mode }: { mode: QueueMode }) {
+  const { ready } = useStore();
+  if (!ready) return null;
+  return mode === 'pay' ? <PaymentQueue /> : <ContentQueue />;
 }
 
-/** Payment approvals and content review, shown beside the console sidebar. */
-export function AdminQueues({ mode }: { mode: Mode }) {
-  const { s, set, ready } = useStore();
-  const { logic, vals } = useConsole();
-  const router = useRouter();
-  // Mirrors the role's permission for the UI; the server must enforce it.
-  const canPay = logic.perm('payments') === 'edit', canContent = logic.perm('content') === 'edit';
-  const setMode = (m: Mode) => router.push(m === 'pay' ? '/admin/payments' : '/admin/content');
+/** Runs the latest `onKey` for key presses that are not typing or pressing a focused button. */
+function useKeys(onKey: (e: KeyboardEvent) => void) {
+  const ref = useRef(onKey);
+  useEffect(() => { ref.current = onKey; });
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null, tag = el?.tagName || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') { if (e.key === 'Escape') el?.blur(); return; }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (tag === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
+      ref.current(e);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+}
 
-  // payments
-  const [qFilter, setQFilter] = useState<PayStatus>('pending');
+function Badge({ c }: { c: Cell }) {
+  return <span className="adm-badge" style={{ background: c.bg, color: c.fg }}>{c.t}</span>;
+}
+
+function Tabs<T extends string>({ tabs, cur, pick }: { tabs: [string, T, number][]; cur: T; pick: (id: T) => void }) {
+  return (
+    <div className="adm-tabs" role="tablist">
+      {tabs.map(([label, id, n]) => (
+        <button key={id} className="adm-tab" role="tab" aria-selected={cur === id} onClick={() => pick(id)}>{label}<span className="adm-n">{n}</span></button>
+      ))}
+    </div>
+  );
+}
+
+function Keys({ hints }: { hints: string[] }) {
+  return <span className="adm-keys" aria-label="Keyboard shortcuts">{hints.map((h) => <span key={h}>{h}</span>)}</span>;
+}
+
+/* ---------- payments ---------- */
+
+const PAY_GRID = 'minmax(0,1.6fr) minmax(0,1.3fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr)';
+const PAY_GRID_WIDE = PAY_GRID + ' minmax(0,0.9fr) minmax(0,1fr)';
+
+function PaymentQueue() {
+  const { s, set } = useStore();
+  const { logic, st } = useConsole();
+  // Mirrors the role's permission for the UI; the server must enforce it.
+  const canPay = logic.perm('payments') === 'edit';
+
+  const [filter, setFilter] = useState<PayStatus>('pending');
   const [sel, setSel] = useState(0);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  // On a narrow screen the details slide over the list, so they open only when a row is picked.
+  const [open, setOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // content
-  const [cFilter, setCFilter] = useState<CFilter>('review');
-  const [cSel, setCSel] = useState(0);
-  const [cRetFor, setCRetFor] = useState<string | null>(null);
-  const [cReason, setCReason] = useState<string | null>(null);
-  const [cNote, setCNote] = useState('');
-
-  /* ---------- payments ---------- */
   const queue = allQueue(s);
-  const qCounts: Record<PayStatus, number> = { pending: 0, approved: 0, rejected: 0 };
-  queue.forEach((r) => { qCounts[r.status]++; });
+  const counts: Record<PayStatus, number> = { pending: 0, approved: 0, rejected: 0 };
+  const sums: Record<PayStatus, number> = { pending: 0, approved: 0, rejected: 0 };
+  queue.forEach((r) => { counts[r.status]++; sums[r.status] += r.amount; });
   const needle = q.trim().toLowerCase();
-  const rows = queue.filter((r) => r.status === qFilter)
+  const rows = queue.filter((r) => r.status === filter)
     .filter((r) => !needle || (r.name + ' ' + r.phone + ' ' + r.trx + ' ' + r.course).toLowerCase().includes(needle));
   const selIdx = Math.min(sel, Math.max(0, rows.length - 1));
   const selRow: Payment | null = rows[selIdx] || null;
   const checkedIds = Object.keys(checked).filter((id) => checked[id]);
 
+  const pick = (i: number) => { setSel(i); setRejectFor(null); };
   const decide = (ids: string[], status: PayStatus, reason?: string) => {
     if (!ids.length || !canPay) return;
     set((x) => decidePayments(x, ids, status, reason));
@@ -68,294 +100,307 @@ export function AdminQueues({ mode }: { mode: Mode }) {
   };
   const toggleCheck = (id: string) => { const c = { ...checked }; if (c[id]) delete c[id]; else c[id] = true; setChecked(c); };
 
-  /* ---------- content ---------- */
-  const cCount: Record<CFilter, number> = { review: 0, published: 0, returned: 0 };
+  useKeys((e) => {
+    if (st.srOpen || st.confirm) return;
+    if (e.key === '/') { e.preventDefault(); searchRef.current?.focus(); return; }
+    if (!selRow) return;
+    const pending = selRow.status === 'pending';
+    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); pick(Math.min(rows.length - 1, selIdx + 1)); }
+    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); pick(Math.max(0, selIdx - 1)); }
+    else if ((e.key === 'a' || e.key === 'A') && pending && canPay) { e.preventDefault(); decide([selRow.id], 'approved'); }
+    else if ((e.key === 'r' || e.key === 'R') && pending && canPay) { e.preventDefault(); setRejectFor(selRow.id); setOpen(true); }
+    else if (e.key === 'Escape') { setRejectFor(null); setOpen(false); }
+    else if (e.key === ' ') { e.preventDefault(); toggleCheck(selRow.id); pick(Math.min(rows.length - 1, selIdx + 1)); }
+  });
+
+  const flags = selRow ? rowFlags(selRow) : [];
+  const badge = (r: Payment) => (r.status === 'approved' ? logic.B('published', 'Approved') : r.status === 'rejected' ? logic.B('denied', 'Rejected') : logic.B('pending'));
+
+  return (
+    <>
+      <section className="adm-list" style={{ ['--g' as string]: PAY_GRID, ['--gw' as string]: PAY_GRID_WIDE }}>
+        <div className="adm-toolbar">
+          <Tabs tabs={[['Pending', 'pending', counts.pending], ['Approved', 'approved', counts.approved], ['Rejected', 'rejected', counts.rejected]]} cur={filter}
+            pick={(id) => { setFilter(id); setSel(0); setRejectFor(null); }} />
+          <div className="adm-grow" />
+          {checkedIds.length ? (
+            <>
+              <button className="adm-btn adm-btn-sm" onClick={() => setChecked({})}>Clear</button>
+              {canPay ? <button className="adm-btn adm-btn-sm" style={{ borderColor: 'var(--brand)', background: 'var(--brand)', color: 'var(--on-brand)' }} onClick={() => decide(checkedIds, 'approved')}>Approve selected ({checkedIds.length})</button> : null}
+            </>
+          ) : null}
+          <input ref={searchRef} className="adm-input" value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }} placeholder="Search name, number or TrxID" aria-label="Search payments" />
+        </div>
+        <div className="adm-thead">
+          <span>Student</span><span>Course</span><span>Method</span><span>TrxID</span><span>Submitted</span><span className="adm-x">Batch</span><span className="adm-x">Sent from</span>
+        </div>
+        <div className="adm-rows">
+          {rows.map((r, i) => {
+            const here = i === selIdx, flagged = rowFlags(r).length > 0, on = !!checked[r.id];
+            return (
+              <div key={r.id} className="adm-row" aria-current={here ? 'true' : undefined} data-flag={flagged} onClick={() => { pick(i); setOpen(true); }}>
+                <span className="adm-cell adm-cell-row">
+                  <button className="adm-check" role="checkbox" aria-checked={on} aria-label={'Select ' + r.name} onClick={(e) => { e.stopPropagation(); toggleCheck(r.id); }}><span>{on ? '✓' : ''}</span></button>
+                  <span className="adm-cell" style={{ flex: 1 }}>
+                    <button className="adm-row-name" style={{ fontWeight: here ? 600 : 400 }}>{r.name}</button>
+                    <span className="adm-cell-s mono ink3">{r.phone}{flagged ? <span className="adm-flag"> · Check</span> : null}</span>
+                  </span>
+                </span>
+                <span className="adm-cell"><span className="adm-cell-t ink2">{r.course}</span></span>
+                <span className="adm-cell">
+                  <span className="adm-cell-t ink2">{r.method}</span>
+                  <span className="adm-cell-s mono" style={{ color: r.amount < r.due ? 'var(--margin)' : 'var(--ink-2)' }}>{taka(r.amount)}</span>
+                </span>
+                <span className="adm-cell"><span className="adm-cell-t mono ink2" style={{ fontSize: 12 }}>{r.trx}</span></span>
+                <span className="adm-cell"><span className="adm-cell-t ink3" style={{ fontSize: 12 }}>{ago(r.agoMin)}</span></span>
+                <span className="adm-cell adm-x"><span className="adm-cell-t mono ink2" style={{ fontSize: 12 }}>{r.batch}</span></span>
+                <span className="adm-cell adm-x"><span className="adm-cell-t mono" style={{ fontSize: 12, color: r.sender !== r.phone ? 'var(--margin)' : 'var(--ink-2)' }}>{r.sender}</span></span>
+              </div>
+            );
+          })}
+          {rows.length === 0 ? (
+            <div className="empty" style={{ padding: '72px 24px' }}>
+              <Penguin size={80} />
+              <div className="t17 w600">{needle ? 'Nothing matches the search' : 'This list is empty'}</div>
+              <div className="t14 ink2" style={{ maxWidth: '36ch' }}>{needle ? 'Try a name, a phone number or a TrxID.' : 'Everything is reviewed. New submissions appear here.'}</div>
+            </div>
+          ) : null}
+        </div>
+        <footer className="adm-foot">
+          <span>{plural(rows.length, 'payment')}{checkedIds.length ? ' · ' + checkedIds.length + ' selected' : ''}</span>
+          <div className="adm-grow" />
+          <Keys hints={['↑↓ row', 'space select', 'A approve', 'R reject', '/ search']} />
+        </footer>
+      </section>
+
+      <Splitter />
+      {selRow ? (
+        <aside className="adm-pane" data-closed={!open} aria-label="Payment details">
+          <div className="adm-pane-in">
+            <div className="adm-pane-head">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="adm-pane-title">{selRow.name}</div>
+                <div className="adm-muted mono">{selRow.phone}</div>
+              </div>
+              <Badge c={badge(selRow)} />
+              <button className="adm-x-btn adm-narrow-only" style={{ alignItems: 'center', justifyContent: 'center' }} onClick={() => setOpen(false)} aria-label="Close">✕</button>
+            </div>
+
+            {flags.length ? <div className="alert" style={{ borderRadius: 10, lineHeight: 1.6 }}>{flags.map((f) => <div key={f}>{f}</div>)}</div> : null}
+            {selRow.status === 'rejected' && selRow.rejectReason ? <div className="adm-note" style={{ background: 'var(--margin-soft)' }}>Rejected: {reasonText(rejectReasons, selRow.rejectReason, 'en')}</div> : null}
+
+            <section className="adm-block">
+              <div className="adm-group" style={{ padding: 0 }}>Course</div>
+              <div className="adm-kv">
+                <span>Name</span><span>{selRow.course}</span>
+                <span>Batch</span><span className="mono">{selRow.batch}</span>
+              </div>
+            </section>
+            <section className="adm-block">
+              <div className="adm-group" style={{ padding: 0 }}>Payment</div>
+              <div className="adm-kv">
+                <span>Method</span><span>{selRow.method}</span>
+                <span>Received</span><span className="mono" style={{ fontWeight: 600, color: selRow.amount < selRow.due ? 'var(--margin)' : undefined }}>{taka(selRow.amount)}</span>
+                <span>Expected</span><span className="mono ink2">{taka(selRow.due)}</span>
+                <span>TrxID</span><span className="mono" style={{ fontWeight: 600 }}>{selRow.trx}</span>
+                <span>Sent from</span><span className="mono" style={{ color: selRow.sender !== selRow.phone ? 'var(--margin)' : undefined }}>{selRow.sender}</span>
+                <span>Submitted</span><span className="ink2">{ago(selRow.agoMin)}</span>
+              </div>
+            </section>
+
+            {selRow.status === 'pending' && canPay && rejectFor === selRow.id ? (
+              <section className="adm-block">
+                <div style={{ fontSize: 13, fontWeight: 500 }}>Reason for rejecting <span className="ink3" style={{ fontWeight: 400 }}>— the student sees it</span></div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {rejectReasons.map((r) => (
+                    <button key={r.code} className="adm-opt" style={{ border: '1px solid var(--margin)', background: 'var(--surface)', color: 'var(--margin)' }} onClick={() => decide([selRow.id], 'rejected', r.code)}>{r.en}</button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {selRow.status === 'pending' && canPay ? (
+              <div className="adm-actions">
+                {rejectFor === selRow.id ? <button className="adm-btn adm-btn-lg" onClick={() => setRejectFor(null)}>Cancel</button> : (
+                  <>
+                    <button className="adm-btn adm-btn-lg" style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--brand)', background: 'var(--brand)', color: 'var(--on-brand)' }} onClick={() => decide([selRow.id], 'approved')}>Approve</button>
+                    <button className="adm-btn adm-btn-lg" style={{ borderColor: 'var(--margin)', color: 'var(--margin)' }} onClick={() => setRejectFor(selRow.id)}>Reject</button>
+                  </>
+                )}
+              </div>
+            ) : null}
+            {selRow.status === 'pending' && !canPay ? <div className="adm-muted" style={{ fontSize: 12 }}>You can only view this area, so you cannot approve or reject.</div> : null}
+            {selRow.live ? <div className="note-dashed" style={{ borderRadius: 10 }}>You submitted this row yourself in the student view. Decide here, then look at the student view.</div> : null}
+          </div>
+        </aside>
+      ) : (
+        <aside className="adm-pane" data-summary="true" aria-label="Section summary">
+          <div className="adm-pane-in">
+            <div className="adm-pane-head">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="adm-pane-title">Payments</div>
+                <div className="adm-muted">Summary</div>
+              </div>
+            </div>
+            <section className="adm-block">
+              <div className="adm-group" style={{ padding: 0 }}>By status</div>
+              <div className="adm-kv">
+                <span>Pending</span><span>{counts.pending}</span>
+                <span>Approved</span><span>{counts.approved}</span>
+                <span>Rejected</span><span>{counts.rejected}</span>
+              </div>
+            </section>
+            <section className="adm-block">
+              <div className="adm-group" style={{ padding: 0 }}>Totals</div>
+              <div className="adm-kv">
+                <span>Waiting for approval</span><span className="mono">{taka(sums.pending)}</span>
+                <span>Approved</span><span className="mono">{taka(sums.approved)}</span>
+              </div>
+            </section>
+            <div className="adm-note" style={{ background: 'var(--surface-sunk)' }}>Nothing in this list. Pick another tab or clear the search.</div>
+          </div>
+        </aside>
+      )}
+    </>
+  );
+}
+
+/* ---------- content review ---------- */
+
+/** Course and position of a lesson revision, for list rows and the preview. */
+function where(k: string, x: LessonRevision) {
+  const c = courses[keyCourse(k)];
+  return { course: c.titleEn, tag: c.code, loc: revisionRef(x) };
+}
+
+function ContentQueue() {
+  const { s, set } = useStore();
+  const { logic, st } = useConsole();
+  const canContent = logic.perm('content') === 'edit';
+
+  const [filter, setFilter] = useState<CFilter>('review');
+  const [sel, setSel] = useState(0);
+  const [retFor, setRetFor] = useState<string | null>(null);
+  const [reason, setReason] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  // On a phone the preview covers the queue, so it opens only when an item is picked.
+  const [open, setOpen] = useState(false);
+
+  const count: Record<CFilter, number> = { review: 0, published: 0, returned: 0 };
   const keys = itemKeys(s);
   keys.forEach((k) => {
-    const st = item(s, k).status;
-    if (st === 'review' || st === 'returned') cCount[st]++;
-    else if (st === 'published' && s.aDecided[k] === 'published') cCount.published++;
+    const status = item(s, k).status;
+    if (status === 'review' || status === 'returned') count[status]++;
+    else if (status === 'published' && s.aDecided[k] === 'published') count.published++;
   });
-  const cVis = keys.filter((k) => {
-    const st = item(s, k).status;
-    return cFilter === 'published' ? st === 'published' && s.aDecided[k] === 'published' : st === cFilter;
+  const vis = keys.filter((k) => {
+    const status = item(s, k).status;
+    return filter === 'published' ? status === 'published' && s.aDecided[k] === 'published' : status === filter;
   });
-  const ci = Math.min(cSel, Math.max(0, cVis.length - 1));
-  const ck = cVis[ci] || null;
+  const ci = Math.min(sel, Math.max(0, vis.length - 1));
+  const ck = vis[ci] || null;
   const cit = ck ? item(s, ck) : null;
-  const canRet = !!cReason || !!cNote.trim();
-  const retOpen = !!ck && cRetFor === ck;
+  const canRet = !!reason || !!note.trim();
+  const retOpen = !!ck && retFor === ck;
+  const inReview = !!cit && cit.status === 'review';
 
-  const cDecide = (k: string | null, status: 'published' | 'returned', reason?: string, note?: string) => {
+  const pick = (i: number) => { setSel(i); setRetFor(null); };
+  const cancelReturn = () => { setRetFor(null); setReason(null); setNote(''); };
+  const decide = (k: string | null, status: 'published' | 'returned', why?: string, detail?: string) => {
     if (!k || !canContent) return;
-    set((x: AppState) => decideContent(x, k, status, reason, note));
+    set((x: AppState) => decideContent(x, k, status, why, detail));
     const x = item(s, k), w = where(k, x);
     const what = x.kind === 'test' ? 'test' : 'lesson';
     logic.log('content', (status === 'published' ? 'Published ' : 'Returned ') + what, w.tag + ' · ' + w.loc + (x.kind === 'test' ? '' : ' · ' + (x.title || '')),
-      [reasonText(contentReasons, reason, 'en'), note].filter(Boolean).join(' — '));
-    setCRetFor(null); setCReason(null); setCNote(''); setCSel(0);
+      [reasonText(contentReasons, why, 'en'), detail].filter(Boolean).join(' — '));
+    cancelReturn(); setSel(0); setOpen(false);
   };
-  const doReturn = () => { if (canRet) cDecide(ck, 'returned', cReason || '', cNote.trim()); };
 
-  /* ---------- keyboard ---------- */
-  const onKey = (e: KeyboardEvent) => {
-    const tag = (e.target as HTMLElement | null)?.tagName || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') { if (e.key === 'Escape') (e.target as HTMLElement).blur(); return; }
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (mode === 'content') {
-      if (!cVis.length) return;
-      const rev = !!cit && cit.status === 'review';
-      if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); setCSel(Math.min(cVis.length - 1, ci + 1)); setCRetFor(null); }
-      else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); setCSel(Math.max(0, ci - 1)); setCRetFor(null); }
-      else if ((e.key === 'a' || e.key === 'A') && rev && canContent) { e.preventDefault(); cDecide(ck, 'published'); }
-      else if ((e.key === 'r' || e.key === 'R') && rev && canContent) { e.preventDefault(); setCRetFor(ck); }
-      else if (e.key === 'Escape') { setCRetFor(null); setCReason(null); }
-      return;
-    }
-    if (e.key === '/') { e.preventDefault(); searchRef.current?.focus(); return; }
-    if (!rows.length || !selRow) return;
-    const pending = selRow.status === 'pending';
-    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); setSel(Math.min(rows.length - 1, selIdx + 1)); setRejectFor(null); }
-    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); setSel(Math.max(0, selIdx - 1)); setRejectFor(null); }
-    else if ((e.key === 'a' || e.key === 'A') && pending && canPay) { e.preventDefault(); decide([selRow.id], 'approved'); }
-    else if ((e.key === 'r' || e.key === 'R') && pending && canPay) { e.preventDefault(); setRejectFor(selRow.id); }
-    else if (e.key === 'Escape') setRejectFor(null);
-    else if (e.key === ' ') { e.preventDefault(); toggleCheck(selRow.id); setSel(Math.min(rows.length - 1, selIdx + 1)); }
-  };
-  const keyRef = useRef(onKey);
-  useEffect(() => { keyRef.current = onKey; });
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => keyRef.current(e);
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, []);
+  useKeys((e) => {
+    if (st.srOpen || st.confirm || !vis.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); pick(Math.min(vis.length - 1, ci + 1)); }
+    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); pick(Math.max(0, ci - 1)); }
+    else if ((e.key === 'a' || e.key === 'A') && inReview && canContent) { e.preventDefault(); decide(ck, 'published'); }
+    else if ((e.key === 'r' || e.key === 'R') && inReview && canContent) { e.preventDefault(); setRetFor(ck); setOpen(true); }
+    else if (e.key === 'Escape') { if (retFor) cancelReturn(); else setOpen(false); }
+  });
 
-  if (!ready) return null;
-
-  const tabStyle = (on: boolean): React.CSSProperties => ({ height: 44, border: 'none', background: 'none', padding: 0, fontSize: 13, fontWeight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', borderBottom: '2px solid ' + (on ? 'var(--brand)' : 'transparent'), whiteSpace: 'nowrap' });
+  const emptyTitle = filter === 'review' ? 'Everything submitted is reviewed' : filter === 'published' ? 'Nothing published yet today' : 'Nothing has been sent back';
 
   return (
-    <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
-      <header style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 16, height: 56, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }}>
-        <div className="logo" style={{ width: 22, height: 22 }} />
-        <nav style={{ display: 'flex', alignItems: 'stretch', gap: 20, height: 56 }} aria-label="Admin">
-          {([['Payments', 'pay', qCounts.pending], ['Content', 'content', cCount.review]] as [string, Mode, number][]).map(([label, id, count]) => {
-            const on = mode === id;
+    <>
+      <section className="adm-list adm-qlist">
+        <div className="adm-toolbar">
+          <Tabs tabs={[['Pending', 'review', count.review], ['Published', 'published', count.published], ['Returned', 'returned', count.returned]]} cur={filter}
+            pick={(id) => { setFilter(id); setSel(0); setRetFor(null); }} />
+        </div>
+        <div className="adm-rows">
+          {vis.map((k, i) => {
+            const x = item(s, k), w = where(k, x), here = i === ci;
             return (
-              <button key={id} aria-current={on ? 'page' : undefined} onClick={() => { setMode(id); setCRetFor(null); setRejectFor(null); }}
-                style={{ height: 56, border: 'none', background: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: on ? 600 : 400, color: on ? 'var(--ink)' : 'var(--ink-3)', borderBottom: '2px solid ' + (on ? 'var(--brand)' : 'transparent') }}>
-                {label}
-                <span style={{ minWidth: 22, height: 20, padding: '0 6px', borderRadius: 10, background: count ? 'var(--warn-soft)' : 'var(--surface-sunk)', color: 'var(--ink)', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+              <button key={k} className="adm-qitem" onClick={() => { pick(i); setOpen(true); }} aria-current={here ? 'true' : undefined}>
+                <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
+                <span style={{ fontSize: 14, lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'Untitled'}</span>
+                <span className="row t12 ink2" style={{ gap: 8 }}>
+                  <span>{x.by || teacher.name}</span>
+                  <span className="tag" style={{ color: x.isNew ? 'var(--brand)' : 'var(--ink-2)' }}>{x.kind === 'test' ? (x.isNew ? 'New Test' : 'Test Update') : x.isNew ? 'New Lesson' : 'Update'}</span>
+                </span>
               </button>
             );
           })}
-        </nav>
-        <div className="t13 ink3 nowrap">
-          {mode === 'pay' ? qCounts.pending + ' pending · ' + qCounts.approved + ' approved today' : cCount.review + ' in review · ' + cCount.published + ' published today'}
+          {vis.length === 0 ? <div className="adm-empty">{emptyTitle}</div> : null}
         </div>
-        <div style={{ flex: 1 }} />
-        {mode === 'pay' ? (
-          <input ref={searchRef} value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }} placeholder="Search name, number or TrxID  /" aria-label="Search"
-            style={{ width: 260, height: 34, padding: '0 12px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 13 }} />
-        ) : null}
-        <div className="row" style={{ gap: 8, paddingLeft: 16, borderLeft: '1px solid var(--line)' }}>
-          <div className="tile mono" style={{ width: 28, height: 28, borderRadius: 9999, background: 'var(--surface-sunk)', border: '1px solid var(--line)', fontSize: 8, color: 'var(--ink-2)' }}>adm</div>
-          <div className="t13 nowrap">{vals.meName.split(' ')[0]}</div>
-        </div>
-      </header>
+        <footer className="adm-foot">
+          <span>{plural(vis.length, 'item')}</span>
+          <div className="adm-grow" />
+          <Keys hints={['↑↓', 'A publish', 'R send back']} />
+        </footer>
+      </section>
 
-      {mode === 'pay' ? (
-        <>
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 20, height: 44, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }} role="tablist">
-            {([['Pending', 'pending'], ['Approved', 'approved'], ['Rejected', 'rejected']] as [string, PayStatus][]).map(([label, id]) => (
-              <button key={id} role="tab" aria-selected={qFilter === id} style={tabStyle(qFilter === id)} onClick={() => { setQFilter(id); setSel(0); setRejectFor(null); }}>{label} {qCounts[id]}</button>
-            ))}
-            {checkedIds.length ? (
-              <div className="row ml-auto" style={{ gap: 8 }}>
-                <button className="btn-quiet t13 w500" style={{ height: 32, padding: '0 12px' }} onClick={() => setChecked({})}>Clear</button>
-                {canPay ? <button onClick={() => decide(checkedIds, 'approved')} style={{ height: 32, padding: '0 14px', border: 'none', borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 13, fontWeight: 500 }}>Approve selected ({checkedIds.length})</button> : null}
+      {cit && ck ? (
+        <ContentPreview k={ck} it={cit} loc={where(ck, cit)} closed={!open} onBack={() => setOpen(false)}
+          badge={cit.status === 'published' ? logic.B('published') : cit.status === 'returned' ? logic.B('denied', 'Returned') : logic.B('pending', 'Pending review')}>
+          {inReview && canContent && retOpen ? (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Why it is going back <span className="ink3" style={{ fontWeight: 400 }}>— the teacher sees this</span></div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {contentReasons.map((r) => {
+                  const on = reason === r.code;
+                  return (
+                    <button key={r.code} className="adm-opt" aria-pressed={on} onClick={() => setReason(on ? null : r.code)}
+                      style={{ border: '1px solid ' + (on ? 'var(--margin)' : 'var(--line-strong)'), background: on ? 'var(--margin-soft)' : 'var(--surface)', color: on ? 'var(--margin)' : 'var(--ink-2)', fontWeight: on ? 600 : 400 }}>{r.en}</button>
+                  );
+                })}
               </div>
-            ) : null}
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }} role="grid" aria-label="Payments">
-              <div className="t12 ink3 pay-grid" style={{ flexShrink: 0, height: 32, padding: '0 16px', borderBottom: '1px solid var(--line)', background: 'var(--paper)', position: 'sticky', top: 0, zIndex: 2 }}>
-                <span /><span>Student</span><span>Course</span><span>Method</span><span>TrxID</span><span>Submitted</span>
+              <textarea className="adm-field-in" value={note} onChange={(e) => setNote(e.target.value)} aria-label="What to fix" placeholder="What to fix — e.g. 4:10 to 6:00, or question 2" rows={2} style={{ minHeight: 64 }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="adm-btn adm-btn-lg" onClick={cancelReturn}>Cancel</button>
+                <button className="adm-btn adm-btn-lg" disabled={!canRet} onClick={() => { if (canRet) decide(ck, 'returned', reason || '', note.trim()); }}
+                  style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--margin)', background: 'var(--margin-soft)', color: 'var(--margin)' }}>Send back</button>
               </div>
-              {rows.map((r, i) => {
-                const here = i === selIdx, flagged = rowFlags(r).length > 0, on = !!checked[r.id];
-                return (
-                  <div key={r.id} role="row" aria-selected={here} onClick={() => { setSel(i); setRejectFor(null); }} className="pay-grid"
-                    style={{ width: '100%', height: 44, padding: '0 16px', borderLeft: '2px solid ' + (here ? 'var(--brand)' : flagged ? 'var(--margin)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', cursor: 'pointer' }}>
-                    <button role="checkbox" aria-checked={on} aria-label={'Select ' + r.name} onClick={(e) => { e.stopPropagation(); toggleCheck(r.id); }}
-                      style={{ width: 16, height: 16, padding: 0, border: '1px solid ' + (on ? 'var(--brand)' : 'var(--line-strong)'), borderRadius: 5, background: on ? 'var(--brand)' : 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--on-brand)' }}>{on ? '✓' : ''}</button>
-                    <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.4 }}>
-                      <span className="t13 ellipsis" style={{ fontWeight: here ? 600 : 400 }}>{r.name}</span>
-                      <span className="mono ink3" style={{ fontSize: 11 }}>{r.phone}</span>
-                    </span>
-                    <span className="t13 ink2 ellipsis">{r.course}</span>
-                    <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.4 }}>
-                      <span className="t13 ink2">{r.method}</span>
-                      <span className="mono" style={{ fontSize: 11, color: r.amount < r.due ? 'var(--margin)' : 'var(--ink-2)' }}>{taka(r.amount)}</span>
-                    </span>
-                    <span className="mono t12 ink2 ellipsis">{r.trx}</span>
-                    <span className="t12 ink3 nowrap">{ago(r.agoMin)}</span>
-                  </div>
-                );
-              })}
-              {rows.length === 0 ? (
-                <div className="empty" style={{ padding: '72px 24px' }}>
-                  <Penguin size={80} />
-                  <div className="t17 w600">This list is empty</div>
-                  <div className="t15 ink2" style={{ maxWidth: '36ch' }}>Everything is reviewed. New submissions appear here.</div>
-                </div>
-              ) : null}
+            </>
+          ) : inReview && canContent ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="adm-btn adm-btn-lg" style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--brand)', background: 'var(--brand)', color: 'var(--on-brand)' }} onClick={() => decide(ck, 'published')}>Publish</button>
+              <button className="adm-btn adm-btn-lg" style={{ borderColor: 'var(--margin)', color: 'var(--margin)' }} onClick={() => setRetFor(ck)}>Send back</button>
             </div>
-
-            {selRow ? (
-              <aside style={{ width: 380, flexShrink: 0, borderLeft: '1px solid var(--line)', background: 'var(--surface)', overflow: 'auto', padding: 20 }}>
-                <div className="t12 w500" style={{ marginBottom: 8, color: selRow.status === 'approved' ? 'var(--brand)' : selRow.status === 'rejected' ? 'var(--margin)' : 'var(--warn)' }}>
-                  {selRow.status === 'approved' ? '✓ Approved' : selRow.status === 'rejected' ? '✗ Rejected' + (selRow.rejectReason ? ' · ' + reasonText(rejectReasons, selRow.rejectReason, 'en') : '') : '● Pending'}
-                </div>
-                <div style={{ fontSize: 20, lineHeight: 1.45, fontWeight: 600 }}>{selRow.name}</div>
-                <div className="mono t13 ink3" style={{ marginBottom: 24 }}>{selRow.phone}</div>
-
-                {rowFlags(selRow).length ? (
-                  <div className="alert" style={{ marginBottom: 24, borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.7 }}>
-                    {rowFlags(selRow).map((f) => <div key={f}>{f}</div>)}
-                  </div>
-                ) : null}
-
-                <div className="t12 w500 ink3" style={{ marginBottom: 8 }}>Course</div>
-                <dl className="kv">
-                  <KV k="Name" v={selRow.course} />
-                  <KV k="Batch" v={selRow.batch} mono />
-                </dl>
-                <div className="t12 w500 ink3" style={{ marginBottom: 8 }}>Payment</div>
-                <dl className="kv">
-                  <KV k="Method" v={selRow.method} />
-                  <KV k="Received" v={taka(selRow.amount)} mono strong color={selRow.amount < selRow.due ? 'var(--margin)' : undefined} />
-                  <KV k="Expected" v={taka(selRow.due)} mono color="var(--ink-2)" />
-                  <KV k="TrxID" v={selRow.trx} mono strong />
-                  <KV k="Sent from" v={selRow.sender} mono color={selRow.sender !== selRow.phone ? 'var(--margin)' : undefined} />
-                  <KV k="Submitted" v={ago(selRow.agoMin)} color="var(--ink-2)" />
-                </dl>
-
-                {selRow.status === 'pending' && !canPay ? <div className="t12 ink3">You can only view this area, so you cannot approve or reject.</div> : null}
-                {selRow.status === 'pending' && canPay ? (
-                  <div>
-                    {rejectFor === selRow.id ? (
-                      <div>
-                        <div className="t13 w500 ink2" style={{ marginBottom: 10 }}>Reason for rejecting</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                          {rejectReasons.map((r) => (
-                            <button key={r.code} className="chip" style={{ borderColor: 'var(--margin)', color: 'var(--margin)' }} onClick={() => decide([selRow.id], 'rejected', r.code)}>{r.en}</button>
-                          ))}
-                        </div>
-                        <button className="btn-quiet t13 w500" style={{ height: 36, padding: '0 12px' }} onClick={() => setRejectFor(null)}>Cancel</button>
-                      </div>
-                    ) : null}
-                    <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                      <button onClick={() => decide([selRow.id], 'approved')} style={{ flex: 1, height: 44, border: 'none', borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 15, fontWeight: 500 }}>Approve</button>
-                      <button onClick={() => setRejectFor(selRow.id)} style={{ height: 44, padding: '0 16px', border: '1px solid var(--margin)', borderRadius: 10, background: 'none', color: 'var(--margin)', fontSize: 15, fontWeight: 500 }}>Reject</button>
-                    </div>
-                  </div>
-                ) : null}
-                {selRow.live ? <div className="note-dashed" style={{ marginTop: 20, borderRadius: 10 }}>You submitted this row yourself in the student view. Decide here, then look at the student view.</div> : null}
-              </aside>
-            ) : null}
-          </div>
-        </>
+          ) : inReview ? <div className="adm-muted" style={{ fontSize: 12 }}>You can only view this area, so you cannot publish or send back.</div> : null}
+        </ContentPreview>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 20, height: 44, padding: '0 20px', borderBottom: '1px solid var(--line)', background: 'var(--surface)' }} role="tablist">
-            {([['Pending', 'review'], ['Published', 'published'], ['Returned', 'returned']] as [string, CFilter][]).map(([label, id]) => (
-              <button key={id} role="tab" aria-selected={cFilter === id} style={tabStyle(cFilter === id)} onClick={() => { setCFilter(id); setCSel(0); setCRetFor(null); }}>{label} {cCount[id]}</button>
-            ))}
-          </div>
-          <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <div style={{ width: 400, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--surface)', overflow: 'auto' }}>
-              {cVis.map((k, i) => {
-                const x = item(s, k), w = where(k, x), here = i === ci;
-                const kindColor = x.isNew ? 'var(--brand)' : 'var(--ink-2)';
-                return (
-                  <button key={k} onClick={() => { setCSel(i); setCRetFor(null); }} aria-current={here ? 'true' : undefined}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '12px 16px 12px 14px', border: 'none', borderLeft: '2px solid ' + (here ? 'var(--brand)' : 'transparent'), borderBottom: '1px solid var(--line)', background: here ? 'var(--brand-soft)' : 'var(--surface)', textAlign: 'left', whiteSpace: 'normal' }}>
-                    <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
-                    <span className="t15" style={{ lineHeight: 1.5, fontWeight: here ? 600 : 500 }}>{x.title || 'Untitled'}</span>
-                    <span className="row t12 ink2" style={{ gap: 8 }}><span>{x.by || teacher.name}</span><span className="tag" style={{ color: kindColor }}>{x.kind === 'test' ? (x.isNew ? 'New Test' : 'Test Update') : x.isNew ? 'New Lesson' : 'Update'}</span></span>
-                  </button>
-                );
-              })}
-              {cVis.length === 0 ? (
-                <div className="empty" style={{ padding: '64px 24px', gap: 12 }}>
-                  <Penguin size={64} />
-                  <div className="t15 w600">{cFilter === 'review' ? 'Everything submitted is reviewed' : cFilter === 'published' ? 'Nothing published yet today' : 'Nothing has been sent back'}</div>
-                  <div className="t13 ink2" style={{ maxWidth: '30ch' }}>Lessons and chapter tests appear here when a teacher submits them.</div>
-                </div>
-              ) : null}
-            </div>
-
-            {cit && ck ? (
-              <ContentPreview k={ck} it={cit} loc={where(ck, cit)}
-                actions={cit.status === 'review' && canContent ? (
-                  <div style={{ flexShrink: 0, padding: '14px 32px', borderTop: '1px solid var(--line)', background: 'var(--surface)' }}>
-                    <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {retOpen ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div className="t13 w500 ink2">Why it is going back — the teacher sees this</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {contentReasons.map((r) => {
-                              const on = cReason === r.code;
-                              return (
-                                <button key={r.code} className="chip" aria-pressed={on} onClick={() => setCReason(on ? null : r.code)}
-                                  style={{ borderColor: on ? 'var(--margin)' : 'var(--line-strong)', background: on ? 'var(--margin-soft)' : 'var(--surface)', color: on ? 'var(--margin)' : 'var(--ink-2)' }}>{r.en}</button>
-                              );
-                            })}
-                          </div>
-                          <textarea value={cNote} onChange={(e) => setCNote(e.target.value)} aria-label="What to fix"
-                            placeholder="What to fix — e.g. 4:10 to 6:00, or question 2"
-                            style={{ width: '100%', minHeight: 64, padding: '10px 12px', border: '1px solid var(--line-strong)', borderRadius: 10, background: 'var(--paper)', color: 'var(--ink)', fontSize: 14, lineHeight: 1.7, resize: 'none' }} />
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                            <button className="btn btn-quiet" style={{ height: 44 }} onClick={() => { setCRetFor(null); setCReason(null); setCNote(''); }}>Cancel</button>
-                            <button disabled={!canRet} onClick={doReturn}
-                              style={{ height: 44, padding: '0 18px', border: '1px solid ' + (canRet ? 'var(--margin)' : 'var(--line)'), borderRadius: 10, background: canRet ? 'var(--margin-soft)' : 'var(--surface)', color: canRet ? 'var(--margin)' : 'var(--ink-3)', fontSize: 15, fontWeight: 500 }}>Send back</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 10 }}>
-                          <button onClick={() => cDecide(ck, 'published')} style={{ flex: 1, height: 44, border: 'none', borderRadius: 10, background: 'var(--brand)', color: 'var(--on-brand)', fontSize: 15, fontWeight: 500 }}>Publish</button>
-                          <button onClick={() => setCRetFor(ck)} style={{ height: 44, padding: '0 16px', border: '1px solid var(--margin)', borderRadius: 10, background: 'none', color: 'var(--margin)', fontSize: 15, fontWeight: 500 }}>Send back</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null} />
-            ) : null}
-          </div>
+        <div className="adm-blank">
+          <Penguin size={72} />
+          <div className="t17 w600">{emptyTitle}</div>
+          <div className="t14 ink2" style={{ maxWidth: '38ch' }}>Lessons and chapter tests appear here when a teacher submits them.</div>
         </div>
       )}
-
-      <footer className="mono ink3" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', height: 36, padding: '0 20px', borderTop: '1px solid var(--line)', background: 'var(--surface)', fontSize: 11 }}>
-        {(mode === 'pay' ? ['↑↓ row', 'space select', 'A approve', 'R reject', '/ search'] : ['↑↓ row', 'A publish', 'R send back', 'Esc cancel']).map((h) => <span key={h}>{h}</span>)}
-      </footer>
-    </div>
+    </>
   );
 }
 
-function KV({ k, v, mono, strong, color }: { k: string; v: string; mono?: boolean; strong?: boolean; color?: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 12 }}>
-      <dt className="t13 ink3" style={{ minWidth: 88 }}>{k}</dt>
-      <dd className={'t13' + (mono ? ' mono' : '')} style={{ margin: 0, fontWeight: strong ? 500 : 400, color: color || 'var(--ink)' }}>{v}</dd>
-    </div>
-  );
-}
-
-function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision; loc: { course: string; loc: string }; actions: React.ReactNode }) {
+/** The submission as students will see it, beside the checks and the decision (`children`). */
+function ContentPreview({ k, it, loc, badge, closed, onBack, children }: {
+  k: string; it: LessonRevision; loc: { course: string; loc: string }; badge: Cell; closed: boolean; onBack: () => void; children: React.ReactNode;
+}) {
   const nb = it.blocks.filter(blockHasContent).length, vq = it.quiz.length, vOk = it.video.state === 'done';
-  const status = it.status === 'published' ? ['✓ Published', 'var(--brand)'] : it.status === 'returned' ? ['✗ Returned', 'var(--margin)'] : ['● Pending review', 'var(--warn)'];
   const isTest = it.kind === 'test';
   const checks: [string, boolean][] = isTest ? [
     ['Questions · ' + vq, vq >= MIN_TEST_QUESTIONS],
@@ -367,65 +412,68 @@ function ContentPreview({ k, it, loc, actions }: { k: string; it: LessonRevision
   ];
 
   return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--paper)' }}>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        <div key={k} style={{ maxWidth: 720, margin: '0 auto', padding: '28px 32px 48px' }}>
-          <div className="t12 w500" style={{ color: status[1], marginBottom: 8 }}>{status[0]}</div>
-          <div className="t12 ink3">{loc.course} · {loc.loc}</div>
-          <h1 style={{ margin: '2px 0 4px', fontSize: 24, lineHeight: 1.4, fontWeight: 600 }}>{it.title || 'Untitled'}</h1>
-          <div className="t13 ink2" style={{ marginBottom: 20 }}>{(it.by || teacher.name) + ' · submitted ' + ago(it.subAgoMin ?? 0)}</div>
-          {!it.isNew && it.status === 'review' ? (
-            <div className="note-dashed t13 ink2" style={{ marginBottom: 20, fontSize: 13, borderRadius: 10 }}>An update to something already published. Publishing replaces the old version; student progress and results are kept.</div>
-          ) : null}
-          {it.status === 'returned' ? (
-            <div style={{ marginBottom: 20, padding: '12px 14px', border: '1px solid var(--margin)', borderRadius: 10, background: 'var(--margin-soft)' }}>
-              <div className="t12 w500" style={{ color: 'var(--margin)' }}>Sent back because</div>
-              <div style={{ fontSize: 14, lineHeight: 1.7 }}>{returnReason(it, 'en') || 'No reason given'}</div>
-            </div>
-          ) : null}
-          {it.live && it.status === 'review' ? <div className="note-dashed" style={{ marginBottom: 20, borderRadius: 10 }}>Submitted just now from the teacher view. Decide here, then look at the Content page in the teacher view.</div> : null}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', padding: '12px 0', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', marginBottom: 24 }}>
-            {checks.map(([label, ok]) => (
-              <span key={label} className="t13 ink2" style={{ display: 'flex', gap: 6 }}><span style={{ color: ok ? 'var(--brand)' : 'var(--ink-3)' }}>{ok ? '✓' : '–'}</span><span>{label}</span></span>
+    <div className="adm-review" data-closed={closed}>
+      <div className="adm-review-in">
+        <div className="adm-review-doc" key={k}>
+          <div className="adm-review-head">
+            <button className="adm-link adm-phone-only" style={{ marginLeft: -8, marginBottom: 4 }} onClick={onBack}>← Back to the queue</button>
+            <div className="t12 ink3">{loc.course} · {loc.loc}</div>
+            <h2>{it.title || 'Untitled'}</h2>
+            <div className="t13 ink2">{(it.by || teacher.name) + ' · submitted ' + ago(it.subAgoMin ?? 0)}</div>
+          </div>
+          <div className="adm-review-flow">
+            {isTest ? null : (
+              <>
+                <div className="adm-review-video"><span>{vOk ? it.video.name : 'No video'}</span>{vOk ? <span>▶ {it.video.dur || ''}</span> : null}</div>
+                <div>
+                  <div className="adm-review-label">Notes — as students see them</div>
+                  {/* Lesson notes are the teacher's own words, so they stay in the language they were written in. */}
+                  <div className="adm-review-card" lang="bn" style={{ padding: '20px 24px' }}><NoteBlocks blocks={it.blocks} /></div>
+                </div>
+              </>
+            )}
+            {it.quiz.map((q, qi) => (
+              <div key={qi} lang="bn">
+                {qi === 0 ? <div className="adm-review-label" lang="en">{isTest ? 'Questions' : 'Quiz'} — correct answers marked</div> : null}
+                <div className="adm-review-card">
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                    <span className="mono t12 ink3" style={{ lineHeight: '24px' }}>{pad2(qi + 1)}</span>
+                    <span style={{ fontSize: 15, fontWeight: 500 }}>{q.stem}</span>
+                  </div>
+                  <div className="adm-review-opts">
+                    {q.o.map((o, oi) => (
+                      <div key={oi} className="adm-review-opt" data-right={q.a === oi}>
+                        <span style={{ width: 14, flexShrink: 0, color: 'var(--brand)' }} aria-label={q.a === oi ? 'Correct answer' : undefined}>{q.a === oi ? '✓' : ''}</span><span>{o}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {q.why ? <div className="t13 ink2" style={{ marginTop: 10, lineHeight: 1.7 }}><span lang="en">Explanation · </span>{q.why}</div> : null}
+                </div>
+              </div>
             ))}
           </div>
-          {isTest ? null : (<>
-          <div style={{ height: 240, marginBottom: 32, padding: 12, background: 'var(--surface-sunk)', border: '1px solid var(--line)', borderRadius: 16, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-            <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>{vOk ? it.video.name : 'No video'}</span>
-            {vOk ? <span className="mono ink2" style={{ fontSize: 11, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 5, padding: '1px 6px' }}>▶ {it.video.dur || ''}</span> : null}
-          </div>
-          <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>Notes — as students see them</div>
-          <div style={{ marginBottom: 32, padding: '24px 28px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}><NoteBlocks blocks={it.blocks} /></div>
-          </>)}
-          {it.quiz.length ? (
-            <div>
-              <div className="t12 w500 ink3" style={{ marginBottom: 10 }}>{isTest ? 'Questions' : 'Quiz'} — correct answers marked</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {it.quiz.map((q, qi) => (
-                  <div key={qi} style={{ padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16 }}>
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                      <span className="mono t12 ink3" style={{ lineHeight: '24px' }}>{pad2(qi + 1)}</span>
-                      <span className="t15 w500">{q.stem}</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 8 }}>
-                      {q.o.map((o, oi) => {
-                        const r = q.a === oi;
-                        return (
-                          <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 40, padding: '6px 12px', border: '1px solid ' + (r ? 'var(--brand)' : 'var(--line)'), borderRadius: 10, background: r ? 'var(--brand-soft)' : 'var(--surface)', fontSize: 14, fontWeight: r ? 600 : 400 }}>
-                            <span style={{ width: 14, flexShrink: 0, color: 'var(--brand)' }}>{r ? '✓' : ''}</span><span>{o}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {q.why ? <div className="t13 ink2" style={{ marginTop: 10, lineHeight: 1.7 }}>Explanation · {q.why}</div> : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
+
+        <aside className="adm-review-rail" aria-label="Review">
+          <div className="adm-review-info">
+            <div><Badge c={badge} /></div>
+            <div className="adm-checks">
+              {checks.map(([label, ok]) => (
+                <span key={label}><span style={{ color: ok ? 'var(--brand)' : 'var(--ink-3)' }} aria-label={ok ? 'Present' : 'Missing'}>{ok ? '✓' : '–'}</span><span>{label}</span></span>
+              ))}
+            </div>
+            {!it.isNew && it.status === 'review' ? <div className="note-dashed" style={{ borderRadius: 10 }}>An update to something already published. Publishing replaces the old version; student progress and results are kept.</div> : null}
+            {it.status === 'returned' ? (
+              <div style={{ padding: '10px 12px', border: '1px solid var(--margin)', borderRadius: 10, background: 'var(--margin-soft)' }}>
+                <div className="t12 w500" style={{ color: 'var(--margin)' }}>Sent back because</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6 }}>{returnReason(it, 'en') || 'No reason given'}</div>
+              </div>
+            ) : null}
+            {it.live && it.status === 'review' ? <div className="note-dashed" style={{ borderRadius: 10 }}>Submitted just now from the teacher view. Decide here, then look at the Content page in the teacher view.</div> : null}
+          </div>
+          <div className="adm-review-act">{children}</div>
+        </aside>
       </div>
-      {actions}
     </div>
   );
 }

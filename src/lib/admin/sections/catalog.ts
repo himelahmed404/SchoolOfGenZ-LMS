@@ -25,9 +25,16 @@ export function courses(c: AdminConsole): SectionView {
         return { id: x.id, cells: [
           c.T(x.title, x.code + ' · ' + c.pl(x.lessons, 'lesson'), { bold: true, subMono: true }), c.T(t ? t.name : 'No teacher', '', { fg: t ? 'var(--ink)' : 'var(--warn)' }),
           c.T(c.priceStr(x)), c.T(nf(studentsOf(x.id))), c.B(x.status),
+          c.T(x.early === 'on' && x.earlyEnd ? tk(x.earlyPrice) + ' until ' + c.fd(x.earlyEnd) : '—', '', { fg: x.early === 'on' ? 'var(--ink)' : 'var(--ink-3)' }),
+          c.T(nf(S.batches.filter((b) => b.course === x.id && b.status !== 'finished').length)),
         ] };
       }),
-      'No courses.'),
+      'No courses.',
+      { cols: ['Early-bird', 'Live batches'], grid: 'minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,0.6fr) minmax(0,0.7fr) minmax(0,1.2fr) minmax(0,0.7fr)' }),
+    summary: [
+      c.kv('Students in live batches', nf(S.batches.filter((b) => b.status !== 'finished').reduce((a, b) => a + b.enrolled, 0))),
+      c.kv('Lessons in total', nf(S.courses.reduce((a, x) => a + x.lessons, 0))),
+    ],
   };
   const c0 = S.courses.find((x) => x.id === S.sel);
   if (c0) {
@@ -114,9 +121,16 @@ export function batches(c: AdminConsole): SectionView {
           c.T(c.fd(b.exam), b.status !== 'finished' && d >= 0 ? c.pl(d, 'day') + ' left' : '', { subFg: d <= 30 ? 'var(--warn)' : 'var(--ink-3)' }),
           c.T(nf(b.enrolled) + '/' + nf(b.seats), b.status !== 'finished' ? nf(left) + ' free' : '', { subFg: left <= 2 ? 'var(--warn)' : 'var(--ink-3)' }),
           c.B(b.status),
+          c.T((c.teacherOf(b.course) || { name: 'No teacher' }).name, '', { fg: c.teacherOf(b.course) ? 'var(--ink)' : 'var(--warn)' }),
         ] };
       }),
-      'No batches.'),
+      'No batches.',
+      { cols: ['Teacher'], grid: 'minmax(0,1.1fr) minmax(0,1.6fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,1.1fr)' }),
+    summary: (() => {
+      const live = S.batches.filter((b) => b.status !== 'finished');
+      const seats = live.reduce((a, b) => a + Number(b.seats), 0), taken = live.reduce((a, b) => a + b.enrolled, 0);
+      return [c.kv('Seats in live batches', nf(seats)), c.kv('Enrolled', nf(taken)), c.kv('Free', nf(seats - taken))];
+    })(),
   };
   if (S.sel === 'new') {
     const f: Rec = S.form || {}, dup = S.batches.some((b) => b.id === f.id);
@@ -190,6 +204,7 @@ export function coupons(c: AdminConsole): SectionView {
         c.T(k.code, '', { mono: true, bold: true }), c.T(disc(k)), c.T(scope(k.scope)), c.T(nf(k.used) + ' / ' + (k.limit ? nf(k.limit) : '∞')), c.T(c.fd(k.exp)), c.B(c.couponStatus(k)),
       ] })),
       'No coupons.'),
+    summary: [c.kv('Uses in total', nf(S.coupons.reduce((a, k) => a + k.used, 0)))],
   };
   if (S.sel === 'new') {
     const f: Rec = S.form || {}, dup = S.coupons.some((k) => k.code === f.code), vErr = f.type === 'pct' && +f.value > 90 ? 'Cannot be more than 90%' : '';

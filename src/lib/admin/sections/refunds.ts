@@ -21,9 +21,14 @@ export function refunds(c: AdminConsole): SectionView {
         c.T(r.name, r.method + ' · ' + r.number, { bold: true }), c.T(r.batch, '', { mono: true }), c.T(tk(r.paid)),
         c.T(c.pl(r.ago, 'day'), '', { fg: r.ago > Number(st.refundDays) ? 'var(--warn)' : 'var(--ink)' }),
         c.T(nf(r.watched) + '%', '', { fg: r.watched >= Number(st.refundWatch) ? 'var(--warn)' : 'var(--ink)' }),
-        c.B(pol(r)),
+        c.B(pol(r)), c.T(r.why, '', { fg: 'var(--ink-2)' }),
       ] })),
-      'No refund requests.'),
+      'No refund requests.',
+      { cols: ['Reason given'], grid: 'minmax(0,1.5fr) minmax(0,1fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.9fr) minmax(0,2.2fr)' }),
+    summary: [
+      c.kv('Asked for (open)', tk(S.refunds.filter((x) => x.status === 'open').reduce((a, x) => a + x.paid, 0))),
+      c.kv('Refunded so far', tk(S.refunds.reduce((a, x) => a + (x.status === 'refunded' ? x.amount || 0 : 0), 0))),
+    ],
   };
   const r = S.refunds.find((x) => x.id === S.sel);
   if (r) {

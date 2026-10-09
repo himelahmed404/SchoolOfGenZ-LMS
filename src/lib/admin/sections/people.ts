@@ -18,8 +18,15 @@ export function students(c: AdminConsole): SectionView {
         c.T(u.name, u.phone, { bold: true, subMono: true }), c.T(u.batch, '', { mono: true }), c.B(u.status), c.T(nf(u.prog) + '%'),
         c.T(tk(u.paid), u.due ? 'Due ' + tk(u.due) : '', { subFg: 'var(--warn)' }),
         c.T(nf(u.devices.length) + '/' + nf(S.settings.devices), '', { fg: u.devices.length >= S.settings.devices ? 'var(--warn)' : 'var(--ink)' }),
+        c.T(c.fd(u.joined)), c.T(u.due ? tk(u.due) : '—', '', { fg: u.due ? 'var(--warn)' : 'var(--ink-3)' }),
       ] })),
-      'No students match this filter.'),
+      'No students match this filter.',
+      { cols: ['Joined', 'Due'], grid: 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,0.7fr) minmax(0,0.9fr) minmax(0,0.6fr) minmax(0,0.8fr) minmax(0,0.7fr)' }),
+    summary: [
+      c.kv('Paid in total', tk(S.students.reduce((a, u) => a + u.paid, 0))),
+      c.kv('Still due', tk(S.students.reduce((a, u) => a + u.due, 0))),
+      c.kv('Average progress', nf(Math.round(S.students.reduce((a, u) => a + u.prog, 0) / Math.max(1, S.students.length))) + '%'),
+    ],
   };
   const u = S.students.find((x) => x.id === S.sel);
   if (u) {
@@ -78,9 +85,14 @@ export function teachers(c: AdminConsole): SectionView {
       rows.map((t) => ({ id: t.id, cells: [
         c.T(t.name, t.email, { bold: true }), c.T(t.courses.map((x) => c.course(x).code).join(', ') || '—', '', { mono: true }),
         c.T(t.status === 'active' ? nf(t.med) + ' h' : '—', '', { fg: t.med > 24 ? 'var(--warn)' : 'var(--ink)' }),
-        t.overdue ? c.B('open', nf(t.overdue)) : c.T('—'), c.T(t.status === 'active' ? nf(t.answered) : '—'), c.B(t.status),
+        t.overdue ? c.B('open', nf(t.overdue)) : c.T('—'), c.T(t.status === 'active' ? nf(t.answered) : '—'), c.B(t.status), c.T(c.fd(t.joined)),
       ] })),
-      'No teachers here.'),
+      'No teachers here.',
+      { cols: ['Joined'], grid: 'minmax(0,1.6fr) minmax(0,0.9fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,0.8fr)' }),
+    summary: [
+      c.kv('Questions over 24 h', nf(S.teachers.reduce((a, t) => a + (t.status === 'active' ? t.overdue : 0), 0))),
+      c.kv('Answered in 7 days', nf(S.teachers.reduce((a, t) => a + t.answered, 0))),
+    ],
   };
   if (S.sel === 'new') {
     const f: Rec = S.form || {}, ok = (f.name || '').trim().length > 2 && /.+@.+\..+/.test(f.email || '');
