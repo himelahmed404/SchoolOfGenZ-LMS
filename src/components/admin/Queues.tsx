@@ -6,7 +6,7 @@ import { Penguin } from '@/components/Penguin';
 import { Splitter, useConsole } from './Console';
 import { decideContent, decidePayments } from '@/lib/actions';
 import type { Cell } from '@/lib/admin';
-import { contentReasons, courses, MIN_TEST_QUESTIONS, rejectReasons, teacher } from '@/lib/data';
+import { contentReasons, MIN_TEST_QUESTIONS, rejectReasons, teacher } from '@/lib/data';
 import { ago, pad2, plural, taka } from '@/lib/format';
 import { allQueue, blockHasContent, item, itemKeys, keyCourse, reasonText, returnReason, revisionRef, rowFlags } from '@/lib/selectors';
 import type { AppState } from '@/lib/state';
@@ -153,7 +153,7 @@ function PaymentQueue() {
                 </span>
                 <span className="adm-cell"><span className="adm-cell-t mono ink2" style={{ fontSize: 12 }}>{r.trx}</span></span>
                 <span className="adm-cell"><span className="adm-cell-t ink3" style={{ fontSize: 12 }}>{ago(r.agoMin)}</span></span>
-                <span className="adm-cell adm-x"><span className="adm-cell-t mono ink2" style={{ fontSize: 12 }}>{r.batch}</span></span>
+                <span className="adm-cell adm-x"><span className="adm-cell-t mono ink2" style={{ fontSize: 12 }}>{r.batch || '—'}</span></span>
                 <span className="adm-cell adm-x"><span className="adm-cell-t mono" style={{ fontSize: 12, color: r.sender !== r.phone ? 'var(--margin)' : 'var(--ink-2)' }}>{r.sender}</span></span>
               </div>
             );
@@ -193,7 +193,7 @@ function PaymentQueue() {
               <div className="adm-group" style={{ padding: 0 }}>Course</div>
               <div className="adm-kv">
                 <span>Name</span><span>{selRow.course}</span>
-                <span>Batch</span><span className="mono">{selRow.batch}</span>
+                <span>Batch</span><span className="mono">{selRow.batch || '—'}</span>
               </div>
             </section>
             <section className="adm-block">
@@ -267,8 +267,8 @@ function PaymentQueue() {
 /* ---------- content review ---------- */
 
 /** Course and position of a lesson revision, for list rows and the preview. */
-function where(k: string, x: LessonRevision) {
-  const c = courses[keyCourse(k)];
+function where(s: AppState, k: string, x: LessonRevision) {
+  const c = s.catalog.courses[keyCourse(k)];
   return { course: c.titleEn, tag: c.code, loc: revisionRef(x) };
 }
 
@@ -308,7 +308,7 @@ function ContentQueue() {
   const decide = (k: string | null, status: 'published' | 'returned', why?: string, detail?: string) => {
     if (!k || !canContent) return;
     set((x: AppState) => decideContent(x, k, status, why, detail));
-    const x = item(s, k), w = where(k, x);
+    const x = item(s, k), w = where(s, k, x);
     const what = x.kind === 'test' ? 'test' : 'lesson';
     logic.log('content', (status === 'published' ? 'Published ' : 'Returned ') + what, w.tag + ' · ' + w.loc + (x.kind === 'test' ? '' : ' · ' + (x.title || '')),
       [reasonText(contentReasons, why, 'en'), detail].filter(Boolean).join(' — '));
@@ -335,7 +335,7 @@ function ContentQueue() {
         </div>
         <div className="adm-rows">
           {vis.map((k, i) => {
-            const x = item(s, k), w = where(k, x), here = i === ci;
+            const x = item(s, k), w = where(s, k, x), here = i === ci;
             return (
               <button key={k} className="adm-qitem" onClick={() => { pick(i); setOpen(true); }} aria-current={here ? 'true' : undefined}>
                 <span className="row t12 ink3" style={{ gap: 8, width: '100%' }}><span>{w.tag} · {w.loc}</span><span className="ml-auto nowrap">{ago(x.subAgoMin ?? 0)}</span></span>
@@ -357,7 +357,7 @@ function ContentQueue() {
       </section>
 
       {cit && ck ? (
-        <ContentPreview k={ck} it={cit} loc={where(ck, cit)} closed={!open} onBack={() => setOpen(false)}
+        <ContentPreview k={ck} it={cit} loc={where(s, ck, cit)} closed={!open} onBack={() => setOpen(false)}
           badge={cit.status === 'published' ? logic.B('published') : cit.status === 'returned' ? logic.B('denied', 'Returned') : logic.B('pending', 'Pending review')}>
           {inReview && canContent && retOpen ? (
             <>

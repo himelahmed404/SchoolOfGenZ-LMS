@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { courses } from '@/lib/data';
 import { pad2, secs } from '@/lib/format';
 import { chapterTest, isDone, isLocked, testFacts, testKey, testStatus } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -22,7 +21,7 @@ interface Props {
 export function ChapterList({ courseId, open, onToggle, current, variant, onOpenLesson }: Props) {
   const { s } = useStore();
   const router = useRouter();
-  const course = courses[courseId];
+  const course = s.catalog.courses[courseId];
   const big = variant === 'course';
   const rowH = big ? 48 : variant === 'sheet' ? 44 : 40;
   const rowText = variant === 'spine' ? 13 : 15;

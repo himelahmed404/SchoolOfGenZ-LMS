@@ -6,11 +6,11 @@ import { useEffect } from 'react';
 import { CourseCard } from '@/components/CourseCard';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { boardExam, courses, newCourse, streakSeed } from '@/lib/data';
+import { chooseProgram } from '@/lib/actions';
+import { boardExam, streakSeed } from '@/lib/data';
 import { dateEn, daysTo, mmss, ordinalEn, pad2, plural, secs, taka } from '@/lib/format';
-import { batchLabel, boardRows, chapterTest, counts, courseKicker, examISO, lessonRef, nextOpenTest, studentName, testFacts, weekDots } from '@/lib/selectors';
+import { batchLine, boardRows, chapterTest, counts, courseKicker, examISO, lessonRef, myBatch, myCourses, nextOpenTest, offers, programName, studentName, testFacts, weekDots } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import type { CourseId } from '@/lib/types';
 
 function greeting() {
   const h = new Date().getHours();
@@ -23,7 +23,7 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const { s, ready } = useStore();
+  const { s, set, ready } = useStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function Dashboard() {
   }, [ready, s.prefs.setupDone, router]);
 
   const { courseId, ch, li, t } = s.last;
-  const course = courses[courseId];
+  const course = s.catalog.courses[courseId];
   const lesson = course.chapters[ch].lessons[li];
   const lessonHref = `/learn/${courseId}/${ch}/${li}`;
   const coursePct = counts(s, courseId).pct;
@@ -41,12 +41,18 @@ export default function Dashboard() {
   const days = daysTo(iso);
   const urgent = days <= 21;
 
-  const all = boardRows(s, false);
-  const me = all.find((r) => r.live) || all[0];
+  // The rank and the live class belong to a diploma batch; a student with only single courses has neither.
+  const batch = myBatch(s);
+  const all = batch ? boardRows(s, batch.id, false) : [];
+  const me = all.find((r) => r.live);
+  // The course being resumed first, then the rest in order.
+  const mine = [course].concat(myCourses(s).filter((c) => c.id !== courseId)).slice(0, 4);
+  const offer = offers(s)[0];
   const dots = weekDots();
   // A finished chapter whose optional test is still untaken.
   const openCh = nextOpenTest(s, courseId);
   const openTest = openCh === null ? null : chapterTest(s, courseId, openCh);
+  const hasTest = openCh !== null && !!openTest;
 
   return (
     <Shell role="student" title="Home">
@@ -91,7 +97,7 @@ export default function Dashboard() {
               </Link>
               <div style={{ minWidth: 0 }}>
                 <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700 }}>{lesson.t}</div>
-                <div style={{ marginTop: 4, fontSize: 13, opacity: 0.85 }}>{courseKicker(course)}</div>
+                <div style={{ marginTop: 4, fontSize: 13, opacity: 0.85 }}>{courseKicker(s, course)}</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -123,37 +129,45 @@ export default function Dashboard() {
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <SecHead title="My Courses" href="/courses" />
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 16 }}>
-            {(Object.keys(courses) as CourseId[]).map((id) => <CourseCard key={id} id={id} />)}
+            {mine.map((c) => <CourseCard key={c.id} id={c.id} />)}
           </div>
         </section>
 
+        {offer ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <SecHead title="New Course" href="/explore" />
-          <Link href="/enroll" className="card tap" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px' }}>
-            <span className="tile disp" style={{ width: 60, height: 60, borderRadius: 16, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 18, fontWeight: 800 }}>WEB</span>
+          <Link href="/enroll" onClick={() => set((x) => chooseProgram(x, offer.program.id))} className="card tap" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px' }}>
+            <span className="tile disp" style={{ width: 60, height: 60, borderRadius: 16, background: 'var(--sun)', color: 'var(--on-sun)', fontSize: 18, fontWeight: 800 }}>{offer.program.code}</span>
             <span style={{ minWidth: 0, flex: 1 }}>
-              <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{newCourse.title}</span>
-              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>Skill course · {batchLabel(newCourse.batchNo)} · {taka(newCourse.price)}</span>
+              <span className="disp" style={{ display: 'block', fontSize: 17, lineHeight: 1.3, fontWeight: 700 }}>{programName(s, offer.program, 'bn')}</span>
+              <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-3)' }}>{(offer.batch ? batchLine(offer.batch) : 'Skill course') + ' · ' + taka(offer.program.price)}</span>
             </span>
             <span style={{ flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', gap: 4, padding: '0 14px', borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--on-brand-soft)', fontSize: 13, fontWeight: 700 }}>
               Enroll<Icon name="arrow_forward" size={18} />
             </span>
           </Link>
         </section>
+        ) : null}
 
+        {hasTest || batch ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <h2 className="sec-h">This Week</h2>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {openCh !== null && openTest ? (
-              <WeekRow badge={pad2(openCh + 1)} big tone={['var(--brand-soft)', 'var(--on-brand-soft)']} title={'Chapter ' + pad2(openCh + 1) + ' test'} sub={testFacts(openTest) + ' · optional'}
+            {hasTest ? (
+              <WeekRow badge={pad2(openCh + 1)} big tone={['var(--brand-soft)', 'var(--on-brand-soft)']} title={'Chapter ' + pad2(openCh + 1) + ' test'} sub={testFacts(openTest) + ' · optional'} last={!batch}
                 action={<Link href={`/test/${courseId}/${openCh}`} className="btn btn-primary btn-sm" style={{ padding: '0 16px' }}>Take test</Link>} />
             ) : null}
-            <WeekRow badge="Mon" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="7:00 PM"
-              action={<button className="btn btn-sm" disabled title="The link appears before class">Link</button>} />
-            <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="Batch Rank" sub={ordinalEn(me.rank) + ' of ' + all.length} last
-              action={<Link href="/leaderboard" className="btn btn-sm">View</Link>} />
+            {batch ? (
+              <WeekRow badge="Mon" tone={['var(--accent-2-soft)', 'var(--accent-2)']} title="Live Class" sub="7:00 PM" last={!me}
+                action={<button className="btn btn-sm" disabled title="The link appears before class">Link</button>} />
+            ) : null}
+            {me ? (
+              <WeekRow badge={String(me.rank)} big tone={['var(--sun)', 'var(--on-sun)']} title="Batch Rank" sub={ordinalEn(me.rank) + ' of ' + all.length} last
+                action={<Link href="/leaderboard" className="btn btn-sm">View</Link>} />
+            ) : null}
           </div>
         </section>
+        ) : null}
       </div>
     </Shell>
   );

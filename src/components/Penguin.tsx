@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { courses } from '@/lib/data';
-import { counts } from '@/lib/selectors';
+import { counts, isSingle } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { Icon } from './ui';
 
@@ -31,16 +30,17 @@ export function Celebrations() {
     );
   }
   if (toast === 'big') {
-    const c = counts(s, 'cst');
+    // The lesson page makes its course the resume course, so this is the one just finished.
+    const cid = s.last.courseId, c = counts(s, cid), single = isSingle(s, cid);
     return (
       <div className="ov" data-print="hide" role="dialog" aria-modal="true" aria-label="Course Complete"
         style={{ zIndex: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, background: 'repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px), var(--paper)', animation: 'pgn 260ms var(--ease)' }}>
         <Penguin size={148} />
         <div className="disp" style={{ fontSize: 34, lineHeight: 1.2, fontWeight: 800, textAlign: 'center' }}><span className="hl">Course Complete!</span></div>
-        <div style={{ fontSize: 15, color: 'var(--ink-2)', textAlign: 'center' }}>{courses.cst.title} · all {c.total} lessons done</div>
+        <div style={{ fontSize: 15, color: 'var(--ink-2)', textAlign: 'center' }}>{s.catalog.courses[cid].title} · all {c.total} lessons done</div>
         <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-          <Link href="/certificate" className="btn btn-primary" style={{ height: 48 }} onClick={() => showToast(null)}><Icon name="workspace_premium" size={20} />View Certificate</Link>
-          <button className="btn" style={{ height: 48, fontSize: 15 }} onClick={() => showToast(null)}>Later</button>
+          {single ? <Link href="/certificate" className="btn btn-primary" style={{ height: 48 }} onClick={() => showToast(null)}><Icon name="workspace_premium" size={20} />View Certificate</Link> : null}
+          <button className={single ? 'btn' : 'btn btn-primary'} style={{ height: 48, fontSize: 15 }} onClick={() => showToast(null)}>{single ? 'Later' : 'Done'}</button>
         </div>
       </div>
     );

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { defaultStudent, teacher } from '@/lib/data';
-import { counts, studentName, unreadCount, type AppRole } from '@/lib/selectors';
+import { counts, myBatch, studentName, type AppRole, unreadCount } from '@/lib/selectors';
+import type { AppState } from '@/lib/state';
 import { useStore } from '@/lib/store';
 import { Notifications } from './Notifications';
 import { ThemeToggle } from './ThemeToggle';
@@ -14,6 +15,8 @@ interface NavItem {
   label: string; icon: string; href: string; match: (p: string) => boolean;
   /** Short label for the phone tab bar. Items without one are reached through "More". */
   tab?: string;
+  /** Left out of the navigation when this says no. */
+  show?: (s: AppState) => boolean;
 }
 interface NavGroup { label: string; items: NavItem[] }
 
@@ -27,7 +30,8 @@ const NAV: Record<AppRole, NavGroup[]> = {
       { label: 'Explore Courses', icon: 'explore', href: '/explore', match: under('/explore', '/enroll') },
     ] },
     { label: 'Progress', items: [
-      { label: 'Leaderboard', icon: 'leaderboard', href: '/leaderboard', match: under('/leaderboard'), tab: 'Leaderboard' },
+      // A rank belongs to a diploma batch; a student with only single courses has none.
+      { label: 'Leaderboard', icon: 'leaderboard', href: '/leaderboard', match: under('/leaderboard'), tab: 'Leaderboard', show: (s) => !!myBatch(s) },
       { label: 'Certificates', icon: 'workspace_premium', href: '/certificates', match: under('/certificates', '/certificate') },
       { label: 'Saved & Notes', icon: 'bookmarks', href: '/saved', match: under('/saved'), tab: 'Saved' },
     ] },
@@ -71,7 +75,7 @@ export function Shell({ role, title, back, lessonMode, lessonBar, noTabs, topAct
   const [more, setMore] = useState(false);
   if (!ready) return <div className="shell" />;
 
-  const groups = NAV[role];
+  const groups = NAV[role].map((g) => ({ ...g, items: g.items.filter((it) => !it.show || it.show(s)) })).filter((g) => g.items.length);
   const all = groups.flatMap((g) => g.items);
   const tabs = all.filter((it) => it.tab);
   // Everything the phone tab bar has no room for, plus the profile (the sidebar reaches it through the card at the bottom).

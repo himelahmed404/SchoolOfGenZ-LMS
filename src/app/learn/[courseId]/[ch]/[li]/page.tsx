@@ -9,9 +9,9 @@ import { Penguin } from '@/components/Penguin';
 import { Sheet, Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
 import { askDoubt, completeLesson, savePosition, setMyNote, toggleBookmark } from '@/lib/actions';
-import { confusions, courses, defaultStudent } from '@/lib/data';
+import { confusions, defaultStudent } from '@/lib/data';
 import { ago, mmss, pad2, plural, secs } from '@/lib/format';
-import { chapterTest, doubtsFor, isLocked, lessonKey, lessonRef, step, studentLesson, testFacts, testStatus, watermarkOn } from '@/lib/selectors';
+import { batchOf, chapterTest, doubtsFor, isLocked, isSingle, lessonKey, lessonRef, step, studentLesson, testFacts, testStatus, watermarkOn } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { CourseId } from '@/lib/types';
 
@@ -32,7 +32,7 @@ export default function LessonPage() {
 
   const cid = p.courseId as CourseId;
   const ci = Number(p.ch), li = Number(p.li);
-  const exists = !!courses[cid]?.chapters[ci]?.lessons[li];
+  const exists = !!s.catalog.courses[cid]?.chapters[ci]?.lessons[li];
   const locked = exists && ready && isLocked(s, cid, ci, li);
 
   useEffect(() => { if (locked) router.replace('/course/' + cid); }, [locked, cid, router]);
@@ -49,11 +49,13 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   const router = useRouter();
   const { s, set, showToast } = useStore();
 
-  const course = courses[cid];
+  const course = s.catalog.courses[cid];
   const lessonMeta = course.chapters[ci].lessons[li];
+  // A single course has projects, not quizzes, so it has no Quiz tab.
+  const tabs = isSingle(s, cid) ? TABS.filter((x) => x[1] !== 'quiz') : TABS;
   const dur = secs(lessonMeta.d);
 
-  const [tab, setTab] = useState<Tab>(() => { const q = query.get('tab'); return isTab(q) ? q : 'notes'; });
+  const [tab, setTab] = useState<Tab>(() => { const q = query.get('tab'); return isTab(q) && tabs.some((x) => x[1] === q) ? q : 'notes'; });
   const [playing, setPlaying] = useState(false);
   // Resume where "Continue" left off.
   const [t, setT] = useState(() => { const l = s.last; return l.courseId === cid && l.ch === ci && l.li === li ? Math.min(l.t, dur) : 0; });
@@ -101,9 +103,8 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   const lk = lessonKey(cid, ci, li);
   const answers = s.practiceAns[lk] || {};
   const stuck = confusions[lk] || [];
-  const batch = cid === 'cst' ? defaultStudent.batch : 'ENG-02-B07';
-  const asks = doubtsFor(s, batch).filter((d) => d.course === cid && d.ch === ci && d.li === li);
-  const isLast = !step(cid, ci, li, 1);
+  const asks = doubtsFor(s, cid, batchOf(s, cid)?.id).filter((d) => d.ch === ci && d.li === li);
+  const isLast = !step(s, cid, ci, li, 1);
   const bm = !!s.bookmarks[lk];
   const note = s.myNotes[lk] || '';
   const words = note.trim() ? note.trim().split(/\s+/).length : 0;
@@ -124,7 +125,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
   };
   const test = chapterTest(s, cid, ci);
   const prev = () => {
-    const pv = step(cid, ci, li, -1);
+    const pv = step(s, cid, ci, li, -1);
     if (pv) router.push(`/learn/${cid}/${pv[0]}/${pv[1]}`);
   };
   const nextLabel = isLast ? 'Finish' : 'Next →';
@@ -189,7 +190,7 @@ function Lesson({ cid, ci, li }: { cid: CourseId; ci: number; li: number }) {
 
       <div data-print="hide" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         <div className="seg" role="tablist">
-          {TABS.map(([label, id]) => (
+          {tabs.map(([label, id]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               style={{ fontSize: 14, fontWeight: tab === id ? 600 : 400 }}>{label}</button>
           ))}

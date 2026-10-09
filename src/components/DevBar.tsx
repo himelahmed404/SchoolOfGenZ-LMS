@@ -14,13 +14,13 @@ type Role = 'student' | 'teacher' | 'admin';
 
 const JUMPS: Record<Role, [string, string][]> = {
   student: [
-    ['dashboard', '/'], ['courses', '/courses'], ['course', '/course/cst'], ['lesson', '/learn/cst/2/4'], ['test', '/test/cst/1'], ['result', '/test/cst/0/result'],
+    ['dashboard', '/'], ['courses', '/courses'], ['course', '/course/dsa'], ['lesson', '/learn/dsa/2/4'], ['test', '/test/dsa/1'], ['result', '/test/dsa/0/result'],
     ['explore', '/explore'], ['enroll', '/enroll'], ['board', '/leaderboard'], ['certs', '/certificates'], ['cert', '/certificate'], ['saved', '/saved'],
     ['questions', '/questions'], ['payments', '/payments'], ['help', '/help'], ['profile', '/profile'], ['setup', '/setup'],
   ],
   teacher: [
     ['class', '/teacher'], ['doubts', '/teacher/doubts'], ['content', '/teacher/content'],
-    ['editor', editorHref('cst|lesson:2:4')], ['profile', '/teacher/profile'],
+    ['editor', editorHref('dsa|lesson:2:4')], ['profile', '/teacher/profile'],
   ],
   admin: [],
 };

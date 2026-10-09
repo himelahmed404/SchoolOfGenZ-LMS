@@ -5,16 +5,18 @@ import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { createDraft, newLessonKey } from '@/lib/actions';
-import { batches, courses, teacher } from '@/lib/data';
+import { teacher } from '@/lib/data';
 import { pad2, plural } from '@/lib/format';
-import { editorHref, item, itemKeys, statusOf, testItem, testRevKey } from '@/lib/selectors';
+import { editorHref, isSingle, item, itemKeys, statusOf, testItem, testRevKey } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function ContentPage() {
   const { s, set } = useStore();
   const router = useRouter();
-  const tCid = batches[teacher.batch].course;
-  const tc = courses[tCid];
+  const tCid = teacher.course;
+  const tc = s.catalog.courses[tCid];
+  // Chapter tests belong to diploma subjects. A single course has projects instead.
+  const tests = !isSingle(s, tCid);
   const [openCh, setOpenCh] = useState<number | null>(tc.chapters.length - 1);
 
   const keys = itemKeys(s);
@@ -60,7 +62,7 @@ export default function ContentPage() {
             .concat(keys.filter((k) => k.startsWith(tCid + '|new:' + ci + ':')).map((k, j) => [k, pad2(ch.lessons.length + j + 1)] as [string, string]));
           const rows = ks.map(([k, num]) => ({ k, num, it: item(s, k) }));
           // Each chapter can end with one optional test, reviewed like a lesson.
-          const tIt = testItem(s, tCid, ci), tKey = testRevKey(tCid, ci);
+          const tIt = tests ? testItem(s, tCid, ci) : null, tKey = testRevKey(tCid, ci);
           const pend = rows.filter((r) => r.it.status !== 'published').length + (tIt && tIt.status !== 'published' ? 1 : 0);
           const open = openCh === ci;
           return (
@@ -91,7 +93,7 @@ export default function ContentPage() {
                       <span className="grow t15 ellipsis">Chapter test · {plural(tIt.quiz.length, 'question')}</span>
                       <span className="t12 w500" style={{ flexShrink: 0, color: statusOf(tIt)[1] }}>{statusOf(tIt)[0]}</span>
                     </button>
-                  ) : (
+                  ) : !tests ? null : (
                     <button onClick={() => addTest(ci)}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, padding: '8px 8px 8px 0', border: 'none', borderTop: '1px dashed var(--line-strong)', background: 'none', color: 'var(--brand)', fontSize: 14, fontWeight: 600, textAlign: 'left' }}>
                       <Icon name="add" size={18} />Add chapter test

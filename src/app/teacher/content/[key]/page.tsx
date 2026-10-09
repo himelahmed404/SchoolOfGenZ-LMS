@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Tex } from '@/components/Tex';
 import { patchItem, startUpload, submitForReview, withdraw } from '@/lib/actions';
-import { blockTypes, courses, fxKeys, MIN_TEST_QUESTIONS, teacher } from '@/lib/data';
+import { blockTypes, fxKeys, MIN_TEST_QUESTIONS, teacher } from '@/lib/data';
 import { pad2 } from '@/lib/format';
-import { blockHasContent, issues, item, keyCourse, returnReason, revisionRef, statusOf } from '@/lib/selectors';
+import { blockHasContent, isSingle, issues, item, keyCourse, returnReason, revisionRef, statusOf } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { Block, BlockType, LessonRevision, QuizQ } from '@/lib/types';
 
@@ -18,9 +18,9 @@ const ADD: [BlockType, string][] = [['p', 'Paragraph'], ['h', 'Heading'], ['list
 function safeItem(s: Parameters<typeof item>[0], k: string): LessonRevision | null {
   try {
     const cid = keyCourse(k);
-    if (!courses[cid]) return null;
+    if (!s.catalog.courses[cid]) return null;
     const it = item(s, k);
-    return courses[cid].chapters[it.ch] ? it : null;
+    return s.catalog.courses[cid].chapters[it.ch] ? it : null;
   } catch {
     return null;
   }
@@ -69,6 +69,8 @@ export default function EditorPage() {
     ['Notes', 'notes', String(it.blocks.filter(blockHasContent).length)],
     ['Quiz', 'quiz', String(it.quiz.length)],
   ];
+  // A single course has no quizzes, so its lessons have no Quiz tab to fill.
+  if (isSingle(s, keyCourse(k))) tabs.pop();
 
   return (
     <Shell role="teacher" title={isTest ? 'Chapter Test' : 'Lesson Editor'} back="/teacher/content" noTabs>
@@ -80,7 +82,7 @@ export default function EditorPage() {
       {isTest ? (
         <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
           <h1 className="d1" style={{ fontWeight: 600 }}>Chapter test</h1>
-          <div className="t15 ink2">{courses[keyCourse(k)].chapters[it.ch].name}</div>
+          <div className="t15 ink2">{s.catalog.courses[keyCourse(k)].chapters[it.ch].name}</div>
         </div>
       ) : (
         <input value={it.title} onChange={(e) => patch({ title: e.target.value })} readOnly={locked} placeholder="লেসনের নাম" aria-label="Lesson title"

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
-import { courses, teacher } from '@/lib/data';
+import { teacher } from '@/lib/data';
 import { ago } from '@/lib/format';
 import { doubtsFor, editorHref } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -16,7 +16,7 @@ export default function DoubtsPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  const doubts = doubtsFor(s, teacher.batch);
+  const doubts = doubtsFor(s, teacher.course, teacher.batch);
   // Open questions: longest-waiting first. A question is late after 24 hours.
   const isLate = (min: number) => min >= 24 * 60;
   const openL = doubts.filter((d) => !d.reply).sort((a, b) => b.agoMin - a.agoMin);
@@ -54,7 +54,7 @@ export default function DoubtsPage() {
         <div className="stack">
           {list.map((d) => {
             const late = !d.reply && isLate(d.agoMin), open = openId === d.id, draft = drafts[d.id] || '';
-            const where = courses[d.course].chapters[d.ch].lessons[d.li].t;
+            const where = s.catalog.courses[d.course].chapters[d.ch].lessons[d.li].t;
             return (
               <div key={d.id}>
                 <button onClick={() => setOpenId(open ? null : d.id)} aria-expanded={open}

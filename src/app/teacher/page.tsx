@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Shell } from '@/components/Shell';
-import { batches, courses, teacher } from '@/lib/data';
+import { teacher } from '@/lib/data';
 import { pad2, plural } from '@/lib/format';
 import { roster, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -13,8 +13,8 @@ export default function TeacherClassPage() {
   const [q, setQ] = useState('');
   const [chF, setChF] = useState<number | null>(null);
 
-  const tc = courses[batches[teacher.batch].course];
-  const list0 = roster(s, teacher.batch);
+  const tc = s.catalog.courses[teacher.course];
+  const list0 = roster(s, teacher.batch, teacher.course);
   const total = tc.chapters.length;
   const size = list0.length || 1;
   const query = q.trim();

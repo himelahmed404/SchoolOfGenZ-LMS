@@ -12,7 +12,8 @@ export function overview(c: AdminConsole): SectionView {
   const openRef = S.refunds.filter((r) => r.status === 'open').length;
   const overdue = S.teachers.reduce((a, t) => a + (t.status === 'active' ? t.overdue : 0), 0);
   const live = S.batches.filter((b) => b.status !== 'finished');
-  const active = live.reduce((a, b) => a + b.enrolled, 0);
+  // Students in a batch that is open or running, plus everyone in a single course.
+  const active = S.courses.reduce((a, co) => a + c.studentsOf(co.id), 0);
 
   const att: Item[] = [];
   S.courses.forEach((co) => {

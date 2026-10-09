@@ -2,8 +2,7 @@
  * Domain mutations as pure (state) => state functions.
  * Each one is the seam where a server call goes once there is an API.
  */
-import { defaultStudent } from './data';
-import { allQueue, baseItem, chapterTest, counts, item, lessonKey, step } from './selectors';
+import { allQueue, baseItem, batchOf, chapterTest, counts, enrollingBatch, item, lessonKey, step } from './selectors';
 import type { AppState, TestResult } from './state';
 import type { CourseId, LessonRevision, PayStatus } from './types';
 
@@ -13,7 +12,7 @@ export function completeLesson(s: AppState, cid: CourseId, ci: number, li: numbe
   const progress = { ...s.progress, [lessonKey(cid, ci, li)]: true as const };
   let next = { ...s, progress };
   const c = counts(next, cid);
-  const nx = step(cid, ci, li, 1);
+  const nx = step(s, cid, ci, li, 1);
   if (nx) next = { ...next, last: { courseId: cid, ch: nx[0], li: nx[1], t: 0 } };
   return { s: next, next: nx, courseDone: c.done >= c.total };
 }
@@ -72,30 +71,51 @@ export function trxTaken(s: AppState, trx: string) {
   return allQueue(s).some((r) => r.trx === t);
 }
 
+/**
+ * Pick what to enroll in. One payment is made at a time, so this is refused while another is being checked or was sent back;
+ * a finished (approved) one makes room for the next.
+ */
+export function chooseProgram(s: AppState, program: string): AppState {
+  const p = s.payment;
+  if (p.program === program) return s;
+  if (p.status === 'pending' || p.status === 'rejected') return s;
+  return { ...s, payment: { program, method: null, trxId: '', sender: '', status: 'none' } };
+}
+
 export function submitPayment(s: AppState): AppState {
+  if (!s.payment.program) return s;
   return { ...s, payment: { ...s.payment, status: 'pending', reason: undefined } };
 }
 
+/** Clear the form to send the payment again, for the same program. */
 export function resetPayment(s: AppState): AppState {
-  return { ...s, payment: { method: null, trxId: '', sender: '', status: 'none' } };
+  return { ...s, payment: { program: s.payment.program, method: null, trxId: '', sender: '', status: 'none' } };
 }
 
+/** A question on a lesson. In a diploma subject it goes to the student's batch; a single course has no batch. */
 export function askDoubt(s: AppState, cid: CourseId, ch: number, li: number, text: string): AppState {
-  const batch = cid === 'cst' ? defaultStudent.batch : 'ENG-02-B07';
-  return { ...s, myDoubts: [{ id: 'm' + Date.now(), batch, course: cid, ch, li, q: text, who: '', agoMin: 0 }, ...s.myDoubts] };
+  const b = batchOf(s, cid);
+  return { ...s, myDoubts: [{ id: 'm' + Date.now(), ...(b ? { batch: b.id } : {}), course: cid, ch, li, q: text, who: '', agoMin: 0 }, ...s.myDoubts] };
 }
 
 /* ---------- admin: payments ---------- */
 
-/** `reason` is a `rejectReasons` code. */
+/**
+ * `reason` is a `rejectReasons` code.
+ * Approving the student's own payment enrolls them: in the batch that is taking students for a diploma program, with no batch for a single course.
+ */
 export function decidePayments(s: AppState, ids: string[], status: PayStatus, reason?: string): AppState {
   const decided = { ...s.decided };
-  let payment = s.payment;
+  let payment = s.payment, enrollments = s.enrollments;
   ids.forEach((id) => {
-    if (id === 'live') payment = { ...payment, status, reason };
-    else decided[id] = { status, reason };
+    if (id !== 'live') { decided[id] = { status, reason }; return; }
+    payment = { ...payment, status, reason };
+    const program = payment.program;
+    if (status !== 'approved' || !program || enrollments.some((e) => e.program === program)) return;
+    const b = enrollingBatch(s, program);
+    enrollments = enrollments.concat([{ program, ...(b ? { batch: b.id } : {}) }]);
   });
-  return { ...s, decided, payment };
+  return { ...s, decided, payment, enrollments };
 }
 
 /* ---------- teacher: revisions ---------- */
@@ -115,7 +135,7 @@ export function newLessonKey(cid: CourseId, ci: number) {
 
 /** Start a blank draft for a new lesson (`newLessonKey`) or a chapter's first test (`testRevKey`). */
 export function createDraft(s: AppState, k: string): AppState {
-  return { ...s, tItems: { ...s.tItems, [k]: baseItem(k) } };
+  return { ...s, tItems: { ...s.tItems, [k]: baseItem(s, k) } };
 }
 
 export function submitForReview(s: AppState, k: string, by: string): AppState {

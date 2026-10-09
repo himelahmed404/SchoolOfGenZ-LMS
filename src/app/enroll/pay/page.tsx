@@ -1,13 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
 import { submitPayment, trxTaken } from '@/lib/actions';
-import { newCourse } from '@/lib/data';
 import { taka } from '@/lib/format';
-import { merchantNumbers } from '@/lib/selectors';
+import { merchantNumbers, offerView, payingOffer } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import type { PayMethod } from '@/lib/types';
 
@@ -19,8 +19,11 @@ export default function PayPage() {
   const [error, setError] = useState('');
   const p = s.payment;
   const merchants = merchantNumbers(s);
-  const price = taka(newCourse.price);
-  const canSubmit = !!p.method && p.trxId.trim().length >= 6;
+  // What is being paid for was picked on the enroll page.
+  const o = payingOffer(s);
+  const v = o ? offerView(s, o) : null;
+  const price = taka(v ? v.price : 0);
+  const canSubmit = !!v && !!p.method && p.trxId.trim().length >= 6;
   const setPay = (patch: Partial<typeof p>) => set((x) => ({ ...x, payment: { ...x.payment, ...patch } }));
 
   const steps = p.method ? [
@@ -43,9 +46,20 @@ export default function PayPage() {
   const label: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 10 };
   const input: React.CSSProperties = { width: '100%', height: 52, padding: '0 14px', border: '1px solid var(--field-line)', borderRadius: 14, background: 'var(--paper)', color: 'var(--ink)', fontSize: 15 };
 
+  if (!v) {
+    return (
+      <Shell role="student" title="Payment" back="/explore">
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '40px 24px', textAlign: 'center' }}>
+          <div className="disp" style={{ fontSize: 19, fontWeight: 700 }}>আগে একটা কোর্স বেছে নাও</div>
+          <Link href="/explore" className="btn btn-primary">Explore Courses</Link>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell role="student" title="Payment" back="/enroll">
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>{newCourse.title}</div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>{v.title}</div>
       <h1 className="d1" style={{ margin: '2px 0 6px' }}>Send {price}</h1>
       <div className="muted-p" style={{ maxWidth: '52ch', marginBottom: 24 }}>কোনটা দিয়ে পাঠাবে বেছে নাও। টাকা পাঠানোর পর TrxID-টা নিচে লিখে জমা দাও।</div>
 

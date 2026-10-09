@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AdminConsole, adminSeed, initialUi, type ConsoleState, type Section } from '.';
+import { AdminConsole, adminSeed, BUILDERS, initialUi, type ConsoleState, type Section } from '.';
 import { figure, niceScale, ringArcs, thin } from './chart-math';
 
 /** A console on the seed data, at a fixed date, with `ui` on top of the starting view state. */
@@ -146,3 +146,82 @@ describe('dashboards', () => {
     expect(week.kpis[0].value).not.toBe(month.kpis[0].value);
   });
 });
+
+describe('two kinds of course', () => {
+  /** A console whose changes are kept, so an action can be run and its result read. */
+  function live(sec: Section, ui: Partial<ConsoleState> = {}) {
+    let state: ConsoleState = { ...adminSeed(), ...initialUi, ...ui };
+    const make = () => new AdminConsole(state, (p) => { state = { ...state, ...(typeof p === 'function' ? p(state) : p) }; }, {
+      sec, theme: 'light', payCount: 0, contentCount: 0, pending: [], navigate: () => {}, toggleTheme: () => {}, today: new Date(2026, 9, 9),
+    });
+    return { make, get state() { return state; } };
+  }
+
+  it('counts a diploma course through its open and running batches, and a single course on itself', () => {
+    const c = consoleAt('courses');
+    expect(c.studentsOf('cst4')).toBe(28 + 23);
+    expect(c.studentsOf('cst3')).toBe(0);
+    expect(c.studentsOf('eng')).toBe(318);
+  });
+
+  it('says what someone is in: the batch, or the single course', () => {
+    const c = consoleAt('students');
+    expect(c.inWhat({ course: 'cst4', batch: 'CST-04-B01' })).toBe('CST-04-B01');
+    expect(c.inWhat({ course: 'eng' })).toBe('ENG');
+    expect(c.S.students.filter((u) => c.course(u.course).kind === 'single').every((u) => !u.batch)).toBe(true);
+  });
+
+  it('runs batches for diploma courses only', () => {
+    const c = consoleAt('batches', { sel: 'new', form: { course: 'cst5', id: '', start: '', exam: '', seats: 35 } });
+    expect(c.S.batches.every((b) => c.course(b.course).kind === 'diploma')).toBe(true);
+    const pick = BUILDERS.batches!(c).detail!.blocks[0].fields[0];
+    expect(pick.opts!.map((o) => o.label)).toEqual(['CST · 4th Semester', 'CST · 5th Semester']);
+  });
+
+  it('lists each kind under its own tab', () => {
+    const rows = (filter: string) => BUILDERS.courses!(consoleAt('courses', { filter })).list!.rows.map((r) => r.key);
+    expect(rows('diploma')).toEqual(['cst4', 'cst5', 'cst3']);
+    expect(rows('single')).toEqual(['eng', 'web', 'car', 'uix']);
+    expect(rows('all')).toHaveLength(7);
+    expect(rows('archived')).toEqual(['cst3']);
+  });
+
+  it('shows a semester by its subjects and a single course by its teacher', () => {
+    const sem = BUILDERS.courses!(consoleAt('courses', { sel: 'cst4' })).detail!;
+    const subjects = sem.blocks.find((b) => b.title === 'Subjects · 7')!;
+    expect(subjects.items.map((x) => x.t)).toContain('Data Structure & Algorithm');
+    expect(subjects.items.find((x) => x.t === 'Data Structure & Algorithm')!.right).toBe('Shahriar Hossain');
+    expect(sem.blocks[0].fields.some((f) => f.label === 'Teacher')).toBe(false);
+
+    const one = BUILDERS.courses!(consoleAt('courses', { sel: 'eng' })).detail!;
+    expect(one.blocks.some((b) => b.title.startsWith('Subjects'))).toBe(false);
+    expect(one.blocks[0].fields.some((f) => f.label === 'Teacher')).toBe(true);
+    expect(one.actions!.some((a) => a.label === 'Add subject')).toBe(false);
+  });
+
+  it('adds a subject to a semester, and refuses a code that is taken', () => {
+    const h = live('courses', { sel: 'cst5', form: { _for: 'cst5', title: 'Accounting', code: 'ACC' } });
+    BUILDERS.courses!(h.make()).detail!.actions!.find((a) => a.label === 'Add subject')!.go();
+    const added = h.state.courses.find((x) => x.id === 'cst5')!.subjects;
+    expect(added.map((x) => x.code)).toEqual(['OS', 'NET', 'JAVA', 'SE', 'ACC']);
+    expect(h.state.activity[0]).toMatchObject({ area: 'courses', action: 'Added subject', target: 'CST · Accounting' });
+
+    const taken = BUILDERS.courses!(consoleAt('courses', { sel: 'cst5', form: { _for: 'cst5', title: 'Another', code: 'DSA' } })).detail!;
+    expect(taken.blocks.find((b) => b.title === 'Add a subject')!.fields[1].hint).toBe('This code is already used');
+  });
+
+  it('reaches everyone, one course, or one batch', () => {
+    const c = consoleAt('announcements');
+    expect(c.reach('all', '')).toBe(51 + 12 + 318 + 126 + 86);
+    expect(c.reach('course', 'web')).toBe(126);
+    expect(c.reach('course', 'cst4')).toBe(51);
+    expect(c.reach('batch', 'CST-04-B01')).toBe(28);
+  });
+
+  it('gives certificates for single courses only', () => {
+    const c = consoleAt('certificates', { sel: 'new', form: { name: 'Someone', course: 'eng' } });
+    expect(BUILDERS.certificates!(c).detail!.blocks[0].fields[1].opts!.map((o) => o.label)).toEqual(['ENG', 'WEB', 'CAR']);
+    expect(c.S.certs.every((x) => c.course(x.course).kind === 'single')).toBe(true);
+  });
+});
+

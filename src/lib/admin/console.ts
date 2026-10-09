@@ -8,7 +8,7 @@ import { ago, dateEn } from '../format';
 import { AREAS } from './seed';
 import type {
   Action, AdminData, Area, Bar, Block, Cell, ConfirmSpec, Detail, Field, Item, Kpi, KV, ListView, Meter, Perm, Role, Section, SectionView, Staff, Tab,
-  AdminCourse, AdminTeacher, Coupon, Refund,
+  AdminCourse, AdminTeacher, Coupon, Refund, Subject,
 } from './types';
 
 /** Free-form records: create/edit forms and unsaved drafts. */
@@ -105,8 +105,22 @@ export class AdminConsole {
 
   /* ---------- lookups ---------- */
   areaLabel(a: string) { const f = AREAS.find((x) => x[0] === a); return f ? f[1] : 'Overview'; }
-  course(id: string): AdminCourse { return this.S.courses.find((c) => c.id === id) || ({ id, code: '—', title: '—' } as AdminCourse); }
-  teacherOf(cid: string): AdminTeacher | undefined { return this.S.teachers.find((t) => t.courses.includes(cid)); }
+  course(id: string): AdminCourse { return this.S.courses.find((c) => c.id === id) || ({ id, kind: 'single', code: '—', title: '—', subjects: [], enrolled: 0 } as unknown as AdminCourse); }
+  /** A subject by id, whichever course it belongs to. */
+  subject(id: string): Subject {
+    for (const co of this.S.courses) { const sb = co.subjects.find((x) => x.id === id); if (sb) return sb; }
+    return { id, code: '—', title: '—', lessons: 0 };
+  }
+  /** Who teaches a subject. */
+  teacherOf(sid: string): AdminTeacher | undefined { return this.S.teachers.find((t) => t.courses.includes(sid)); }
+  lessonsOf(co: AdminCourse) { return co.subjects.reduce((a, x) => a + x.lessons, 0); }
+  /** Students in a course now: through its open and running batches for a diploma course, its own count for a single one. */
+  studentsOf(cid: string) {
+    const co = this.course(cid);
+    return co.kind === 'single' ? co.enrolled || 0 : this.S.batches.filter((b) => b.course === cid && b.status !== 'finished').reduce((a, b) => a + b.enrolled, 0);
+  }
+  /** What someone is enrolled in, in one word: the batch, or the code of a single course. */
+  inWhat(x: { course: string; batch?: string }) { return x.batch || this.course(x.course).code; }
   me(): Staff { return this.S.staff.find((s) => s.id === this.S.viewAs) || this.S.staff[0]; }
   roleOf(s: Staff): Role { return this.S.roles.find((r) => r.id === s.role) || this.S.roles[0]; }
   perm(a: Section, staffId?: string): Perm {
@@ -259,8 +273,9 @@ export class AdminConsole {
   refundVerdict(r: Refund) { const st = this.S.settings; return r.ago <= Number(st.refundDays) && r.watched < Number(st.refundWatch) ? 'eligible' : 'decide'; }
   /** How many enrolled students an audience reaches. */
   reach(aud: string, target: string) {
-    const B = this.S.batches.filter((b) => b.status !== 'finished');
-    return aud === 'all' ? B.reduce((a, b) => a + b.enrolled, 0) : aud === 'course' ? B.filter((b) => b.course === target).reduce((a, b) => a + b.enrolled, 0) : (B.find((b) => b.id === target) || { enrolled: 0 }).enrolled;
+    if (aud === 'all') return this.S.courses.reduce((a, co) => a + this.studentsOf(co.id), 0);
+    if (aud === 'course') return this.studentsOf(target);
+    return (this.S.batches.find((b) => b.id === target && b.status !== 'finished') || { enrolled: 0 }).enrolled;
   }
 
   /* ---------- global search (Ctrl K) ---------- */
@@ -282,9 +297,9 @@ export class AdminConsole {
       const ent = <T extends { id: string }>(sec: Section, list: T[], t: (x: T) => string, s: (x: T) => string): Hit[] =>
         this.perm(sec) === 'none' ? [] : list.filter((x) => has(t(x)) || has(s(x))).slice(0, 5).map((x) => ({ title: t(x), sub: s(x), icon: ICON[sec], run: close(() => this.go(sec, x.id)) }));
       ([
-        ['Students', ent('students', S.students, (x) => x.name, (x) => x.phone + ' · ' + x.batch)],
+        ['Students', ent('students', S.students, (x) => x.name, (x) => x.phone + ' · ' + this.inWhat(x))],
         ['Teachers', ent('teachers', S.teachers, (x) => x.name, (x) => x.email)],
-        ['Courses', ent('courses', S.courses, (x) => x.code + ' — ' + x.title, () => 'Course')],
+        ['Courses', ent('courses', S.courses, (x) => x.code + ' — ' + x.title, (x) => (x.kind === 'diploma' ? 'Diploma course' : 'Single course'))],
         ['Batches', ent('batches', S.batches, (x) => x.id, (x) => this.course(x.course).title)],
       ] as [string, Hit[]][]).forEach((g) => { if (g[1].length) groups.push(g); });
     }

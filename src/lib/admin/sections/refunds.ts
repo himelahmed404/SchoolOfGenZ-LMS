@@ -10,15 +10,15 @@ const present = <T,>(x: T | null | false | undefined): x is T => !!x;
 export function refunds(c: AdminConsole): SectionView {
   const S = c.S, nf = c.nf, tk = c.tk, st = S.settings;
   const pol = (r: Refund) => (r.status === 'open' ? c.refundVerdict(r) : r.status);
-  const rows = S.refunds.filter((r) => (S.filter === 'all' || r.status === S.filter) && c.match(r.name + r.batch + r.number));
+  const rows = S.refunds.filter((r) => (S.filter === 'all' || r.status === S.filter) && c.match(r.name + c.inWhat(r) + r.number));
   const v: SectionView = {
     title: 'Refunds', sub: 'Full refund within ' + c.pl(Number(st.refundDays), 'day') + ' and under ' + nf(st.refundWatch) + '% watched. You decide the rest.', head: [],
     list: c.mkList(
       ([['open', 'Open'], ['refunded', 'Refunded'], ['denied', 'Denied'], ['all', 'All']] as [string, string][]).map(([k, l]) => [k, l, S.refunds.filter((r) => k === 'all' || r.status === k).length]),
-      'Search name, batch or number',
-      ['Student', 'Batch', 'Paid', 'Paid ago', 'Watched', 'Policy'], 'minmax(0,1.5fr) minmax(0,1fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.9fr)',
+      'Search name, batch, course or number',
+      ['Student', 'Enrolled in', 'Paid', 'Paid ago', 'Watched', 'Policy'], 'minmax(0,1.5fr) minmax(0,1fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.9fr)',
       rows.map((r) => ({ id: r.id, cells: [
-        c.T(r.name, r.method + ' · ' + r.number, { bold: true }), c.T(r.batch, '', { mono: true }), c.T(tk(r.paid)),
+        c.T(r.name, r.method + ' · ' + r.number, { bold: true }), c.T(c.inWhat(r), '', { mono: true }), c.T(tk(r.paid)),
         c.T(c.pl(r.ago, 'day'), '', { fg: r.ago > Number(st.refundDays) ? 'var(--warn)' : 'var(--ink)' }),
         c.T(nf(r.watched) + '%', '', { fg: r.watched >= Number(st.refundWatch) ? 'var(--warn)' : 'var(--ink)' }),
         c.B(pol(r)), c.T(r.why, '', { fg: 'var(--ink-2)' }),
@@ -37,7 +37,7 @@ export function refunds(c: AdminConsole): SectionView {
     const amt = +f.amount, aErr = f.amount !== '' && (amt <= 0 || amt > r.paid) ? 'Must be more than ৳0 and at most ' + tk(r.paid) : '';
     const mark = (ok: boolean) => (ok ? '✓ ' : '✕ ');
     v.detail = {
-      title: r.name, sub: r.batch + ' · ' + r.method + ' ' + r.number, badge: c.B(pol(r)), closable: true,
+      title: r.name, sub: c.inWhat(r) + ' · ' + r.method + ' ' + r.number, badge: c.B(pol(r)), closable: true,
       blocks: [
         c.blk({ title: 'Request', note: '“' + r.why + '”' }),
         c.blk({ title: 'Policy check', kv: [

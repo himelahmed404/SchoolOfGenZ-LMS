@@ -1,6 +1,6 @@
 import type { AdminData } from './admin/types';
-import { courses } from './data';
-import type { CourseId, Doubt, LessonRevision, PayMethod, PayStatus, PublishedLesson, QuizQ } from './types';
+import { catalog } from './data';
+import type { Catalog, CourseId, Doubt, Enrollment, LessonRevision, PayMethod, PayStatus, PublishedLesson, QuizQ } from './types';
 import type { Numerals } from './format';
 
 /**
@@ -27,7 +27,11 @@ export interface TestResult {
 }
 
 export interface AppState {
-  version: 3;
+  version: 4;
+  /** Programs, batches and courses. Seed data for now; it is not saved with the rest, so a new build always shows the current catalog. */
+  catalog: Catalog;
+  /** What the signed-in student is in. An approved payment adds to it. */
+  enrollments: Enrollment[];
   prefs: {
     numerals: Numerals;
     name: string;
@@ -44,7 +48,8 @@ export interface AppState {
   test: { key: string | null; startedAt: number | null; ans: Record<number, number>; q: number };
   /** Results per chapter test, keyed `cid:ci`. The best score feeds the leaderboard. */
   testResults: Record<string, TestResult>;
-  payment: { method: PayMethod | null; trxId: string; sender: string; status: 'none' | PayStatus; reason?: string };
+  /** The one payment the student is making now; `program` is what it is for. */
+  payment: { program: string | null; method: PayMethod | null; trxId: string; sender: string; status: 'none' | PayStatus; reason?: string };
   /** Admin decisions on seed payments. */
   decided: Record<string, { status: PayStatus; reason?: string }>;
   myDoubts: Doubt[];
@@ -67,19 +72,22 @@ export interface AppState {
 }
 
 export const initialState: AppState = {
-  version: 3,
+  version: 4,
+  catalog,
+  // A diploma semester in its first batch, and one single course.
+  enrollments: [{ program: 'cst4', batch: 'CST-04-B01' }, { program: 'eng' }],
   prefs: { numerals: 'bn', name: '', sem: 4, examDate: null, setupDone: false },
   progress: {},
-  last: { courseId: 'cst', ch: 2, li: 4, t: 372 },
+  last: { courseId: 'dsa', ch: 2, li: 4, t: 372 },
   practiceAns: {},
   test: { key: null, startedAt: null, ans: {}, q: 0 },
   // The student already took the first chapter's test (4 of 5).
-  testResults: { 'cst:0': { score: 4, total: 5, best: 4, tries: 1, elapsed: 212, at: 0, qs: courses.cst.chapters[0].test!.qs, ans: { 0: 0, 1: 0, 2: 2, 3: 0, 4: 0 } } },
-  payment: { method: null, trxId: '', sender: '', status: 'none' },
+  testResults: { 'dsa:0': { score: 4, total: 5, best: 4, tries: 1, elapsed: 212, at: 0, qs: catalog.courses.dsa.chapters[0].test!.qs, ans: { 0: 0, 1: 0, 2: 2, 3: 0, 4: 0 } } },
+  payment: { program: null, method: null, trxId: '', sender: '', status: 'none' },
   decided: {},
   // Matches the first notification: a question the student asked on the resume lesson, already answered.
   myDoubts: [{
-    id: 'm0', batch: 'CST-04-B01', course: 'cst', ch: 2, li: 4, who: '', agoMin: 190, q: 'খালি স্ট্যাকে pop() করলে কী হয়?',
+    id: 'm0', batch: 'CST-04-B01', course: 'dsa', ch: 2, li: 4, who: '', agoMin: 190, q: 'খালি স্ট্যাকে pop() করলে কী হয়?',
     reply: 'খালি স্ট্যাকে pop() করলে underflow হয় — তাই আগে isEmpty() চেক করো।', by: 'Shahriar Hossain', replyAgoMin: 12,
   }],
   replies: {},
@@ -88,8 +96,8 @@ export const initialState: AppState = {
   aDecided: {},
   upload: null,
   notifs: { read: { s4: true, s5: true, t3: true }, gone: {} },
-  bookmarks: { 'cst:2:4': true, 'cst:1:1': true },
-  myNotes: { 'cst:2:4': 'push আর pop দুটোই O(1) — পরীক্ষায় প্রায়ই আসে!' },
+  bookmarks: { 'dsa:2:4': true, 'dsa:1:1': true },
+  myNotes: { 'dsa:2:4': 'push আর pop দুটোই O(1) — পরীক্ষায় প্রায়ই আসে!' },
   profile: { email: 'mahmud.cst@gmail.com', inst: 'Dhaka Polytechnic Institute' },
   tProfile: {
     email: 'shahriar@schoolofgenz.com',

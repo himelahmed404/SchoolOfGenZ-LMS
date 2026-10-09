@@ -6,7 +6,6 @@ import { PageHead } from '@/components/PageHead';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { courses } from '@/lib/data';
 import { ago } from '@/lib/format';
 import { lessonRef, myQuestions } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -44,11 +43,11 @@ export default function MyQuestionsPage() {
         ) : null}
 
         {list.map((d) => {
-          const lesson = courses[d.course].chapters[d.ch].lessons[d.li];
+          const course = s.catalog.courses[d.course], lesson = course.chapters[d.ch].lessons[d.li];
           return (
             <div key={d.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{courses[d.course].code} · {lessonRef(d.ch, d.li)}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>{course.code} · {lessonRef(d.ch, d.li)}</span>
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ago(d.agoMin)}</span>
                 <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 999, background: d.reply ? 'var(--ok-soft)' : 'var(--warn-soft)', color: d.reply ? 'var(--ok)' : 'var(--warn)', fontSize: 12, fontWeight: 700 }}>{d.reply ? 'Answered' : 'Waiting'}</span>
               </div>

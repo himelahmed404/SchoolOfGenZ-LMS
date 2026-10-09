@@ -53,9 +53,26 @@ Things that are easy to get wrong:
 - **Cross-role flows run through the same store.** A `storage` listener reloads state when another tab writes, which is how "student pays → admin approves → student sees it" works with one tab per role.
 - **Time is relative.** Seed records store minutes ago (`agoMin`, `subAgoMin`), not timestamps. Functions that need the clock take `now` / `today` as a parameter so tests can fix it.
 
+### Catalog: programs, batches, courses
+
+There are two kinds of product, and they are not the same shape:
+
+| | Diploma batch | Single course |
+|---|---|---|
+| Sold as | A semester of a department, one price | One recorded course |
+| Runs as | Dated batches | No batch; open all the time, kept for life |
+| Has | Chapter tests, lesson quizzes, a batch leaderboard | Projects (not built yet), a certificate |
+
+- `Program` is what is sold (`kind: 'diploma' | 'single'`), `Batch` is one run of a diploma program, `Course` is what is studied: a subject of a semester, or the one course of a single program. `Enrollment` is `{ program, batch? }`.
+- The catalog is `s.catalog`, seeded from `catalog` in `data.ts`. Screens read it through selectors or `s.catalog.courses[id]`; nothing outside `src/lib` imports the seed catalog. It is left out of saved state (`store.tsx`), so a new build always shows the current one.
+- Start from the selectors: `myPrograms`, `myCourses`, `myBatch`, `programOf`, `batchOf`, `isSingle`, `offers`, `payingOffer`, `offerView`, `programName`.
+- Anything that belongs to a batch must cope with there being none: `myBatch(s)` is undefined for a student with only single courses, so the leaderboard, the rank tile and the live-class row are hidden for them. Questions on a lesson are per batch in a diploma subject and shared in a single course (`doubtsFor(s, cid, bid?)`).
+- A diploma program's name is a fact, so it is always English (`CST · 4th Semester`). A single program is named by its course's title.
+- One payment is made at a time: `s.payment.program` is what it is for (`chooseProgram`), and approving it adds the enrollment (`decidePayments`).
+
 ### Keys
 
-Route params and keys use **0-based** chapter and lesson indexes; display adds 1 (`lessonRef`).
+`cid` is a course id. Route params and keys use **0-based** chapter and lesson indexes; display adds 1 (`lessonRef`).
 
 | Key | Used for |
 |---|---|
@@ -92,6 +109,7 @@ There is no auth. `DevBar` switches role by navigating (`/`, `/teacher`, `/admin
 The console is data-driven. It does not have a component per section.
 
 - `src/lib/admin/console.ts`: the `AdminConsole` class. A new instance is built on every render from `(state, setState, env)`. It holds formatting (`nf`, `tk`, `pl`, `fd`, `when`), permissions (`perm`), effects (`upd`, `log`, `flash`, `ask`, `go`/`nav`) and view-model constructors (`T`/`B` cells, `kv`, `it`, `inp`/`area`/`seg` fields, `blk`, `A` actions, `K` stat tiles, `mkList`).
+- In the console a **course** is what is sold: `AdminCourse.kind` is `diploma` (a semester, with `subjects` and batches) or `single` (one subject, no batch, its own `enrolled` count). Teachers are assigned to subjects. Use `c.studentsOf`, `c.lessonsOf`, `c.subject`, `c.teacherOf(subjectId)` and `c.inWhat(row)` instead of reading batches directly.
 - `src/lib/admin/sections/*.ts`: one builder per section, `(c: AdminConsole) => SectionView`. A `SectionView` is a `list`, `dash` or `matrix`, with an optional `detail` pane. Builders decide colours and labels; they return plain data with callbacks.
   - A dashboard `Panel` holds one of `trend` (line chart), `share` + `whole` (ring), `bars`, `meters`, `table` or `items`, and may carry its own `seg` switch. The page-wide switch is `dash.seg`.
   - `sections/revenue.ts` is the one revenue series; Overview and Reports both draw it for the period in `S.period`.

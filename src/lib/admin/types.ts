@@ -8,21 +8,33 @@ export type Num = number | '';
 
 export interface Role { id: string; name: string; desc: string; locked?: boolean; perms: Record<Area, Perm> }
 export interface Staff { id: string; name: string; email: string; role: string; last: string }
+/** What is studied inside a course: a subject of a diploma semester, or the single course itself. */
+export interface Subject { id: string; code: string; title: string; lessons: number }
+/**
+ * What is sold. A diploma course is one semester of a department: several subjects and dated batches.
+ * A single course is one recorded course: no batch, open all the time, kept for life.
+ */
 export interface AdminCourse {
-  id: string; code: string; title: string; status: 'draft' | 'published' | 'archived';
+  id: string; kind: 'diploma' | 'single'; code: string; title: string; status: 'draft' | 'published' | 'archived';
   model: 'free' | 'one' | 'inst'; price: Num; inst: number;
   early: 'on' | 'off'; earlyPrice: Num; earlyEnd: string;
-  perBatch: 'on' | 'off'; bp: Record<string, Num>; lessons: number;
+  perBatch: 'on' | 'off'; bp: Record<string, Num>;
+  subjects: Subject[];
+  /** Students in a single course. A diploma course counts them through its batches. */
+  enrolled: number;
 }
+/** One run of a diploma course; `course` is that course's id. */
 export interface Batch { id: string; course: string; start: string; exam: string; seats: Num; enrolled: number; status: 'enrolling' | 'running' | 'closed' | 'finished' }
+/** `courses` holds the ids of the subjects they teach. */
 export interface AdminTeacher { id: string; name: string; email: string; courses: string[]; med: number; overdue: number; answered: number; status: 'active' | 'invited' | 'inactive'; joined: string }
 export interface AdminStudent {
-  id: string; name: string; phone: string; batch: string; status: 'active' | 'pending' | 'suspended';
+  /** `batch` is set for a diploma course only. */
+  id: string; name: string; phone: string; course: string; batch?: string; status: 'active' | 'pending' | 'suspended';
   paid: number; due: number; prog: number; devices: { n: string; last: string }[]; joined: string; note?: string;
 }
 export interface Coupon { id: string; code: string; type: 'pct' | 'amt'; value: number; scope: string; used: number; limit: number; exp: string; disabled: boolean }
 export interface Refund {
-  id: string; name: string; batch: string; paid: number; method: string; number: string; ago: number; watched: number; why: string;
+  id: string; name: string; course: string; batch?: string; paid: number; method: string; number: string; ago: number; watched: number; why: string;
   status: 'open' | 'refunded' | 'denied'; amount?: number; reason?: string;
 }
 export interface Cert { id: string; name: string; course: string; issued: string; status: 'valid' | 'revoked'; reason?: string }

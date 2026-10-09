@@ -2,10 +2,9 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { courses, pastCertificate } from '@/lib/data';
-import { counts } from '@/lib/selectors';
+import { pastCertificate } from '@/lib/data';
+import { counts, myPrograms } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import type { CourseId } from '@/lib/types';
 import { Icon } from './ui';
 
 export function CertRow({ icon, tone, title, meta, action }: { icon: string; tone: [string, string]; title: string; meta: string; action: ReactNode }) {
@@ -21,17 +20,18 @@ export function CertRow({ icon, tone, title, meta, action }: { icon: string; ton
   );
 }
 
-/** Certificates the student holds, then one locked row per course still in progress. */
+/** Certificates the student holds, then one locked row per single course still in progress. Diploma subjects give none. */
 export function CertificateList() {
   const { s } = useStore();
   const view = <Link href="/certificate" className="btn btn-sm">View</Link>;
   const earnedTone: [string, string] = ['var(--sun)', 'var(--on-sun)'];
+  const singles = myPrograms(s).filter((m) => m.program.kind === 'single').flatMap((m) => m.courses);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'var(--card-cols)', gap: 12 }}>
       <CertRow icon="workspace_premium" tone={earnedTone} title={pastCertificate.title} meta={pastCertificate.meta} action={view} />
-      {(Object.keys(courses) as CourseId[]).map((id) => {
-        const c = courses[id], cnt = counts(s, id);
+      {singles.map((c) => {
+        const id = c.id, cnt = counts(s, id);
         return cnt.done >= cnt.total ? (
           <CertRow key={id} icon="workspace_premium" tone={earnedTone} title={c.titleEn} meta="Completed · just now" action={view} />
         ) : (

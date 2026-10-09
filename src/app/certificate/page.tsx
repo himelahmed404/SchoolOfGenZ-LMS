@@ -2,13 +2,18 @@
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui';
-import { courses, defaultStudent } from '@/lib/data';
-import { studentName } from '@/lib/selectors';
+import { pastCertificate } from '@/lib/data';
+import { counts, isSingle, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 export default function CertificatePage() {
   const { s, ready } = useStore();
   if (!ready) return null;
+
+  // Certificates belong to single courses: the one just finished, else the one the student already holds.
+  const cur = s.catalog.courses[s.last.courseId];
+  const cnt = cur ? counts(s, cur.id) : null;
+  const title = cur && cnt && cnt.done >= cnt.total && isSingle(s, cur.id) ? cur.title : pastCertificate.title;
 
   const share = () => {
     const url = window.location.href;
@@ -26,11 +31,10 @@ export default function CertificatePage() {
         <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>এই সার্টিফিকেট দেওয়া হলো</div>
         <div className="disp" style={{ fontSize: 'var(--cert-name)', lineHeight: 1.25, fontWeight: 800, margin: '10px 0 22px' }}><span className="hl">{studentName(s)}</span></div>
         <div style={{ fontSize: 14, color: 'var(--ink-2)' }}>সফলভাবে শেষ করার জন্য</div>
-        <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700, margin: '6px 0 32px' }}>{courses.cst.title}</div>
+        <div className="disp" style={{ fontSize: 'var(--d2)', lineHeight: 1.3, fontWeight: 700, margin: '6px 0 32px' }}>{title}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
           <Meta k="Issued" v="23 Aug 2026" />
           <Meta k="Certificate ID" v="SGZ-2026-04812" />
-          <Meta k="Batch" v={defaultStudent.batch} />
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 28, padding: '6px 14px', borderRadius: 999, background: 'var(--ok-soft)', color: 'var(--ok)', fontSize: 13, fontWeight: 700 }}>
           <Icon name="verified" size={18} fill />School of GenZ-এ যাচাই করা হয়েছে

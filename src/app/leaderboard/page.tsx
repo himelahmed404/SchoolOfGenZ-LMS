@@ -4,21 +4,32 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Shell } from '@/components/Shell';
 import { Icon, initial } from '@/components/ui';
-import { defaultStudent } from '@/lib/data';
 import { ordinalEn, plural } from '@/lib/format';
-import { boardRows } from '@/lib/selectors';
+import { boardRows, myBatch } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 const AVATAR: [string, string][] = [
   ['var(--brand-soft)', 'var(--on-brand-soft)'], ['var(--accent-2-soft)', 'var(--accent-2)'], ['var(--ok-soft)', 'var(--ok)'], ['var(--warn-soft)', 'var(--warn)'],
 ];
 
+/** A batch's ranking. Single courses are taken at each student's own pace, so they have none. */
 export default function LeaderboardPage() {
+  const { s } = useStore();
+  const batch = myBatch(s);
+  if (batch) return <Board bid={batch.id} />;
+  return (
+    <Shell role="student" title="Leaderboard" back="/">
+      <div className="card" style={{ padding: '32px 24px', textAlign: 'center', fontSize: 15, lineHeight: 1.8, color: 'var(--ink-2)' }}>লিডারবোর্ড শুধু ডিপ্লোমা ব্যাচের জন্য। তোমার কোর্সগুলো নিজের গতিতে শেখার, তাই এখানে র‍্যাংক নেই।</div>
+    </Shell>
+  );
+}
+
+function Board({ bid }: { bid: string }) {
   const { s, n } = useStore();
   const [period, setPeriod] = useState<'all' | 'week'>('all');
   const weekly = period === 'week';
 
-  const rows = boardRows(s, weekly);
+  const rows = boardRows(s, bid, weekly);
   const meIdx = Math.max(0, rows.findIndex((r) => r.live));
   const me = rows[meIdx];
   // Only ±5 around the student. The full ranking is never shown (the API must return just this window).
@@ -38,7 +49,7 @@ export default function LeaderboardPage() {
           <div style={{ minWidth: 0 }}>
             <h1 className="d1 only-desktop" style={{ margin: '0 0 6px' }}>Leaderboard</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-3)' }}>
-              <span className="mono" style={{ padding: '2px 8px', borderRadius: 8, background: 'var(--surface-sunk)', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{defaultStudent.batch}</span>
+              <span className="mono" style={{ padding: '2px 8px', borderRadius: 8, background: 'var(--surface-sunk)', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{bid}</span>
               <span>{plural(rows.length, 'student')}</span>
             </div>
           </div>

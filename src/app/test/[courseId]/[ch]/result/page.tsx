@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { Penguin } from '@/components/Penguin';
 import { Shell } from '@/components/Shell';
 import { Icon } from '@/components/ui';
-import { courses } from '@/lib/data';
 import { mmss, pad2 } from '@/lib/format';
 import { counts, frontier, testKey, testStatus } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
@@ -19,7 +18,7 @@ export default function ChapterTestResultPage() {
   const [wrongOnly, setWrongOnly] = useState(false);
 
   const cid = p.courseId as CourseId, ci = Number(p.ch);
-  const chapter = courses[cid]?.chapters[ci];
+  const chapter = s.catalog.courses[cid]?.chapters[ci];
   if (!chapter) notFound();
 
   const courseHref = '/course/' + cid, testHref = `/test/${cid}/${ci}`;

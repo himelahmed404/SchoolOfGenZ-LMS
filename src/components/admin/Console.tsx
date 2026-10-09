@@ -107,7 +107,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
     payCount: queue.length,
     contentCount: itemKeys(s).filter((k) => item(s, k).status === 'review').length,
     pending: queue.slice().sort((a, b) => b.agoMin - a.agoMin).slice(0, 5)
-      .map((r) => ({ id: r.id, name: r.name, sub: r.batch + ' · ' + r.method + ' · ' + ago(r.agoMin), amount: taka(r.amount) })),
+      .map((r) => ({ id: r.id, name: r.name, sub: (r.batch || r.course) + ' · ' + r.method + ' · ' + ago(r.agoMin), amount: taka(r.amount) })),
     navigate: (k: Section) => { if (k !== sec) consoleNav.current = true; router.push(k === 'overview' ? '/admin' : '/admin/' + k); },
     toggleTheme,
   };

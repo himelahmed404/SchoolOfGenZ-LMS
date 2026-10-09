@@ -7,15 +7,15 @@ const present = <T,>(x: T | null | false | undefined): x is T => !!x;
 export function students(c: AdminConsole): SectionView {
   const S = c.S, nf = c.nf, tk = c.tk;
   const pass = (u: (typeof S.students)[number], k: string) => k === 'all' || (k === 'due' ? u.due > 0 : u.status === k);
-  const rows = S.students.filter((u) => pass(u, S.filter) && c.match(u.name + u.phone + u.batch));
+  const rows = S.students.filter((u) => pass(u, S.filter) && c.match(u.name + u.phone + c.inWhat(u)));
   const v: SectionView = {
     title: 'Students', sub: 'Find a student, move batch, reset devices or suspend.', head: [],
     list: c.mkList(
       ([['all', 'All'], ['active', 'Active'], ['pending', 'Pending'], ['due', 'Due'], ['suspended', 'Suspended']] as [string, string][]).map(([k, l]) => [k, l, S.students.filter((u) => pass(u, k)).length]),
-      'Search name, phone or batch',
-      ['Student', 'Batch', 'Status', 'Progress', 'Paid', 'Devices'], 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,0.7fr) minmax(0,0.9fr) minmax(0,0.6fr)',
+      'Search name, phone, batch or course',
+      ['Student', 'Enrolled in', 'Status', 'Progress', 'Paid', 'Devices'], 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,0.7fr) minmax(0,0.9fr) minmax(0,0.6fr)',
       rows.map((u) => ({ id: u.id, cells: [
-        c.T(u.name, u.phone, { bold: true, subMono: true }), c.T(u.batch, '', { mono: true }), c.B(u.status), c.T(nf(u.prog) + '%'),
+        c.T(u.name, u.phone, { bold: true, subMono: true }), c.T(c.inWhat(u), '', { mono: true }), c.B(u.status), c.T(nf(u.prog) + '%'),
         c.T(tk(u.paid), u.due ? 'Due ' + tk(u.due) : '', { subFg: 'var(--warn)' }),
         c.T(nf(u.devices.length) + '/' + nf(S.settings.devices), '', { fg: u.devices.length >= S.settings.devices ? 'var(--warn)' : 'var(--ink)' }),
         c.T(c.fd(u.joined)), c.T(u.due ? tk(u.due) : '—', '', { fg: u.due ? 'var(--warn)' : 'var(--ink-3)' }),
@@ -30,8 +30,9 @@ export function students(c: AdminConsole): SectionView {
   };
   const u = S.students.find((x) => x.id === S.sel);
   if (u) {
-    const b = S.batches.find((x) => x.id === u.batch), co = c.course(b ? b.course : '');
-    const opts = S.batches.filter((x) => b && x.course === b.course && x.status !== 'finished').map((x) => [x.id, x.id + ' · ' + c.pl(Number(x.seats) - x.enrolled, 'seat') + ' left'] as [string, string]);
+    // Only a diploma student is in a batch, and can be moved to another batch of the same course.
+    const co = c.course(u.course);
+    const opts = S.batches.filter((x) => !!u.batch && x.course === u.course && x.status !== 'finished').map((x) => [x.id, x.id + ' · ' + c.pl(Number(x.seats) - x.enrolled, 'seat') + ' left'] as [string, string]);
     const move = (nb: string) => {
       if (nb === u.batch) return;
       c.ask({ title: 'Move ' + u.name + ' to ' + nb + '?', body: 'Progress and payments move with the student. The leaderboard starts over in the new batch, and the student gets an SMS.', needReason: true,
@@ -49,7 +50,7 @@ export function students(c: AdminConsole): SectionView {
         susp ? c.blk({ note: 'Suspended — ' + u.note, tone: 'danger' }) : null,
         u.status === 'pending' ? c.blk({ note: 'Payment not verified yet. Access starts once it is approved in the Payments queue.', tone: 'warn' }) : null,
         c.blk({ kv: [c.kv('Course', co.title), c.kv('Joined', c.fd(u.joined)), c.kv('Paid', tk(u.paid)), c.kv('Due', u.due ? tk(u.due) : '—', { fg: u.due ? 'var(--warn)' : 'var(--ink)', bold: !!u.due }), c.kv('Progress', nf(u.prog) + '%')] }),
-        c.blk({ title: 'Batch', fields: [c.seg('', opts, u.batch, move, { hint: 'Moving a student needs a reason.' })] }),
+        u.batch ? c.blk({ title: 'Batch', fields: [c.seg('', opts, u.batch, move, { hint: 'Moving a student needs a reason.' })] }) : null,
         c.blk({ title: 'Devices · limit ' + nf(S.settings.devices), items: u.devices.map((d) => c.it(d.n, 'Last sign-in ' + d.last)), note: u.devices.length ? '' : 'Not signed in on any device.' }),
       ].filter(present) as Block[],
       actions: [
@@ -74,16 +75,17 @@ export function teachers(c: AdminConsole): SectionView {
   const S = c.S, nf = c.nf;
   const pass = (t: (typeof S.teachers)[number], k: string) => k === 'all' || (k === 'overdue' ? t.overdue > 0 : t.status === k);
   const rows = S.teachers.filter((t) => pass(t, S.filter) && c.match(t.name + t.email));
-  const copts = S.courses.filter((co) => co.status !== 'archived').map((co) => [co.id, co.code] as [string, string]);
+  // A teacher is given subjects: those of each semester, and each single course.
+  const copts = S.courses.filter((co) => co.status !== 'archived').flatMap((co) => co.subjects.map((sb) => [sb.id, sb.code] as [string, string]));
   const v: SectionView = {
-    title: 'Teachers', sub: 'Assign courses, watch reply times, invite new teachers.',
+    title: 'Teachers', sub: 'Assign subjects, watch reply times, invite new teachers.',
     head: [c.A('Invite teacher', () => c.setState({ sel: 'new', form: { name: '', email: '', courses: [] } }), 'primary')],
     list: c.mkList(
       ([['all', 'All'], ['active', 'Active'], ['invited', 'Invited'], ['overdue', 'Overdue']] as [string, string][]).map(([k, l]) => [k, l, S.teachers.filter((t) => pass(t, k)).length]),
       'Search name or email',
-      ['Teacher', 'Courses', 'Median reply', 'Over 24h', 'Answered · 7d', 'Status'], 'minmax(0,1.6fr) minmax(0,0.9fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,0.8fr) minmax(0,0.7fr)',
+      ['Teacher', 'Subjects', 'Median reply', 'Over 24h', 'Answered · 7d', 'Status'], 'minmax(0,1.6fr) minmax(0,0.9fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,0.8fr) minmax(0,0.7fr)',
       rows.map((t) => ({ id: t.id, cells: [
-        c.T(t.name, t.email, { bold: true }), c.T(t.courses.map((x) => c.course(x).code).join(', ') || '—', '', { mono: true }),
+        c.T(t.name, t.email, { bold: true }), c.T(t.courses.map((x) => c.subject(x).code).join(', ') || '—', '', { mono: true }),
         c.T(t.status === 'active' ? nf(t.med) + ' h' : '—', '', { fg: t.med > 24 ? 'var(--warn)' : 'var(--ink)' }),
         t.overdue ? c.B('open', nf(t.overdue)) : c.T('—'), c.T(t.status === 'active' ? nf(t.answered) : '—'), c.B(t.status), c.T(c.fd(t.joined)),
       ] })),
@@ -101,7 +103,7 @@ export function teachers(c: AdminConsole): SectionView {
       blocks: [c.blk({ fields: [
         c.inp('Name', f.name, (x) => c.setF('name', x)),
         c.inp('Email', f.email, (x) => c.setF('email', x), { type: 'email', ph: 'name@example.com' }),
-        c.seg('Courses', copts, f.courses || [], (x) => c.setF('courses', c.tog(f.courses || [], x)), { hint: 'Can be changed later.' }),
+        c.seg('Subjects', copts, f.courses || [], (x) => c.setF('courses', c.tog(f.courses || [], x)), { hint: 'Can be changed later.' }),
       ] })],
       actions: [
         c.A('Send invite', () => {
@@ -118,7 +120,7 @@ export function teachers(c: AdminConsole): SectionView {
     const assign = (cid: string) => {
       const has = t.courses.includes(cid);
       c.upd('teachers', t.id, { courses: c.tog(t.courses, cid) });
-      c.log('teachers', has ? 'Unassigned course' : 'Assigned course', t.name + ' · ' + c.course(cid).code); c.flash(has ? 'Course unassigned' : 'Course assigned');
+      c.log('teachers', has ? 'Unassigned subject' : 'Assigned subject', t.name + ' · ' + c.subject(cid).code); c.flash(has ? 'Subject unassigned' : 'Subject assigned');
     };
     v.detail = {
       title: t.name, sub: t.email, badge: c.B(t.status), closable: true,
@@ -128,9 +130,9 @@ export function teachers(c: AdminConsole): SectionView {
         c.blk({ kv: [
           c.kv('Joined', c.fd(t.joined)), c.kv('Median reply', t.status === 'active' ? nf(t.med) + ' h' : '—', { fg: t.med > 24 ? 'var(--warn)' : 'var(--ink)' }),
           c.kv('Answered · 7d', nf(t.answered)),
-          c.kv('Students', nf(S.batches.filter((b) => t.courses.includes(b.course) && b.status !== 'finished').reduce((a, b) => a + b.enrolled, 0))),
+          c.kv('Students', nf(S.courses.filter((co) => co.subjects.some((sb) => t.courses.includes(sb.id))).reduce((a, co) => a + c.studentsOf(co.id), 0))),
         ] }),
-        c.blk({ title: 'Assigned courses', fields: [c.seg('', copts, t.courses, assign, { dis: t.status === 'inactive' })] }),
+        c.blk({ title: 'Assigned subjects', fields: [c.seg('', copts, t.courses, assign, { dis: t.status === 'inactive' })] }),
       ].filter(present) as Block[],
       actions: [
         t.overdue ? c.A('Send reminder', () => { c.log('teachers', 'Sent reply reminder', t.name + ' · ' + c.pl(t.overdue, 'question')); c.flash('Reminder sent'); }, 'primary') : null,
@@ -139,7 +141,7 @@ export function teachers(c: AdminConsole): SectionView {
           ? c.A('Reactivate', () => { c.upd('teachers', t.id, { status: 'active' }); c.log('teachers', 'Reactivated', t.name); })
           : c.A(t.status === 'invited' ? 'Cancel invite' : 'Deactivate', () => c.ask({
             title: (t.status === 'invited' ? 'Remove ' : 'Deactivate ') + t.name + '?',
-            body: t.courses.length ? 'Their courses (' + t.courses.map((x) => c.course(x).code).join(', ') + ') will have no teacher until you assign someone else.' : 'They will no longer be able to sign in.',
+            body: t.courses.length ? 'Their subjects (' + t.courses.map((x) => c.subject(x).code).join(', ') + ') will have no teacher until you assign someone else.' : 'They will no longer be able to sign in.',
             needReason: true, danger: true, reasons: ['Contract ended', 'Repeated late replies', 'Left on their own'], ok: 'Deactivate',
             run: (r) => { c.upd('teachers', t.id, { status: 'inactive', courses: [] }); c.log('teachers', 'Deactivated teacher', t.name, r); c.flash('Deactivated'); } }), 'danger'),
       ].filter(present) as Action[],
@@ -148,13 +150,14 @@ export function teachers(c: AdminConsole): SectionView {
   return v;
 }
 
-/** Certificates: verify, issue manually, revoke and restore (each with a reason). */
+/** Certificates: verify, issue manually, revoke and restore (each with a reason). Only single courses give one. */
 export function certificates(c: AdminConsole): SectionView {
   const S = c.S;
+  const singles = S.courses.filter((co) => co.kind === 'single' && co.status === 'published');
   const rows = S.certs.filter((x) => (S.filter === 'all' || x.status === S.filter) && c.match(x.id + x.name));
   const v: SectionView = {
     title: 'Certificates', sub: 'Check issued certificates, issue one by hand, or revoke.',
-    head: [c.A('Issue certificate', () => c.setState({ sel: 'new', form: { name: '', course: 'cst' } }), 'primary')],
+    head: [c.A('Issue certificate', () => c.setState({ sel: 'new', form: { name: '', course: (singles[0] || { id: '' }).id } }), 'primary')],
     list: c.mkList(
       ([['all', 'All'], ['valid', 'Valid'], ['revoked', 'Revoked']] as [string, string][]).map(([k, l]) => [k, l, S.certs.filter((x) => k === 'all' || x.status === k).length]),
       'Search ID or name',
@@ -165,14 +168,14 @@ export function certificates(c: AdminConsole): SectionView {
   if (S.sel === 'new') {
     const f: Rec = S.form || {}, ok = (f.name || '').trim().length > 2;
     v.detail = {
-      title: 'Issue certificate', sub: 'Certificates are normally issued automatically when a course is finished. Use this to issue one by hand.', closable: true,
+      title: 'Issue certificate', sub: 'A certificate is issued automatically when a single course is finished. Use this to issue one by hand.', closable: true,
       blocks: [c.blk({ fields: [
         c.inp('Student name', f.name, (x) => c.setF('name', x), { ph: 'e.g. Mahmudul Hasan' }),
-        c.seg('Course', S.courses.filter((co) => co.status === 'published').map((co) => [co.id, co.code] as [string, string]), f.course, (x) => c.setF('course', x)),
+        c.seg('Course', singles.map((co) => [co.id, co.code] as [string, string]), f.course, (x) => c.setF('course', x)),
       ] })],
       actions: [
         c.A('Issue', () => c.ask({ title: 'Issue a ' + c.course(f.course).code + ' certificate to ' + f.name.trim() + '?', body: 'The verification link works at once.', needReason: true,
-          reasons: ['Course finished but not issued', 'Passed an offline exam', 'Earlier batch'], ok: 'Issue',
+          reasons: ['Course finished but not issued', 'Project marked offline', 'Finished before certificates existed'], ok: 'Issue',
           run: (r) => {
             const id = 'SGZ-' + c.course(f.course).code + '-' + c.env.today.getFullYear() + '-0' + (400 + S.certs.length);
             const cert: Cert = { id, name: f.name.trim(), course: f.course, issued: c.todayISO(), status: 'valid' };

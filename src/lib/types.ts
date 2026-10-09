@@ -1,4 +1,5 @@
-export type CourseId = 'cst' | 'eng';
+/** A course id. Courses come from the catalog, so this is any string. */
+export type CourseId = string;
 
 /** Lesson and chapter numbers come from their position in the list. */
 export interface Lesson {
@@ -20,25 +21,59 @@ export interface Chapter {
   test?: ChapterTest;
 }
 
+/** What a student studies: a subject of a diploma semester, or the content of a single course. */
 export interface Course {
   id: CourseId;
-  /** Short code shown on covers and in details lines: CST, ENG. */
+  /** Short code shown on covers and in details lines: DSA, ENG. */
   code: string;
-  track: 'batch' | 'skill';
   /** Bangla title, shown to students. */
   title: string;
   /** English title, for the admin console. */
   titleEn: string;
   instructor: string;
-  /** Batch courses follow a diploma semester and run between two dates. */
-  sem?: number;
-  batchNo?: number;
-  start?: string;
-  end?: string;
-  /** Skill courses are self-paced. */
-  weeks?: number;
-  access?: 'lifetime';
+  /** Diploma subjects carry their board code. */
+  bteb?: string;
   chapters: Chapter[];
+}
+
+/**
+ * What is sold. A diploma program is one semester of a department, with several subjects and dated batches.
+ * A single program is one recorded course: no batch, open all the time, kept for life.
+ */
+export interface Program {
+  id: string;
+  kind: 'diploma' | 'single';
+  /** Short code: CST, ENG, WEB. */
+  code: string;
+  /** Diploma: the semester it covers. */
+  sem?: number;
+  /** Single: a suggested pace. */
+  weeks?: number;
+  price: number;
+  /** In order: the subjects of the semester, or the one course of a single program. */
+  courses: CourseId[];
+}
+
+/** One run of a diploma program. Single courses have none. */
+export interface Batch {
+  id: string;
+  program: string;
+  no: number;
+  start: string;
+  end: string;
+  status: 'enrolling' | 'running' | 'finished';
+}
+
+export interface Catalog {
+  programs: Record<string, Program>;
+  batches: Record<string, Batch>;
+  courses: Record<CourseId, Course>;
+}
+
+/** A student in a program; a diploma enrollment also names the batch. */
+export interface Enrollment {
+  program: string;
+  batch?: string;
 }
 
 export interface QuizQ {
@@ -111,8 +146,10 @@ export interface Payment {
   id: string;
   name: string;
   phone: string;
+  /** English name of what was bought: "CST · 4th Semester", or a single course's title. */
   course: string;
-  batch: string;
+  /** Diploma only. */
+  batch?: string;
   method: PayMethod;
   amount: number;
   due: number;
@@ -129,7 +166,8 @@ export interface Payment {
 
 export interface Doubt {
   id: string;
-  batch: string;
+  /** The asker's batch. A single course has none, so everyone taking it shares its questions. */
+  batch?: string;
   course: CourseId;
   ch: number;
   li: number;

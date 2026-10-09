@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BRAND, brandTokens, contrast } from './brand';
+import { catalog, courseCover } from './data';
 
 /** The colour tokens of one theme, read from the stylesheet. */
 function tokens(theme: 'light' | 'dark') {
@@ -46,3 +47,15 @@ describe('brand tokens from one hex', () => {
     }
   });
 });
+
+describe('course covers', () => {
+  it('are dark enough for the white code printed on them', () => {
+    Object.entries(courseCover).forEach(([id, c]) => {
+      if (c.bg.startsWith('#')) expect(contrast(c.bg, '#FFFFFF'), id + ' ' + c.bg).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+  it('exist for every course a student is shown as enrolled in', () => {
+    ['cst4', 'eng', 'web'].forEach((pid) => catalog.programs[pid].courses.forEach((id) => expect(courseCover[id], id).toBeTruthy()));
+  });
+});
+

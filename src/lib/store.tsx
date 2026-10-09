@@ -36,7 +36,7 @@ function load(): AppState {
     if (!raw) return initialState;
     const parsed = JSON.parse(raw) as AppState;
     if (parsed.version !== initialState.version) return initialState;
-    return { ...initialState, ...parsed, prefs: { ...initialState.prefs, ...parsed.prefs } };
+    return { ...initialState, ...parsed, prefs: { ...initialState.prefs, ...parsed.prefs }, catalog: initialState.catalog };
   } catch {
     return initialState;
   }
@@ -62,7 +62,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* storage unavailable */ }
+    // The catalog is not the student's data: it is left out, and `load` takes it from the build.
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...s, catalog: undefined })); } catch { /* storage unavailable */ }
   }, [s, ready]);
 
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => 'light' as Theme);

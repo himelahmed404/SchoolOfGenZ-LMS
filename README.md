@@ -50,23 +50,38 @@ Three kinds of text, so no line mixes scripts:
   and two labels: the admin picks the English one, and the student or teacher reads the Bangla one
   (`reasonText`, `returnReason`). The stored value is the code.
 
+## Two kinds of product
+
+| | Diploma batch | Single course |
+|---|---|---|
+| What is sold | A semester of a department | One course |
+| Inside | Several subjects → chapters → lessons | Chapters → recorded lessons |
+| How it runs | A dated batch with seats and an exam date | Recorded. No batch; open all the time |
+| Access | For the semester | For life |
+| Checked by | Chapter tests and a batch leaderboard | Projects (not built yet) |
+| Certificate | No | Yes |
+
+In the code a **program** is what is sold (`kind: 'diploma' | 'single'`), a **batch** is one run of a
+diploma program, and a **course** is what is studied: a subject of a semester, or the one course of a
+single program. An enrollment names a program and, for diploma, a batch.
+
 ## Routes
 
 | Role | Path | Screen |
 |---|---|---|
 | Student | `/` | Dashboard: streak, resume card, exam countdown, courses, this week (redirects to `/setup` on first visit) |
 | | `/setup` | First-run setup (name, semester, exam date, numerals) |
-| | `/courses`, `/course/[cst\|eng]` | My courses; course page |
-| | `/explore` | Courses open for enrollment |
-| | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / Stuck? / Quiz / Q&A / My Note, bookmarks (0-based indexes) |
-| | `/test/[course]/[chapter]`, `…/result` | Optional chapter test (timed) and its review; opens once the chapter's lessons are done |
-| | `/leaderboard` | Batch leaderboard (±5 window) |
-| | `/certificates`, `/certificate` | Certificates earned and still locked; the certificate itself |
+| | `/courses`, `/course/[course]` | My courses (each semester with its subjects, then single courses); course page |
+| | `/explore` | Diploma batches and single courses open for enrollment |
+| | `/learn/[course]/[chapter]/[lesson]` | Lesson player: Notes / Stuck? / Quiz / Q&A / My Note, bookmarks (0-based indexes). A single course has no Quiz tab |
+| | `/test/[course]/[chapter]`, `…/result` | Optional chapter test (timed) and its review; opens once the chapter's lessons are done. Diploma subjects only |
+| | `/leaderboard` | Batch leaderboard across the semester's subjects (±5 window). Only for a student in a diploma batch |
+| | `/certificates`, `/certificate` | Certificates earned and still locked, for single courses; the certificate itself |
 | | `/saved` | Bookmarked lessons and private notes |
 | | `/questions` | Every question the student asked, with the teacher's answer |
 | | `/payments` | The student's payments and their status |
 | | `/help` | Support number and common questions (refund rule and device limit come from admin Settings) |
-| | `/enroll`, `/enroll/pay`, `/enroll/pending` | Enrollment with bKash/Nagad |
+| | `/enroll`, `/enroll/pay`, `/enroll/pending` | Enrollment in the program picked in Explore, with bKash/Nagad. One payment at a time |
 | | `/profile`, `/profile/edit` (`#password`) | Profile (stats, streak calendar, badges, bookmarks, notes) and edit |
 | Teacher | `/teacher`, `/teacher/doubts` | Class progress, doubts |
 | | `/teacher/content`, `/teacher/content/[key]` | Content list; editor for a lesson or a chapter test |
@@ -88,8 +103,8 @@ unanswered. The best score counts 5 leaderboard points per correct answer. Keys:
 
 ## Layout of the code
 
-- `src/lib/data.ts`: seed data ported from the prototype. Course details are fields (`sem`, `batchNo`, `start`…), and times are minutes ago.
-- `src/lib/state.ts`: the persisted app state shape (`version` bumps reset old saved state).
+- `src/lib/data.ts`: seed data ported from the prototype. `catalog` holds the programs, batches and courses; times are minutes ago.
+- `src/lib/state.ts`: the app state shape (`version` bumps reset old saved state). It carries the catalog and the student's enrollments; the catalog is not saved, so a new build always shows the current one.
 - `src/lib/selectors.ts`: pure reads (progress, roster, leaderboard, queue flags, revisions).
 - `src/lib/actions.ts`: pure mutations, each the seam for a future API call.
 - `src/lib/store.tsx`: React provider. It persists to `localStorage` and syncs across tabs.

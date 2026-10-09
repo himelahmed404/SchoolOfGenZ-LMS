@@ -3,7 +3,6 @@
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { startTest, submitTest, testElapsed } from '@/lib/actions';
-import { courses } from '@/lib/data';
 import { mmss, pad2 } from '@/lib/format';
 import { Icon } from '@/components/ui';
 import { chapterDone, chapterTest, testKey } from '@/lib/selectors';
@@ -22,7 +21,7 @@ export default function ChapterTestPage() {
   const [submitAsk, setSubmitAsk] = useState(false);
 
   const cid = p.courseId as CourseId, ci = Number(p.ch);
-  const chapter = courses[cid]?.chapters[ci];
+  const chapter = s.catalog.courses[cid]?.chapters[ci];
   const key = testKey(cid, ci);
   const test = chapter ? chapterTest(s, cid, ci) : null;
   const open = !!test && chapterDone(s, cid, ci);

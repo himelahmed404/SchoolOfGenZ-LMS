@@ -8,7 +8,7 @@ import { Shell } from '@/components/Shell';
 import { Avatar, Icon } from '@/components/ui';
 import { badgeSeed, defaultStudent, streakSeed, weekDayHead } from '@/lib/data';
 import { monthEn, plural, semLabel } from '@/lib/format';
-import { boardRows, counts, monthCells, savedItems, studentName } from '@/lib/selectors';
+import { boardRows, counts, monthCells, myBatch, myCourses, savedItems, studentName } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 
 /** How many saved lessons the profile shows before linking to the full list. */
@@ -18,17 +18,19 @@ export default function ProfilePage() {
   const { s, theme, toggleTheme, setNotifOpen } = useStore();
   const router = useRouter();
   const name = studentName(s);
-  const cst = counts(s, 'cst');
-  const me = boardRows(s, false).find((r) => r.live);
+  const lessonsDone = myCourses(s).reduce((a, c) => a + counts(s, c.id).done, 0);
+  // Only a diploma batch has a rank.
+  const batch = myBatch(s);
+  const me = batch ? boardRows(s, batch.id, false).find((r) => r.live) : undefined;
   const today = new Date();
   const cells = monthCells(today);
   const earned = badgeSeed.filter((b) => b[3]).length;
 
   const stats: [string, string, string, string, string][] = [
     ['local_fire_department', String(streakSeed.current), 'Day streak', 'var(--sun)', 'var(--on-sun)'],
-    ['task_alt', String(cst.done), 'Lessons done', 'var(--ok-soft)', 'var(--ok)'],
-    ['leaderboard', String(me ? me.rank : 0), 'Batch rank', 'var(--brand-soft)', 'var(--on-brand-soft)'],
+    ['task_alt', String(lessonsDone), 'Lessons done', 'var(--ok-soft)', 'var(--ok)'],
   ];
+  if (me) stats.push(['leaderboard', String(me.rank), 'Batch rank', 'var(--brand-soft)', 'var(--on-brand-soft)']);
 
   const saved = savedItems(s);
 
@@ -48,7 +50,7 @@ export default function ProfilePage() {
           <Link href="/profile/edit" className="btn btn-white" style={{ height: 44, padding: '0 18px', fontSize: 14, gap: 8 }}><Icon name="edit" size={18} />Edit Profile</Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(' + stats.length + ',minmax(0,1fr))', gap: 12 }}>
           {stats.map(([icon, value, label, bg, fg]) => (
             <div key={label} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 16 }}>
               <span className="tile" style={{ width: 34, height: 34, borderRadius: 10, background: bg, color: fg }}><Icon name={icon} size={20} fill /></span>
