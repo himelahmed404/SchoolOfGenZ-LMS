@@ -1,27 +1,18 @@
 import { AREAS } from '../seed';
 import { SL, type AdminConsole, type Rec } from '../console';
 import type { Area, Perm, Role, SectionView, Settings } from '../types';
+import { periodTabs, revenueOver } from './revenue';
 
-/** A revenue figure for each of the last 182 days, the same on every render: a slow rise with a weekly rhythm. Seeded until reporting exists. */
-const DAILY = Array.from({ length: 182 }, (_, i) => Math.round(3600 + i * 22 + 1500 * Math.sin(i / 3.2) + (i % 7 === 5 ? 2400 : 0)));
-const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 /** Eight steps from `from` to `to` with a steady wobble, for a tile's trend line. Seeded like the rest of the report. */
 const walk = (from: number, to: number, seed: number) => Array.from({ length: 8 }, (_, i) =>
   from + ((to - from) * i) / 7 + (i > 0 && i < 7 ? Math.sin(seed + i * 2.3) * (Math.abs(to - from) || to * 0.1) * 0.4 : 0));
 
 /** Reports: the period switch scopes every number on the page. Tiles, revenue over time, payment split, revenue by course, batch fill, coupons. */
 export function reports(c: AdminConsole): SectionView {
-  const S = c.S, nf = c.nf, tk = c.tk, P = S.period;
-  const span = { week: 7, month: 30, quarter: 91 }[P];
-  const lbl = { week: 'This week', month: 'This month', quarter: 'Last 3 months' }[P], vs = { week: 'vs last week', month: 'vs last month', quarter: 'vs the 3 months before' }[P];
-  const cur = DAILY.slice(-span), before = DAILY.slice(-2 * span, -span), rev = sum(cur);
-  // Daily points for a week or a month; a quarter reads better by week.
-  const dayAt = (back: number) => { const d = new Date(c.env.today); d.setDate(d.getDate() - back); return d.getDate() + ' ' + d.toLocaleString('en-US', { month: 'short' }); };
-  const points = P === 'quarter'
-    ? Array.from({ length: 13 }, (_, w) => ({ x: dayAt(span - 1 - w * 7), y: sum(cur.slice(w * 7, w * 7 + 7)) }))
-    : cur.map((y, i) => ({ x: dayAt(span - 1 - i), y }));
-  const enrolled = Math.round(rev / 2650), enrolledBefore = Math.round(sum(before) / 2650);
-  const avg = Math.round(rev / Math.max(1, enrolled)), avgBefore = Math.round(sum(before) / Math.max(1, enrolledBefore));
+  const S = c.S, nf = c.nf, tk = c.tk;
+  const R = revenueOver(c), span = R.days, lbl = R.label, vs = R.vs, rev = R.total, revBefore = R.totalBefore;
+  const enrolled = Math.round(rev / 2650), enrolledBefore = Math.round(revBefore / 2650);
+  const avg = Math.round(rev / Math.max(1, enrolled)), avgBefore = Math.round(revBefore / Math.max(1, enrolledBefore));
   const byCourse = ([['CST', 0.6], ['ENG', 0.24], ['WEB', 0.16], ['UIX', 0], ['CAR', 0]] as [string, number][]).map(([code, share]) => [code, Math.round(rev * share)] as [string, number]);
   const top = Math.max(...byCourse.map((x) => x[1]), 1);
   const scale = span / 30, refunded = 3500 * scale, refundedBefore = 5000 * scale;
@@ -31,21 +22,20 @@ export function reports(c: AdminConsole): SectionView {
     title: 'Reports', sub: 'Revenue, enrollment, refunds and learning.',
     head: [c.A('Export CSV', () => { c.log('reports', 'Exported report', lbl); c.flash('CSV download started'); }, 'ghost', false, true)],
     dash: {
-      seg: ([['week', 'This week'], ['month', 'This month'], ['quarter', 'Last 3 months']] as [ConsoleState['period'], string][])
-        .map(([k, label]) => ({ label, count: '', on: P === k, go: () => c.setState({ period: k }) })),
+      seg: periodTabs(c),
       kpis: [
-        c.K('Revenue', tk(rev), lbl, 'reports', 'brand', { spark: points.map((x) => x.y), delta: c.delta(rev, sum(before), vs, true, true) }),
+        c.K('Revenue', tk(rev), lbl, 'reports', 'brand', { spark: R.trend.points.map((x) => x.y), delta: c.delta(rev, revBefore, vs, true, true) }),
         c.K('New enrollments', nf(enrolled), lbl, 'students', 'blue', { spark: walk(enrolledBefore, enrolled, 1), delta: c.delta(enrolled, enrolledBefore, vs, true) }),
         c.K('Average payment', tk(avg), 'per enrollment', 'payments', 'muted', { spark: walk(avgBefore, avg, 2), delta: c.delta(avg, avgBefore, vs, true, tk) }),
         c.K('Refunded', tk(refunded), c.pl(Math.max(1, Math.round(2 * scale)), 'request'), 'refunds', 'danger', { spark: walk(refundedBefore, refunded, 3), delta: c.delta(refunded, refundedBefore, vs, false, true) }),
-        c.K('Completion', nf(63) + '%', 'average of running batches', 'batches', 'muted', { spark: walk(61, 63, 4), delta: c.delta(63, 61, vs, true, (n) => c.pl(n, 'point')) }),
+        c.K('Average completion', nf(63) + '%', 'in running batches', 'batches', 'muted', { spark: walk(61, 63, 4), delta: c.delta(63, 61, vs, true, (n) => nf(n) + ' pts') }),
         c.K('Median reply', nf(14) + ' h', 'across teachers', 'teachers', 'warn', { spark: walk(16, 14, 5), delta: c.delta(14, 16, vs, false, (n) => nf(n) + ' h') }),
       ],
       // The first row is the tall one, so the list that grows with the catalog sits beside the chart.
       panels: [
-        { title: 'Revenue', sub: lbl + (P === 'quarter' ? ' · by week' : ' · by day'), span: 8, trend: { points, unit: 'taka' } },
+        { title: 'Revenue', sub: lbl + ' · ' + R.by, span: 8, trend: R.trend },
         { title: 'Revenue by course', sub: lbl, span: 4, bars: byCourse.map(([code, v]) => c.bar(code, tk(v), (v / top) * 100)) },
-        { title: 'Payment method', sub: 'Share of revenue · ' + lbl.toLowerCase(), span: 4, share: [
+        { title: 'Payment method', sub: 'Share of revenue · ' + lbl.toLowerCase(), span: 4, whole: { label: 'Revenue', value: tk(rev) }, share: [
           { label: 'bKash', value: tk(rev * 0.64), pct: 64, slot: 1, sub: paidBy(0.64) }, { label: 'Nagad', value: tk(rev * 0.36), pct: 36, slot: 2, sub: paidBy(0.36) },
         ] },
         { title: 'Batch fill', sub: 'Enrolled against seats', span: 4,
@@ -55,7 +45,6 @@ export function reports(c: AdminConsole): SectionView {
     },
   };
 }
-type ConsoleState = AdminConsole['S'];
 
 /** Activity log: append-only, filter by area, search; the detail shows the reason. */
 export function activity(c: AdminConsole): SectionView {

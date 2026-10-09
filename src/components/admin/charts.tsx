@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { Bar, Meter, Share, Trend } from '@/lib/admin';
-import { figure, niceScale, thin } from '@/lib/admin/chart-math';
+import { figure, niceScale, ringArcs, thin } from '@/lib/admin/chart-math';
 
 /**
  * Trend for a stat tile: the past in the de-emphasis grey, the current period as an accent dot.
@@ -152,22 +152,45 @@ export function Meters({ meters }: { meters: Meter[] }) {
   );
 }
 
-/** Parts of a whole as one stacked bar with a 2px gap between parts, and a legend that carries every value. */
-export function ShareBar({ parts }: { parts: Share[] }) {
+/**
+ * Parts of a whole as a ring with a 2px gap between parts. The middle names the whole; pointing at a part,
+ * or at its row in the key, puts that part there instead. The key carries every value, so nothing depends on colour or on hovering.
+ */
+export function Donut({ parts, whole }: { parts: Share[]; whole?: { label: string; value: string } }) {
+  const [on, setOn] = useState<number | null>(null);
+  // A circle of radius 42 with a 16-wide stroke, measured in hundredths of its length. The gap is about 2px at the size it is drawn.
+  const R = 42, GAP = 100 * (2.4 / (2 * Math.PI * R));
+  const arcs = ringArcs(parts.map((p) => p.pct));
+  const cur = on == null ? null : parts[on];
   return (
-    <div>
-      <div className="viz-share" role="img" aria-label={parts.map((p) => p.label + ' ' + p.pct + '%').join(', ')}>
-        {parts.map((p) => (
-          <span key={p.label} tabIndex={0} title={`${p.label}: ${p.value} (${p.pct}%)`} style={{ flex: p.pct, background: `var(--viz-${p.slot})` }} />
-        ))}
+    <div className="viz-donut">
+      <div className="viz-ring">
+        <svg viewBox="0 0 100 100" role="img" aria-label={parts.map((p) => p.label + ' ' + p.pct + '%').join(', ')}>
+          {arcs.map(({ i, from, len }) => {
+            const p = parts[i], dash = Math.max(0.5, len - GAP);
+            return (
+              <circle key={p.label} cx="50" cy="50" r={R} fill="none" stroke={`var(--viz-${p.slot})`} strokeWidth="16" pathLength="100" transform="rotate(-90 50 50)"
+                strokeDasharray={arcs.length > 1 ? `${dash} ${100 - dash}` : undefined} strokeDashoffset={arcs.length > 1 ? -(from + GAP / 2) : undefined}
+                opacity={on == null || on === i ? 1 : 0.35} tabIndex={0} aria-label={`${p.label}: ${p.value}, ${p.pct}%`}
+                onPointerEnter={() => setOn(i)} onPointerLeave={() => setOn(null)} onFocus={() => setOn(i)} onBlur={() => setOn(null)} />
+            );
+          })}
+        </svg>
+        {cur || whole ? (
+          <div className="viz-ring-mid" aria-hidden={!cur}>
+            <b>{cur ? cur.pct + '%' : whole!.value}</b>
+            <span>{cur ? cur.label : whole!.label}</span>
+          </div>
+        ) : null}
       </div>
       <div className="viz-legend">
-        {parts.map((p) => (
-          <div key={p.label} className="viz-legend-row">
+        {parts.map((p, i) => (
+          <div key={p.label} className="viz-legend-row" data-on={on === i} onPointerEnter={() => setOn(i)} onPointerLeave={() => setOn(null)}>
             <i style={{ background: `var(--viz-${p.slot})` }} />
-            <span>{p.label}{p.sub ? <small>{p.sub}</small> : null}</span>
-            <span>{p.value}</span>
+            <span>{p.label}</span>
             <b>{p.pct}%</b>
+            <span>{p.value}</span>
+            {p.sub ? <small>{p.sub}</small> : null}
           </div>
         ))}
       </div>

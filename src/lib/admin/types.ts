@@ -97,6 +97,10 @@ export interface Panel {
   /** Columns out of 12 on a wide screen. */
   span: 4 | 6 | 8 | 12;
   items?: Item[]; bars?: Bar[]; meters?: Meter[]; trend?: Trend; share?: Share[];
+  /** The whole that `share` divides, shown in the middle of the ring. */
+  whole?: { label: string; value: string };
+  /** A switch in the panel header that scopes this panel alone (the period of Overview's revenue chart). */
+  seg?: Tab[];
   table?: { cols: string[]; rows: string[][] };
   /** Link in the panel header, e.g. to the full list. */
   more?: { label: string; go: () => void };

@@ -31,3 +31,14 @@ export function niceScale(max: number, whole = false) {
   const step = whole ? Math.max(1, m * p) : m * p;
   return { top: Math.max(step, Math.ceil(max / step - 1e-9) * step), step };
 }
+
+/**
+ * Where each part of a ring starts and how long it is, in hundredths of the ring. Parts are scaled to fill the ring
+ * even when their figures do not add up to 100, and a part of nothing gets no arc.
+ */
+export function ringArcs(pcts: number[]) {
+  const total = pcts.reduce((a, b) => a + Math.max(0, b), 0);
+  if (!total) return [];
+  return pcts.map((pct, i) => ({ i, from: (pcts.slice(0, i).reduce((a, b) => a + Math.max(0, b), 0) / total) * 100, len: (Math.max(0, pct) / total) * 100 }))
+    .filter((a) => a.len > 0);
+}

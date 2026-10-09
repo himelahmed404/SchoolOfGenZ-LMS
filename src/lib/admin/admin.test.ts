@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AdminConsole, adminSeed, initialUi, type ConsoleState, type Section } from '.';
-import { figure, niceScale, thin } from './chart-math';
+import { figure, niceScale, ringArcs, thin } from './chart-math';
 
 /** A console on the seed data, at a fixed date, with `ui` on top of the starting view state. */
 function consoleAt(sec: Section, ui: Partial<ConsoleState> = {}) {
@@ -34,6 +34,13 @@ describe('chart numbers', () => {
     expect(out[11]).toBe(30);
     expect(out[0]).toBeLessThan(out[10]);
     expect(thin([4, 5, 6], 12)).toEqual([4, 5, 6]);
+  });
+  it('lays the parts of a ring end to end', () => {
+    expect(ringArcs([64, 36])).toEqual([{ i: 0, from: 0, len: 64 }, { i: 1, from: 64, len: 36 }]);
+  });
+  it('fills the ring when the parts do not add up to 100, and skips a part of nothing', () => {
+    expect(ringArcs([30, 0, 10])).toEqual([{ i: 0, from: 0, len: 75 }, { i: 2, from: 75, len: 25 }]);
+    expect(ringArcs([0, 0])).toEqual([]);
   });
 });
 
@@ -105,6 +112,23 @@ describe('dashboards', () => {
     // The first row is the wide chart with one panel beside it; the grid's row count relies on rows adding up to twelve.
     expect(dash.panels.slice(0, 2).map((p) => p.span)).toEqual([8, 4]);
     expect(dash.panels.reduce((a, p) => a + p.span, 0)).toBe(24);
+  });
+  it('draws the same revenue series on Overview and Reports, for the period chosen on either', () => {
+    const dashOf = (sec: Section) => consoleAt(sec, { period: 'quarter' }).renderVals().v.dash!;
+    const overview = dashOf('overview').panels[0], reports = dashOf('reports').panels[0];
+    expect(overview.trend!.points).toHaveLength(13);
+    expect(overview.trend).toEqual(reports.trend);
+    expect(overview.sub).toBe('Last 3 months · by week');
+  });
+  it('puts the period switch on the Overview chart, not over the tiles about today', () => {
+    const dash = consoleAt('overview').renderVals().v.dash!;
+    expect(dash.seg).toEqual([]);
+    expect(dash.panels[0].seg!.map((t) => [t.label, t.on])).toEqual([['Week', false], ['Month', true], ['Quarter', false]]);
+  });
+  it('names the whole that the payment methods divide', () => {
+    const split = consoleAt('reports').renderVals().v.dash!.panels.find((p) => p.share)!;
+    expect(split.whole).toEqual({ label: 'Revenue', value: consoleAt('reports').renderVals().v.dash!.kpis[0].value });
+    expect(split.share!.reduce((a, x) => a + x.pct, 0)).toBe(100);
   });
   it('scopes Reports to the chosen period', () => {
     const week = consoleAt('reports', { period: 'week' }).renderVals().v.dash!, month = consoleAt('reports', { period: 'month' }).renderVals().v.dash!;

@@ -10,7 +10,7 @@ import { ago, taka } from '@/lib/format';
 import { allQueue, item, itemKeys } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { figure } from '@/lib/admin/chart-math';
-import { BarList, Meters, ShareBar, Sparkline, TrendChart } from './charts';
+import { BarList, Donut, Meters, Sparkline, TrendChart } from './charts';
 
 const SECTIONS = new Set<string>(AREAS.map((a) => a[0]));
 export const isSection = (s: string): s is Section => s === 'overview' || SECTIONS.has(s);
@@ -457,10 +457,15 @@ function PanelView({ p }: { p: Panel }) {
   return (
     <section className="adm-panel" data-span={p.span} style={{ ['--span' as string]: p.span }}>
       <header className="adm-panel-head">
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="adm-panel-title">
           <h2>{p.title}</h2>
           {p.sub ? <div className="adm-panel-sub">{p.sub}</div> : null}
         </div>
+        {p.seg ? (
+          <div className="adm-seg adm-seg-sm" role="group" aria-label={p.title + ' period'}>
+            {p.seg.map((t) => <button key={t.label} onClick={t.go} aria-pressed={t.on}>{t.label}</button>)}
+          </div>
+        ) : null}
         {twin ? (
           <button className="adm-link" onClick={() => setAsTable(!asTable)} aria-pressed={asTable} title={asTable ? 'Show the chart' : 'Show the numbers as a table'}>
             <Svg d={asTable ? ICON.chart : ICON.table} size={14} />{asTable ? 'Chart' : 'Table'}
@@ -471,7 +476,7 @@ function PanelView({ p }: { p: Panel }) {
       <div className="adm-panel-body">
         {asTable && twin ? <DataTable cols={twin.cols} rows={twin.rows} />
           : p.trend ? <TrendChart trend={p.trend} />
-          : p.share ? <ShareBar parts={p.share} />
+          : p.share ? <Donut parts={p.share} whole={p.whole} />
           : p.bars ? <BarList bars={p.bars} />
           : p.meters ? <Meters meters={p.meters} />
           : p.table ? <DataTable cols={p.table.cols} rows={p.table.rows} />

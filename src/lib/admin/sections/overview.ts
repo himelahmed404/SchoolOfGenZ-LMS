@@ -1,9 +1,10 @@
 import type { AdminConsole } from '../console';
 import type { Item, SectionView } from '../types';
+import { periodTabs, revenueOver } from './revenue';
 
 /**
  * Overview: stat tiles that open their section, then two rows of panels on a 12-column grid.
- * Row 1: revenue over six months (8) and the generated "needs attention" list (4).
+ * Row 1: revenue over the chosen period (8) and the generated "needs attention" list (4).
  * Row 2: the payments that have waited longest, how full each batch is, and recent activity (4 each).
  */
 export function overview(c: AdminConsole): SectionView {
@@ -31,11 +32,13 @@ export function overview(c: AdminConsole): SectionView {
     if (c.couponStatus(k) === 'active' && k.limit && k.limit - k.used <= 60) att.push(c.it(k.code + ' — ' + c.pl(k.limit - k.used, 'use') + ' left', 'Expires ' + c.fd(k.exp), '', 'Open', () => c.nav('coupons', k.id)));
   });
 
-  // Seeded until reporting exists: monthly revenue, and the last six days of each daily count.
+  // Seeded until reporting exists: monthly revenue for the tile, and the last six days of each daily count.
   const revenue: [string, number][] = [['May', 142000], ['Jun', 186000], ['Jul', 231000], ['Aug', 312000], ['Sep', 264000], ['Oct', 98400]];
   const sepToDate = 91200;
   const week = { pay: [7, 9, 6, 12, 8, 10], content: [2, 5, 3, 4, 2, 3], refunds: [1, 2, 2, 4, 3, 2], doubts: [5, 4, 7, 6, 9, 9], students: [164, 168, 171, 172, 176, 178] };
   const yesterday = (k: keyof typeof week) => week[k][week[k].length - 1];
+  // The chart has its own period switch: the tiles above are about today, so the switch must not look like it scopes them.
+  const R = revenueOver(c);
 
   return {
     title: 'Overview', sub: 'Today, ' + c.fd(c.todayISO()) + ' — what needs your attention.', head: [],
@@ -50,7 +53,7 @@ export function overview(c: AdminConsole): SectionView {
         c.K('Active students', nf(active), 'in ' + c.pl(live.length, 'batch', 'batches'), 'students', 'muted', { spark: week.students.concat([active]), delta: c.delta(active, yesterday('students'), 'vs yesterday', true) }),
       ],
       panels: [
-        { title: 'Revenue', sub: 'Last 6 months · Oct is month to date', span: 8, trend: { points: revenue.map(([x, y]) => ({ x, y })), unit: 'taka', partial: true }, more: { label: 'Reports', go: () => c.nav('reports') } },
+        { title: 'Revenue', sub: R.label + ' · ' + R.by, span: 8, seg: periodTabs(c, true), trend: R.trend, more: { label: 'Reports', go: () => c.nav('reports') } },
         { title: 'Needs attention', sub: att.length ? c.pl(att.length, 'item') : '', span: 4, items: att.length ? att : [c.it('All clear. Nothing is waiting.')] },
         { title: 'Longest-waiting payments', sub: E.pending.length ? 'Oldest first' : '', span: 4, more: { label: 'Open queue', go: () => c.nav('payments') },
           items: E.pending.length ? E.pending.map((p) => c.it(p.name, p.sub, p.amount, 'Review', () => c.nav('payments'))) : [c.it('No payments are waiting.')] },
