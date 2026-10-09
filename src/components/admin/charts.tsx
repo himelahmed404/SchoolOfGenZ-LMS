@@ -11,7 +11,7 @@ import { figure, niceScale, ringArcs, thin } from '@/lib/admin/chart-math';
 
 /**
  * Trend for a stat tile: the past in the de-emphasis grey, the current period as an accent dot.
- * It is drawn on a 100 × 28 canvas that stretches sideways with the tile; the dot is HTML so it stays round.
+ * It is drawn on a 100 × 28 canvas that stretches with the tile; the dot is HTML so it stays round.
  */
 export function Sparkline({ values: all }: { values: number[] }) {
   if (all.length < 2) return null;
@@ -25,7 +25,7 @@ export function Sparkline({ values: all }: { values: number[] }) {
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
         <polyline points={pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} fill="none" stroke="var(--viz-mute)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       </svg>
-      <i style={{ left: ex + '%', top: ey }} />
+      <i style={{ left: ex + '%', top: (ey / H) * 100 + '%' }} />
     </span>
   );
 }

@@ -180,9 +180,12 @@ textarea.adm-field-in { height: auto; min-height: 96px; padding: 8px 10px; line-
 .adm-delta svg { flex-shrink: 0; margin-top: 2px; }
 .adm-delta[data-good="true"] { color: var(--ok); }
 .adm-delta[data-good="false"] { color: var(--margin); }
-/* a narrow tile drops its icon first, then its trend line; the figure and the change always stay */
+/* a narrow tile drops its icon; narrower still, the trend line moves under the figure and takes the full width */
 @container (max-width: 169px) { .adm-kpi-ico { display: none; } }
-@container (max-width: 149px) { .viz-spark { display: none; } }
+@container (max-width: 149px) {
+  .adm-kpi-mid { flex-direction: column; align-items: stretch; gap: 4px; }
+  .adm-kpi-mid .viz-spark { flex: none; max-width: none; height: 22px; }
+}
 /*
  * The first row of panels takes the height that is left, so the chart grows with the screen; the rows under it stay
  * compact (240px to 400px). When even the minimum does not fit, the dashboard scrolls.
